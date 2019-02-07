@@ -54,184 +54,180 @@
 /* Receiver IP addr */
 #define ARP_TPA   24
 
+#define ARP_OPER_REQUEST  1
+#define ARP_OPER_REPLY    2
+
 #define READ_NEXT_BYTE rcall SPI_MASTER_TRANSMIT
+
+#define COUNTER R16
+#define DATA1   R17
+#define DATA2   R18
 /*******************************************************************************
  ******************************************************************************/
 ARP_PROCESS:
-   ldi RETURN_VALUE, 0
-   /* check type ARP */
-   lds   TMP1, TYPE_LEN_H
-   cpi   TMP1, ETHER_TYPE_ARP_H
-   brne  ARP_UNEXPECTED_PACKET
-   lds   TMP1, TYPE_LEN_L
-   cpi   TMP1, ETHER_TYPE_ARP_L
-   brne  ARP_UNEXPECTED_PACKET
+    ldi RETURN_VALUE, 0
+    /* check type ARP */
+    lds   TMP1, TYPE_LEN_H
+    cpi   TMP1, hi8(ETHER_TYPE_ARP)
+    brne  ARP_UNEXPECTED_PACKET
+    lds   TMP1, TYPE_LEN_L
+    cpi   TMP1, lo8(ETHER_TYPE_ARP)
+    brne  ARP_UNEXPECTED_PACKET
 
-   /* Read the ARP payload and store it into memory */
-   /* Addr Z */
-   push  R31
-   push  R30
-   /* Addr Y */
-   push  R29
-   push  R28
-   /* To hold memory from SRAM */
-   push  R27
-   push  R26
-   /* Mostly counter */
-   push  R25
+    /* Read the ARP payload and store it into memory */
+    /* Addr Z */
+    push  ZH
+    push  ZL
+    /* Mostly counter */
+    push  COUNTER
 
-   rcall ETH_READ_BUFFER_START
+    rcall ETH_READ_BUFFER_START
 
-   /* Read ARP payload (28 bytes) into SRAM */
-   ldi   R25, 28
-   ldi   R31, 0x0
-   ldi   R30, ARP_PAYLOAD
+    /* Read ARP payload (28 bytes) into SRAM */
+    ldi   COUNTER, ARP_PAYLOAD_LEN
+    ldi   ZH, hi8(ARP_PAYLOAD)
+    ldi   ZL, lo8(ARP_PAYLOAD)
 
 ARP_PROCESS_READ_PAYLOAD:
-   READ_NEXT_BYTE
-   st    Z+, RETURN_VALUE
-   dec   R25
-   brne  ARP_PROCESS_READ_PAYLOAD
+    READ_NEXT_BYTE
+    st    Z+, RETURN_VALUE
+    dec   COUNTER
+    brne  ARP_PROCESS_READ_PAYLOAD
 
-   ETH_READ_BUFFER_END
+    ETH_READ_BUFFER_END
 
-   /* Check that ARP is for me */
-   rcall ARP_PROCESS_CHECK_MY_IP
-   cpi   RETURN_VALUE, 0
-   brne  ARP_PROCESS_NOT_FOR_ME
+    /* Check that ARP is for me */
+    rcall ARP_PROCESS_CHECK_MY_IP
+    cpi   RETURN_VALUE, 0
+    brne  ARP_PROCESS_NOT_FOR_ME
 
-   /* Prepare ARP packet to be sent as response */
-   rcall ARP_PROCESS_PREPARE_RESPONSE
+    /* Prepare ARP packet to be sent as response */
+    rcall ARP_PROCESS_PREPARE_RESPONSE
 
-   /* Send ARP packet back */
+    /* Send ARP packet back */
 
 ARP_PROCESS_CLOSE:
-   pop   R25
-   pop   R26
-   pop   R27
-   pop   R28
-   pop   R29
-   pop   R30
-   pop   R31
+    pop   COUNTER
+    pop   ZL
+    pop   ZH
 
-   ERR_ARP_CLR_ERROR
+    ERR_ARP_CLR_ERROR
 ARP_PROCESS_END:
-   ret
+    ret
 
 ARP_UNEXPECTED_PACKET:
-   ldi RETURN_VALUE, 1
-   ERR_ARP_SET_ERROR
-   rjmp ARP_PROCESS_END
+    ldi RETURN_VALUE, 1
+    ERR_ARP_SET_ERROR
+    rjmp ARP_PROCESS_END
 
 ARP_PROCESS_NOT_FOR_ME:
-   ldi RETURN_VALUE, 2
-   rjmp ARP_PROCESS_CLOSE
+    ldi RETURN_VALUE, 2
+    rjmp ARP_PROCESS_CLOSE
 
 /*******************************************************************************
  * Check that ARP packet is for me
  ******************************************************************************/
 ARP_PROCESS_CHECK_MY_IP:
-   push ZH
-   push ZL
-   push YH
-   push YL
-   push R16 /* Counter */
-   push R17 /* data holder */
-   push R18 /* data holder */
+    /* Z is used to read the IP from the SRAM (received packet) */
+    push ZH
+    push ZL
+    /* Y is used to read my IP from the EEPROM */
+    push YH
+    push YL
+    push DATA1 /* My IP */
+    push DATA2 /* ARP IP */
 
-   ldi R16, IPV4_SIZE_IN_BYTES
+    ldi COUNTER, IPV4_SIZE_IN_BYTES
 
-   /* Z */
-   ldi ZH, hi8(ARP_PAYLOAD + ARP_TPA)
-   ldi ZL, lo8(ARP_PAYLOAD + ARP_TPA)
+    /* Z */
+    ldi ZH, hi8(ARP_PAYLOAD + ARP_TPA)
+    ldi ZL, lo8(ARP_PAYLOAD + ARP_TPA)
 
-   /* Y */
-   ldi YH, hi8(EEPROM_IP_ADDR)
-   ldi YL, lo8(EEPROM_IP_ADDR)
+    /* Y */
+    ldi YH, hi8(EEPROM_IP_ADDR)
+    ldi YL, lo8(EEPROM_IP_ADDR)
 
 ARP_PROCESS_CHECK_MY_IP_LOOP:
-   /* My ip from EEPROM */
-   out  _SFR_IO_ADDR(EEARH), YH
-   out  _SFR_IO_ADDR(EEARL), YL
-   sbi  _SFR_IO_ADDR(EECR), EERE
-   in   R17, _SFR_IO_ADDR(EEDR)
-   adiw YL, 1
-   /* Dst IP from ARP payload */
-   ld   R18, Z+
-   /* Comparing both IPs */
-   cp   R18, R17
-   brne ARP_PROCESS_NOT_MY_IP
-   /* Loop counter */
-   dec  R16
-   brne ARP_PROCESS_CHECK_MY_IP_LOOP
+    /* My ip from EEPROM */
+    out  _SFR_IO_ADDR(EEARH), YH
+    out  _SFR_IO_ADDR(EEARL), YL
+    sbi  _SFR_IO_ADDR(EECR), EERE
+    in   DATA1, _SFR_IO_ADDR(EEDR)
+    adiw YL, 1
+    /* Dst IP from ARP payload */
+    ld   DATA2, Z+
+    /* Comparing both IPs */
+    cp   DATA2, DATA1
+    brne ARP_PROCESS_NOT_MY_IP
+    /* Loop counter */
+    dec  COUNTER
+    brne ARP_PROCESS_CHECK_MY_IP_LOOP
 
-   /* Return zero if IPs are equal */
-   ldi RETURN_VALUE, 0
+    /* Return zero if IPs are equal */
+    ldi RETURN_VALUE, 0
 
 ARP_PROCESS_CHECK_MY_IP_FINISH:
-   pop R18
-   pop R17
-   pop R16
-   pop YL
-   pop YH
-   pop ZL
-   pop ZH
-   ret
+    pop DATA2
+    pop DATA1
+    pop YL
+    pop YH
+    pop ZL
+    pop ZH
+    ret
 
 ARP_PROCESS_NOT_MY_IP:
-   ldi RETURN_VALUE, 1
-   rjmp ARP_PROCESS_CHECK_MY_IP_FINISH
+    ldi RETURN_VALUE, 1
+    rjmp ARP_PROCESS_CHECK_MY_IP_FINISH
 
 /*******************************************************************************
  ******************************************************************************/
 ARP_PROCESS_PREPARE_RESPONSE:
-   /* prepare response for ARP requeSt */
-   /* Replace operation for 2, should be 1 */
-   ldi R30, ARP_PAYLOAD
-   ldi R31, (ARP_OPER + 1) /* First byte not used */
-   add R30, R31 /* Address of ARP OPER */
-   ldi ZH, 0x0
-   ldi R26, 2   /* ARP reply (operation) */
-   st  Z+, R26  /* Z ends up in the first address of the sender's MAC */
+    /* Prepare response for ARP request */
+    /* Replace operation from 1 to 2 (2 is reply) */
+    push DATA1
+    ldi  ZH, hi8(ARP_PAYLOAD + ARP_OPER + 1) /* First byte not used */
+    ldi  ZL, lo8(ARP_PAYLOAD + ARP_OPER + 1)
+    ldi  DATA1, ARP_OPER_REPLY
+    st   Z+, DATA1  /* Z ends up in the first address of the sender's MAC */
 
-   /* Write sender (mine) MAC and copy original MAC into destination (10 bytes
-    * ahead) */
-   ldi  R25, MAC_SIZE_IN_BYTES
-   ldi  YH, hi8(EEPROM_MAC_ADDR)  
-   ldi  YL, lo8(EEPROM_MAC_ADDR)  
+    /* Write sender (mine) MAC and copy original MAC into destination (10 bytes
+     * ahead) */
+    ldi  COUNTER, MAC_SIZE_IN_BYTES
+    ldi  YH, hi8(EEPROM_MAC_ADDR)
+    ldi  YL, lo8(EEPROM_MAC_ADDR)
 ARP_PROCESS_KEEP_WRITING_MY_MAC:
-   /* Write previous target MAC into destination MAC */
-   ld   R26, Z
-   std  Z+(ARP_THA - ARP_SHA), R26
-   /* Set Addr to read from EEPROM, read and write into SRAM */
-   out  _SFR_IO_ADDR(EEARH), YH
-   out  _SFR_IO_ADDR(EEARL), YL
-   sbi  _SFR_IO_ADDR(EECR), EERE
-   in   R26, _SFR_IO_ADDR(EEDR)
-   adiw YL, 1
-   st   Z+, R26
-   dec R25
-   brne ARP_PROCESS_KEEP_WRITING_MY_MAC
+    /* Write previous target MAC into destination MAC */
+    ld   DATA1, Z
+    std  Z+(ARP_THA - ARP_SHA), DATA1
+    /* Set Addr to read from EEPROM, read and write into SRAM */
+    out  _SFR_IO_ADDR(EEARH), YH
+    out  _SFR_IO_ADDR(EEARL), YL
+    sbi  _SFR_IO_ADDR(EECR), EERE
+    in   DATA1, _SFR_IO_ADDR(EEDR)
+    adiw YL, 1
+    st   Z+, DATA1
+    dec  COUNTER
+    brne ARP_PROCESS_KEEP_WRITING_MY_MAC
 
-   /* Write my own IP and copy original IP into destination (10 bytes ahead) */
-   ldi R25, IPV4_SIZE_IN_BYTES
-   ldi YH, hi8(EEPROM_IP_ADDR)
-   ldi YL, lo8(EEPROM_IP_ADDR)
+    /* Write my own IP and copy original IP into destination (10 bytes ahead) */
+    ldi  COUNTER, IPV4_SIZE_IN_BYTES
+    ldi  YH, hi8(EEPROM_IP_ADDR)
+    ldi  YL, lo8(EEPROM_IP_ADDR)
 
 ARP_PROCESS_WRITE_IP_BYTE:
-   /* Copy IP from src to dst */
-   ld   R26, Z
-   std  Z+(ARP_TPA - ARP_SPA), R26
-   /* Set addr to read from EEPROM, read into R26 and write it into SRAM */
-   out  _SFR_IO_ADDR(EEARH), YH
-   out  _SFR_IO_ADDR(EEARL), YL
-   sbi  _SFR_IO_ADDR(EECR), EERE
-   in   R26, _SFR_IO_ADDR(EEDR)
-   adiw YL, 1
-   st   Z+,  R26
-   dec  R25
-   brne ARP_PROCESS_WRITE_IP_BYTE
-
-   ret
+    /* Copy IP from src to dst */
+    ld   DATA1, Z
+    std  Z+(ARP_TPA - ARP_SPA), DATA1
+    /* Set addr to read from EEPROM, read into DATA1 and write it into SRAM */
+    out  _SFR_IO_ADDR(EEARH), YH
+    out  _SFR_IO_ADDR(EEARL), YL
+    sbi  _SFR_IO_ADDR(EECR), EERE
+    in   DATA1, _SFR_IO_ADDR(EEDR)
+    adiw YL, 1
+    st   Z+,  DATA1
+    dec  COUNTER
+    brne ARP_PROCESS_WRITE_IP_BYTE
+    pop  DATA1
+    ret
 
 #endif

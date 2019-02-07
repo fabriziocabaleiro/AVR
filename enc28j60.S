@@ -1,66 +1,7 @@
-/* vim: set filetype=S:set foldmethod=marker: */
+/* vim: set filetype=S foldmethod=marker: */
 #include "spi.S"
 #ifndef __ENC28J60_S__
 #define __ENC28J60_S__
-
-/* Ethernet type from wikipedia {{{ */
-// EtherType Protocol
-#define ETHER_TYPE_IPV4_H 0x08 /* Internet Protocol version 4 (IPv4) */
-#define ETHER_TYPE_IPV4_L 0x00 /* Internet Protocol version 4 (IPv4) */
-#define ETHER_TYPE_ARP_H  0x08 /* Address Resolution Protocol (ARP)  */
-#define ETHER_TYPE_ARP_L  0x06 /* Address Resolution Protocol (ARP)  */
-#if 0
-0x0842 Wake-on-LAN[9]
-0x22F3 IETF TRILL Protocol
-0x22EA Stream Reservation Protocol
-0x6003 DECnet Phase IV
-0x8035 Reverse Address Resolution Protocol
-0x809B AppleTalk (Ethertalk)
-0x80F3 AppleTalk Address Resolution Protocol (AARP)
-0x8100 VLAN-tagged frame (IEEE 802.1Q) and Shortest Path Bridging IEEE 802.1aq with NNI compatibility[10]
-0x8137 IPX
-0x8204 QNX Qnet
-0x86DD Internet Protocol Version 6 (IPv6)
-0x8808 Ethernet flow control
-0x8809 Ethernet Slow Protocols[11] such as the Link Aggregation Control Protocol
-0x8819 CobraNet
-0x8847 MPLS unicast
-0x8848 MPLS multicast
-0x8863 PPPoE Discovery Stage
-0x8864 PPPoE Session Stage
-0x886D Intel Advanced Networking Services [12]
-0x8870 Jumbo Frames (Obsoleted draft-ietf-isis-ext-eth-01)
-0x887B HomePlug 1.0 MME
-0x888E EAP over LAN (IEEE 802.1X)
-0x8892 PROFINET Protocol
-0x889A HyperSCSI (SCSI over Ethernet)
-0x88A2 ATA over Ethernet
-0x88A4 EtherCAT Protocol
-0x88A8 Provider Bridging (IEEE 802.1ad) & Shortest Path Bridging IEEE 802.1aq[10]
-0x88AB Ethernet Powerlink[citation needed]
-0x88B8 GOOSE (Generic Object Oriented Substation event)
-0x88B9 GSE (Generic Substation Events) Management Services
-0x88BA SV (Sampled Value Transmission)
-0x88CC Link Layer Discovery Protocol (LLDP)
-0x88CD SERCOS III
-0x88DC WSMP, WAVE Short Message Protocol
-0x88E1 HomePlug AV MME[citation needed]
-0x88E3 Media Redundancy Protocol (IEC62439-2)
-0x88E5 MAC security (IEEE 802.1AE)
-0x88E7 Provider Backbone Bridges (PBB) (IEEE 802.1ah)
-0x88F7 Precision Time Protocol (PTP) over Ethernet (IEEE 1588)
-0x88F8 NC-SI
-0x88FB Parallel Redundancy Protocol (PRP)
-0x8902 IEEE 802.1ag Connectivity Fault Management (CFM) Protocol / ITU-T Recommendation Y.1731 (OAM)
-0x8906 Fibre Channel over Ethernet (FCoE)
-0x8914 FCoE Initialization Protocol
-0x8915 RDMA over Converged Ethernet (RoCE)
-0x891D TTEthernet Protocol Control Frame (TTE)
-0x892F High-availability Seamless Redundancy (HSR)
-0x9000 Ethernet Configuration Testing Protocol[13]
-0x9100 VLAN-tagged (IEEE 802.1Q) frame with double tagging
-#endif
-/* }}} */
 
 /* Receive status vector {{{ */
 // TODO: REMOVE DUPLICATED
@@ -140,8 +81,8 @@ EPMM6            Pattern Match Mask Byte 6 (EPMM<55:48>)                        
 EPMM7            Pattern Match Mask Byte 7 (EPMM<63:56>)                                                                  0000 0000
 Legend:    x = unknown, u = unchanged, - = unimplemented, q = value depends on condition, r = reserved, do not modify.
 Note 1:    CLKRDY resets to ‘0’ on Power-on Reset but is unaffected on all other Resets.
-      2:   EREVID is a read-only register.
-      3:   ECOCON resets to ‘---- -100’ on Power-on Reset and ‘---- -uuu’ on all other Resets.
+     2:   EREVID is a read-only register.
+     3:   ECOCON resets to ‘---- -100’ on Power-on Reset and ‘---- -uuu’ on all other Resets.
 
 EPMCSL          Pattern Match Checksum Low Byte (EPMCS<7:0>)                                                              0000 0000     51
 EPMCSH          Pattern Match Checksum High Byte (EPMCS<15:0>)                                                            0000 0000     51
@@ -209,14 +150,14 @@ EPAUSH          Pause Timer Value High Byte (EPAUS<15:8>)                       
 
 /* INT BUFER r LATECOL — RXBUSY TXABRT CLKRDY(1) 0000 -000 */
 #define ESTAT       0x1D
-#define ESTAT_INT      0x80
-#define ESTAT_BUFER    0x40
-#define ESTAT_r        0x20
-#define ESTAT_LATECOL  0x10
-//#define ESTAT_—        0x08
-#define ESTAT_RXBUSY   0x04
-#define ESTAT_TXABRT   0x02
-#define ESTAT_CLKRDY   0x01
+#define ESTAT_INT      7
+#define ESTAT_BUFER    6
+#define ESTAT_r        5
+#define ESTAT_LATECOL  4
+//#define ESTAT_—        3
+#define ESTAT_RXBUSY   2
+#define ESTAT_TXABRT   1
+#define ESTAT_CLKRDY   0
 /* AUTOINC PKTDEC PWRSV r VRPS — — — 1000 0--- */
 #define ECON2       0x1E
 #define ECON2_AUTOINC    0x80
@@ -575,98 +516,145 @@ EPAUSH          Pause Timer Value High Byte (EPAUS<15:8>)                       
 /* #define Reserved    0x1A */
 /* }}} */
 
+#if 0
+Read Control Register
+(RCR)   0 0 0   a a a a a       N/A
+Read Buffer Memory
+(RBM)   0 0 1   1 1 0 1 0       N/A
+Write Control Register
+(WCR)   0 1 0   a a a a a       d d d d d d d d
+Write Buffer Memory
+(WBM)   0 1 1   1 1 0 1 0       d d d d d d d d
+Bit Field Set
+(BFS)   1 0 0   a a a a a       d d d d d d d d
+Bit Field Clear
+(BFC)   1 0 1   a a a a a       d d d d d d d d
+System Reset Command (Soft Reset)
+(SRC)   1 1 1   1 1 1 1 1       N/A_
+#endif
+#define ETH_SPI_CMD_RCR 0x00
+#define ETH_SPI_CMD_RBM 0x3A
+#define ETH_SPI_CMD_WCR 0x40
+#define ETH_SPI_CMD_WBM 0x7A
+#define ETH_SPI_CMD_BFS 0x80
+#define ETH_SPI_CMD_BFC 0xA0
+#define ETH_SPI_CMD_SRC 0xFF
+
 /*******************************************************************************
+ * Read Control Register {{{
  * To read a control register first we send the command "000" together with the
  * address of the register, i.e. "000AAAAA" through SPI, ignoring the byte that
  * is being transmitted during the command + address transmission, then, we send
  * a dummy message to activate the SCK and read a byte.
+ *
+ * ARG_REG1 is the register to be read
  ******************************************************************************/
 ETH_READ_CONTROL_REGISTER:
-   SPI_SELECT_ETH
-   rcall SPI_MASTER_TRANSMIT
-   rcall SPI_MASTER_TRANSMIT
-   SPI_END_ETH
-   ret
+    SPI_SELECT_ETH
+    rcall SPI_MASTER_TRANSMIT
+    rcall SPI_MASTER_TRANSMIT
+    SPI_END_ETH
+    ret
+/* }}} */
 
 /*******************************************************************************
+ * Write control register  {{{
  * Send command and address together, then send the new value of the space that
  * the address is pointing to
+ *
+ * ARG_REG1 is the register to be written
+ * ARG_REG2 is the value of the register
  ******************************************************************************/
 ETH_WRITE_CONTROL_REGISTER:
-   mov SPI_DATA, ARG_REG1
-   /* command is 010AAAAA, then corresponding prefix */
-   sbr SPI_DATA, 0x40
-   SPI_SELECT_ETH
-   rcall SPI_MASTER_TRANSMIT
-   mov SPI_DATA, ARG_REG2
-   rcall SPI_MASTER_TRANSMIT
-   SPI_END_ETH
-   ret
+    /* command is 010AAAAA, then corresponding prefix */
+    sbr   ARG_REG1, ETH_SPI_CMD_WCR
+    SPI_SELECT_ETH
+    rcall SPI_MASTER_TRANSMIT
+    mov   ARG_REG1, ARG_REG2
+    rcall SPI_MASTER_TRANSMIT
+    SPI_END_ETH
+    ret
+/* }}} */
 
 /*******************************************************************************
- * Set the given bits into the register
+ * Set the given bits into the register {{{
  * Inputs:
  * - ARG_REG1: Register address
  * - ARG_REG2: Mask with bits that are going to be set
  ******************************************************************************/
 ETH_BIT_FIELD_SET:
-   mov SPI_DATA, ARG_REG1
-   /* command is 100AAAAA, then corresponding prefix */
-   sbr SPI_DATA, 0x80
-   SPI_SELECT_ETH
-   rcall SPI_MASTER_TRANSMIT
-   mov SPI_DATA, ARG_REG2
-   rcall SPI_MASTER_TRANSMIT
-   SPI_END_ETH
-   ret
+    /* command is 100AAAAA, then corresponding prefix */
+    sbr   ARG_REG1, ETH_SPI_CMD_BFS
+    SPI_SELECT_ETH
+    rcall SPI_MASTER_TRANSMIT
+    mov   ARG_REG1, ARG_REG2
+    rcall SPI_MASTER_TRANSMIT
+    SPI_END_ETH
+    ret
+/* }}} */
 
 /*******************************************************************************
- * Clear the given bits into the register
+ * Clear the given bits into the register {{{
  * Inputs:
  * - ARG_REG1: Register address
  * - ARG_REG2: Mask with bits that are going to be clear
  ******************************************************************************/
 ETH_BIT_FIELD_CLEAR:
-   mov   SPI_DATA, ARG_REG1
-   /* command is 101AAAAA, then corresponding prefix */
-   sbr   SPI_DATA, 0xA0
-   SPI_SELECT_ETH
-   rcall SPI_MASTER_TRANSMIT
-   mov   SPI_DATA, ARG_REG2
-   rcall SPI_MASTER_TRANSMIT
-   SPI_END_ETH
-   ret
+    /* command is 101AAAAA, then corresponding prefix */
+    sbr   ARG_REG1, ETH_SPI_CMD_BFC
+    SPI_SELECT_ETH
+    rcall SPI_MASTER_TRANSMIT
+    mov   ARG_REG1, ARG_REG2
+    rcall SPI_MASTER_TRANSMIT
+    SPI_END_ETH
+    ret
+/* }}} */
 
 /*******************************************************************************
- * Enable packet reception
+ * Wait until device is ready {{{
+ ******************************************************************************/
+ETH_WAIT_UNTIL_READY:
+    ldi   ARG_REG1, ESTAT
+    rcall ETH_READ_CONTROL_REGISTER
+    sbrs  RETURN_VALUE, ESTAT_CLKRDY
+    rjmp  ETH_WAIT_UNTIL_READY
+    ret
+/* }}} */
+
+/*******************************************************************************
+ * Enable packet reception {{{
  ******************************************************************************/
 ETH_ENABLE_RECEIVE:
-   ldi   ARG_REG1, ECON1
-   ldi   ARG_REG2, ECON1_RXEN
-   rcall ETH_BIT_FIELD_SET
-   ret
+    rcall ETH_WAIT_UNTIL_READY
+    ldi   ARG_REG1, ECON1
+    ldi   ARG_REG2, ECON1_RXEN
+    rcall ETH_BIT_FIELD_SET
+    ret
+/* }}} */
 
 /*******************************************************************************
- * Enable interrupts, TODO: add more info
+ * Enable interrupts, TODO: add more info {{{
  ******************************************************************************/
 ETH_ENABLE_RECEIVE_INTERRUPT:
-   ldi   ARG_REG1, EIE
-   ldi   ARG_REG2, EIE_INTIE | EIE_PKTIE
-   rcall ETH_BIT_FIELD_SET
-   ret
+    ldi   ARG_REG1, EIE
+    ldi   ARG_REG2, EIE_INTIE | EIE_PKTIE
+    rcall ETH_BIT_FIELD_SET
+    ret
+/* }}} */
 
 /*******************************************************************************
- * Software reset
+ * Software reset {{{
  ******************************************************************************/
 ETH_SOFTWARE_RESET:
-   ldi SPI_DATA, 0xFF
-   SPI_SELECT_ETH
-   rcall SPI_MASTER_TRANSMIT
-   SPI_END_ETH
-   ret
+    ldi   ARG_REG1, ETH_SPI_CMD_SRC
+    SPI_SELECT_ETH
+    rcall SPI_MASTER_TRANSMIT
+    SPI_END_ETH
+    ret
+/* }}} */
 
 /*******************************************************************************
- * Buffer initialization
+ * Buffer initialization {{{
  ******************************************************************************/
 #define BUF_TX_ST_L 0x00
 #define BUF_TX_ST_H 0x00
@@ -679,84 +667,86 @@ ETH_SOFTWARE_RESET:
 #define BUF_RX_ND_L 0xFE
 #define BUF_RX_ND_H 0x1F
 ETH_BUFFER_INIT:
-   /* SET BANK 0 */
-   ldi   ARG_REG1, ECON1
-   ldi   ARG_REG2, ECON1_BSEL0 | ECON1_BSEL1
-   rcall ETH_BIT_FIELD_CLEAR
+    /* SET BANK 0 */
+    ldi   ARG_REG1, ECON1
+    ldi   ARG_REG2, ECON1_BSEL0 | ECON1_BSEL1
+    rcall ETH_BIT_FIELD_CLEAR
 
-   /* Memory in range [ERXST, ERXND] dedicated to receive HW */
-   /* ERXST 13 bits, need to program: (recommended even number) */
-   /* ERXND 13 bits, need to program: */
+    /* Memory in range [ERXST, ERXND] dedicated to receive HW */
+    /* ERXST 13 bits, need to program: (recommended even number) */
+    /* ERXND 13 bits, need to program: */
 
-   /* Setting transmission to [0:0x1AFF] and Receive to 0x1F00 */
+    /* Setting transmission to [0:0x1AFF] and Receive to 0x1F00 */
 
-   /* Transmit start */
-   ldi ARG_REG1, ETXSTL
-   ldi ARG_REG2, BUF_TX_ST_L
-   rcall ETH_WRITE_CONTROL_REGISTER
-   ldi ARG_REG1, ETXSTH
-   ldi ARG_REG2, BUF_TX_ST_H
-   rcall ETH_WRITE_CONTROL_REGISTER
+    /* Transmit start */
+    ldi   ARG_REG1, ETXSTL
+    ldi   ARG_REG2, BUF_TX_ST_L
+    rcall ETH_WRITE_CONTROL_REGISTER
+    ldi   ARG_REG1, ETXSTH
+    ldi   ARG_REG2, BUF_TX_ST_H
+    rcall ETH_WRITE_CONTROL_REGISTER
 
-   /* Transmit end */
-   ldi ARG_REG1, ETXNDL
-   ldi ARG_REG2, BUF_TX_ND_L
-   rcall ETH_WRITE_CONTROL_REGISTER
-   ldi ARG_REG1, ETXNDH
-   ldi ARG_REG2, BUF_TX_ND_H
-   rcall ETH_WRITE_CONTROL_REGISTER
+    /* Transmit end */
+    ldi   ARG_REG1, ETXNDL
+    ldi   ARG_REG2, BUF_TX_ND_L
+    rcall ETH_WRITE_CONTROL_REGISTER
+    ldi   ARG_REG1, ETXNDH
+    ldi   ARG_REG2, BUF_TX_ND_H
+    rcall ETH_WRITE_CONTROL_REGISTER
 
-   /* JUST NEED 7 BYTES FOR STATUS VECTOR BETWEEN TRANSMIT AND RECEIVE */
-   /* Receive start */
-   ldi ARG_REG1, ERXSTL
-   ldi ARG_REG2, BUF_RX_ST_L
-   rcall ETH_WRITE_CONTROL_REGISTER
-   ldi ARG_REG1, ERXSTH
-   ldi ARG_REG2, BUF_RX_ST_H
-   rcall ETH_WRITE_CONTROL_REGISTER
+    /* JUST NEED 7 BYTES FOR STATUS VECTOR BETWEEN TRANSMIT AND RECEIVE */
+    /* Receive start */
+    ldi   ARG_REG1, ERXSTL
+    ldi   ARG_REG2, BUF_RX_ST_L
+    rcall ETH_WRITE_CONTROL_REGISTER
+    ldi   ARG_REG1, ERXSTH
+    ldi   ARG_REG2, BUF_RX_ST_H
+    rcall ETH_WRITE_CONTROL_REGISTER
 
-   /* Programming ERXRDPTx to the same value than ERXSTx */
-   ldi ARG_REG1, ERXRDPTL
-   ldi ARG_REG2, BUF_RX_ST_L
-   rcall ETH_WRITE_CONTROL_REGISTER
-   ldi ARG_REG1, ERXRDPTH
-   ldi ARG_REG2, BUF_RX_ST_H
-   rcall ETH_WRITE_CONTROL_REGISTER
+    /* Programming ERXRDPTx to the same value than ERXSTx */
+    ldi   ARG_REG1, ERXRDPTL
+    ldi   ARG_REG2, BUF_RX_ST_L
+    rcall ETH_WRITE_CONTROL_REGISTER
+    ldi   ARG_REG1, ERXRDPTH
+    ldi   ARG_REG2, BUF_RX_ST_H
+    rcall ETH_WRITE_CONTROL_REGISTER
 
-   /* Programming ERDPT (read point for RBM) to the start of receive area */
-   ldi ARG_REG1, ERDPTL
-   ldi ARG_REG2, BUF_RX_ST_L
-   rcall ETH_WRITE_CONTROL_REGISTER
-   ldi ARG_REG1, ERDPTH
-   ldi ARG_REG2, BUF_RX_ST_H
-   rcall ETH_WRITE_CONTROL_REGISTER
+    /* Programming ERDPT (read point for RBM) to the start of receive area */
+    ldi   ARG_REG1, ERDPTL
+    ldi   ARG_REG2, BUF_RX_ST_L
+    rcall ETH_WRITE_CONTROL_REGISTER
+    ldi   ARG_REG1, ERDPTH
+    ldi   ARG_REG2, BUF_RX_ST_H
+    rcall ETH_WRITE_CONTROL_REGISTER
 
-   /* Receive end */
-   ldi ARG_REG1, ERXNDL
-   ldi ARG_REG2, BUF_RX_ND_L
-   rcall ETH_WRITE_CONTROL_REGISTER
-   ldi ARG_REG1, ERXNDH
-   ldi ARG_REG2, BUF_RX_ND_H
-   rcall ETH_WRITE_CONTROL_REGISTER
+    /* Receive end */
+    ldi   ARG_REG1, ERXNDL
+    ldi   ARG_REG2, BUF_RX_ND_L
+    rcall ETH_WRITE_CONTROL_REGISTER
+    ldi   ARG_REG1, ERXNDH
+    ldi   ARG_REG2, BUF_RX_ND_H
+    rcall ETH_WRITE_CONTROL_REGISTER
 
-   /* SET BANK 1 */
-   /* filter */
-   ldi   ARG_REG1, ECON1
-   ldi   ARG_REG2, ECON1_BSEL0
-   rcall ETH_BIT_FIELD_SET
+    /* SET BANK 1 */
+    /* filter */
+    ldi   ARG_REG1, ECON1
+    ldi   ARG_REG2, ECON1_BSEL0
+    rcall ETH_BIT_FIELD_SET
 
-   /* Promiscuous mode */
-   ldi ARG_REG1, ERXFCON
-   ldi ARG_REG2, ERXFCON_UCEN | ERXFCON_CRCEN | ERXFCON_BCEN
-   rcall ETH_WRITE_CONTROL_REGISTER
+    /* Promiscuous mode */
+    ldi   ARG_REG1, ERXFCON
+    ldi   ARG_REG2, ERXFCON_UCEN | ERXFCON_CRCEN | ERXFCON_BCEN
+    rcall ETH_WRITE_CONTROL_REGISTER
 
-   /* Power-on Reset, the ESTAT.CLKRDY bit should be polled to make certain that
-    * enough time
-    */
-   ret
+    /* Power-on Reset, the ESTAT.CLKRDY bit should be polled to make certain that
+     * enough time
+     */
+    rcall ETH_WAIT_UNTIL_READY
+    ret
+/* }}} */
 
 /*******************************************************************************
- * Mac initialization
+ * Mac initialization {{{
  ******************************************************************************/
 #ifdef USE_FULL_DUPLEX
 #  define MACON1_FULL_DUPLEX   (MACON1_RXPAUS | MACON1_TXPAUS)
@@ -768,392 +758,407 @@ ETH_BUFFER_INIT:
 #  define MACON3_FULL_DUPLEX   0
 #endif
 ETH_MAC_INIT: /* ONLY ONCE */
-   /* SET BANK 2 */
-   ldi   ARG_REG1, ECON1
-   ldi   ARG_REG2, ECON1_BSEL0
-   rcall ETH_BIT_FIELD_CLEAR
-   ldi   ARG_REG1, ECON1
-   ldi   ARG_REG2, ECON1_BSEL1
-   rcall ETH_BIT_FIELD_SET
+    /* SET BANK 2 */
+    ldi   ARG_REG1, ECON1
+    ldi   ARG_REG2, ECON1_BSEL0
+    rcall ETH_BIT_FIELD_CLEAR
+    ldi   ARG_REG1, ECON1
+    ldi   ARG_REG2, ECON1_BSEL1
+    rcall ETH_BIT_FIELD_SET
 
-   /* MACON1 */
-   ldi   ARG_REG1, MACON1
-   ldi   ARG_REG2, MACON1_MARXEN | MACON1_FULL_DUPLEX
-   rcall ETH_BIT_FIELD_SET
+    /* MACON1 */
+    ldi   ARG_REG1, MACON1
+    ldi   ARG_REG2, MACON1_MARXEN | MACON1_FULL_DUPLEX
+    rcall ETH_BIT_FIELD_SET
 
-   /* MACON3 */
-   ldi   ARG_REG1, MACON3
-   ldi   ARG_REG2, MACON3_PADCFG0 | MACON3_TXCRCEN | MACON3_FULL_DUPLEX | MACON3_FRMLNEN
-   rcall ETH_BIT_FIELD_SET
+    /* MACON3 */
+    ldi   ARG_REG1, MACON3
+    ldi   ARG_REG2, MACON3_PADCFG0 | MACON3_TXCRCEN | MACON3_FULL_DUPLEX | MACON3_FRMLNEN
+    rcall ETH_BIT_FIELD_SET
 
-   /* MACON4  */
-   ldi   ARG_REG1, MACON4
-   ldi   ARG_REG2, MACON4_DEFER
-   rcall ETH_BIT_FIELD_SET
+    /* MACON4  */
+    ldi   ARG_REG1, MACON4
+    ldi   ARG_REG2, MACON4_DEFER
+    rcall ETH_BIT_FIELD_SET
 
-   /* Max frame length */
-   /* Normal network nodes are designed to handle packets that are 1518 bytes or
-    * less. 1518 -> 0x5EE
-    */
-   ldi ARG_REG1, MAMXFLL
-   ldi ARG_REG2, 0xEE
-   rcall ETH_WRITE_CONTROL_REGISTER
-   ldi ARG_REG1, MAMXFLH
-   ldi ARG_REG2, 0x05
-   rcall ETH_WRITE_CONTROL_REGISTER
+    /* Max frame length */
+    /* Normal network nodes are designed to handle packets that are 1518 bytes or
+     * less. 1518 -> 0x5EE
+     */
+    ldi   ARG_REG1, MAMXFLL
+    ldi   ARG_REG2, 0xEE
+    rcall ETH_WRITE_CONTROL_REGISTER
+    ldi   ARG_REG1, MAMXFLH
+    ldi   ARG_REG2, 0x05
+    rcall ETH_WRITE_CONTROL_REGISTER
 
-   /* MABBIPG. */
-   /* Most applications will program this register with 15h when Full-Duplex
-    * mode is used and 12h when Half-Duplex mode is used.
-    */
-   ldi ARG_REG1, MABBIPG
-   ldi ARG_REG2, MABBIPG_FULL_DUPLEX
-   rcall ETH_WRITE_CONTROL_REGISTER
+    /* MABBIPG. */
+    /* Most applications will program this register with 15h when Full-Duplex
+     * mode is used and 12h when Half-Duplex mode is used.
+     */
+    ldi   ARG_REG1, MABBIPG
+    ldi   ARG_REG2, MABBIPG_FULL_DUPLEX
+    rcall ETH_WRITE_CONTROL_REGISTER
 
-   /* MAIPGL. */
-   /* Configure the Non-Back-to-Back Inter-Packet Gap register low byte, MAIPGL.
-    * Most applications will program this register with 12h.
-    */
-   ldi ARG_REG1, MAIPGL
-   ldi ARG_REG2, 0x12
-   rcall ETH_WRITE_CONTROL_REGISTER
+    /* MAIPGL. */
+    /* Configure the Non-Back-to-Back Inter-Packet Gap register low byte, MAIPGL.
+     * Most applications will program this register with 12h.
+     */
+    ldi   ARG_REG1, MAIPGL
+    ldi   ARG_REG2, 0x12
+    rcall ETH_WRITE_CONTROL_REGISTER
 
-   /* MAIPGH for full duplex to 0x0C */
-   ldi ARG_REG1, MAIPGH
-   ldi ARG_REG2, 0x0C
-   rcall ETH_WRITE_CONTROL_REGISTER
+    /* MAIPGH for full duplex to 0x0C */
+    ldi   ARG_REG1, MAIPGH
+    ldi   ARG_REG2, 0x0C
+    rcall ETH_WRITE_CONTROL_REGISTER
 
-   /* MACLCON1 & MACLCON2 default should be ok */
+    /* MACLCON1 & MACLCON2 default should be ok */
 
-   /* SEST BANK 3 */
-   ldi   ARG_REG1, ECON1
-   ldi   ARG_REG2, ECON1_BSEL1 | ECON1_BSEL0
-   rcall ETH_BIT_FIELD_SET
-   /* Program the local MAC address into the MAADR1:MAADR6 registers. */
-   /* MAC registers are:
-    * ADDR  REG
-    * 0x0   MAADR5
-    * 0x1   MAADR6
-    * 0x2   MAADR3
-    * 0x3   MAADR4
-    * 0x4   MAADR1
-    * 0x5   MAADR2
-    *
-    * So, if we start from address 0x0 to 0x5, we have to write:
-    * EEPROM_MAC_ADDR + (i-- * 2) [ + 1]
-    * Where i [2:0]
-    */
-   /* BEWARE ARG_REG1 -> R24
-    *        ARG_REG2 -> R25
-    */
-   push  YH
-   push  YL
-   ldi   YH, hi8(EEPROM_MAC_ADDR)
-   ldi   YL, lo8(EEPROM_MAC_ADDR)
-   adiw  YL, 4 /* Start from the fifth element */
-   ldi   ARG_REG1, MAADR5  /* ADDR zero */
+    /* SEST BANK 3 */
+    ldi   ARG_REG1, ECON1
+    ldi   ARG_REG2, ECON1_BSEL1 | ECON1_BSEL0
+    rcall ETH_BIT_FIELD_SET
+    /* Program the local MAC address into the MAADR1:MAADR6 registers. */
+    /* MAC registers are:
+     * ADDR  REG
+     * 0x0   MAADR5
+     * 0x1   MAADR6
+     * 0x2   MAADR3
+     * 0x3   MAADR4
+     * 0x4   MAADR1
+     * 0x5   MAADR2
+     *
+     * So, if we start from address 0x0 to 0x5, we have to write:
+     * EEPROM_MAC_ADDR + (i-- * 2) [ + 1]
+     * Where i [2:0]
+     */
+    push  YH
+    push  YL
+    ldi   YH, hi8(EEPROM_MAC_ADDR)
+    ldi   YL, lo8(EEPROM_MAC_ADDR)
+    adiw  YL, 4 /* Start from the fifth element */
+    ldi   TMP1, MAADR5  /* ADDR zero */
 ETH_MAC_INIT_SET_MAC_LOOP:
-   /* Set Addr to read from EEPROM, read and write into SRAM */
-   out   _SFR_IO_ADDR(EEARH), YH
-   out   _SFR_IO_ADDR(EEARL), YL
-   sbi   _SFR_IO_ADDR(EECR), EERE
-   in    ARG_REG2, _SFR_IO_ADDR(EEDR)
-   rcall ETH_WRITE_CONTROL_REGISTER  /* Write first */
+    /* Set Addr to read from EEPROM, read and write into SRAM */
+    out   _SFR_IO_ADDR(EEARH), YH
+    out   _SFR_IO_ADDR(EEARL), YL
+    sbi   _SFR_IO_ADDR(EECR), EERE
+    mov   ARG_REG1, TMP1
+    in    ARG_REG2, _SFR_IO_ADDR(EEDR)
+    rcall ETH_WRITE_CONTROL_REGISTER  /* Write first */
 
-   inc   ARG_REG1 /* Next address to write into */
-   adiw  YL, 1    /* odd element to write */
-   out   _SFR_IO_ADDR(EEARH), YH
-   out   _SFR_IO_ADDR(EEARL), YL
-   sbi   _SFR_IO_ADDR(EECR), EERE
-   in    ARG_REG2, _SFR_IO_ADDR(EEDR)
-   rcall ETH_WRITE_CONTROL_REGISTER  /* Write second */
-   sbiw  YL, 3 /* go back to two previous even addr */
-   inc   ARG_REG1
-   cpi   ARG_REG1, MAADR2 + 1 /* MAADR2 is the last address we write */
-   brne  ETH_MAC_INIT_SET_MAC_LOOP
-   pop   YL
-   pop   YH
-
-#if 0
-   ldi   ARG_REG1, MAADR1
-   ldi   ARG_REG2, 0xFA
-   rcall ETH_WRITE_CONTROL_REGISTER
-   ldi   ARG_REG1, MAADR2
-   ldi   ARG_REG2, 0xB3
-   rcall ETH_WRITE_CONTROL_REGISTER
-   ldi   ARG_REG1, MAADR3
-   ldi   ARG_REG2, 0x12
-   rcall ETH_WRITE_CONTROL_REGISTER
-   ldi   ARG_REG1, MAADR4
-   ldi   ARG_REG2, 0x10
-   rcall ETH_WRITE_CONTROL_REGISTER
-   ldi   ARG_REG1, MAADR5
-   ldi   ARG_REG2, 0x00
-   rcall ETH_WRITE_CONTROL_REGISTER
-   ldi   ARG_REG1, MAADR6
-   ldi   ARG_REG2, 0x00
-   rcall ETH_WRITE_CONTROL_REGISTER
-#endif
-   ret
+    inc   TMP1 /* Next address to write into */
+    adiw  YL, 1    /* odd element to write */
+    out   _SFR_IO_ADDR(EEARH), YH
+    out   _SFR_IO_ADDR(EEARL), YL
+    sbi   _SFR_IO_ADDR(EECR), EERE
+    mov   ARG_REG1, TMP1
+    in    ARG_REG2, _SFR_IO_ADDR(EEDR)
+    rcall ETH_WRITE_CONTROL_REGISTER  /* Write second */
+    sbiw  YL, 3 /* go back to two previous even addr */
+    inc   TMP1
+    cpi   TMP1, MAADR2 + 1 /* MAADR2 is the last address we write */
+    brne  ETH_MAC_INIT_SET_MAC_LOOP
+    pop   YL
+    pop   YH
+    ret
+/* }}} */
 
 /*******************************************************************************
- * Miscellaneous initialization
+ * Miscellaneous initialization {{{
  ******************************************************************************/
 ETH_MISC_INIT:
-   /* AUTOINC should be set by default */
+    /* AUTOINC should be set by default */
 #if 0
-   ldi   ARG_REG1, ECON2
-   ldi   ARG_REG2, ECON2_AUTOINC
-   rcall ETH_BIT_FIELD_SET
+    ldi   ARG_REG1, ECON2
+    ldi   ARG_REG2, ECON2_AUTOINC
+    rcall ETH_BIT_FIELD_SET
 #endif
-   ret
+    ret
+/* }}} */
 
-#if 0
 /*******************************************************************************
+ * PHY initialization {{{
  ******************************************************************************/
 ETH_PHY_INIT: /* ONLY ONCE */
-   /* For proper duplex operation, the PHCON1.PDPXMD bit must also match the
-    * value of the MACON3.FULDPX bit.
-    */
-    PHCON2.HDLDIS
+#if 0
+    /* For proper duplex operation, the PHCON1.PDPXMD bit must also match the
+     * value of the MACON3.FULDPX bit.
+     */
+     PHCON2.HDLDIS
+     ret
 #endif
+/* }}} */
 
 /*******************************************************************************
+ * Start buffer read {{{
  ******************************************************************************/
 ETH_READ_BUFFER_START:
-   ldi SPI_DATA, 0x3A
-   SPI_SELECT_ETH
-   rcall SPI_MASTER_TRANSMIT
-   ret
+    ldi   ARG_REG1, ETH_SPI_CMD_RBM
+    SPI_SELECT_ETH
+    rcall SPI_MASTER_TRANSMIT
+    ret
 
 #define ETH_READ_BUFFER_END SPI_END_ETH
+/* }}} */
 
 /*******************************************************************************
+ * Receive enc28j60 header {{{
  ******************************************************************************/
 ETH_READ_RECEIVE_HEADER:
-   ldi SPI_DATA, 0x3A
-   SPI_SELECT_ETH
-   push  ZL
-   push  ZH
-   rcall SPI_MASTER_TRANSMIT
-   /* Save Status vector into SRAM */
-   /* Get and check next packet pointer */
-   rcall SPI_MASTER_TRANSMIT
-   mov   ZL, RETURN_VALUE
-   rcall SPI_MASTER_TRANSMIT
-   mov   ZH, RETURN_VALUE
-   /* Check that pointer is within receive buffer, seems that control packages
-    * don't set the next packet pointer, therefore reading this value as zero */
-   cpi   ZH, BUF_RX_ST_H
-   brpl  ETH_READ_RECEIVE_HEADER_GET_RPKT_COUNT
-   breq  ETH_READ_RECEIVE_HEADER_CHECK_N_PKT_L
-   /* ZH is lower than expected */
-   rjmp  ETH_READ_RECEIVE_HEADER_ERROR
+    ldi   ARG_REG1, ETH_SPI_CMD_RBM
+    SPI_SELECT_ETH
+    push  ZL
+    push  ZH
+    rcall SPI_MASTER_TRANSMIT
+    /* Save Status vector into SRAM */
+    /* Get and check next packet pointer */
+    rcall SPI_MASTER_TRANSMIT
+    mov   ZL, RETURN_VALUE
+    rcall SPI_MASTER_TRANSMIT
+    mov   ZH, RETURN_VALUE
+    /* Check that pointer is within receive buffer, seems that control packages
+     * don't set the next packet pointer, therefore reading this value as zero */
+    cpi   ZH, BUF_RX_ST_H
+    brpl  ETH_READ_RECEIVE_HEADER_GET_RPKT_COUNT
+    breq  ETH_READ_RECEIVE_HEADER_CHECK_N_PKT_L
+    /* ZH is lower than expected */
+    rjmp  ETH_READ_RECEIVE_HEADER_ERROR
 ETH_READ_RECEIVE_HEADER_CHECK_N_PKT_L:
-   cpi   ZL, BUF_RX_ST_L
-   brge  ETH_READ_RECEIVE_HEADER_GET_RPKT_COUNT
-   /* ZH:ZL is lower than expected */
-   rjmp  ETH_READ_RECEIVE_HEADER_ERROR
+    cpi   ZL, BUF_RX_ST_L
+    brge  ETH_READ_RECEIVE_HEADER_GET_RPKT_COUNT
+    /* ZH:ZL is lower than expected */
+    rjmp  ETH_READ_RECEIVE_HEADER_ERROR
 ETH_READ_RECEIVE_HEADER_GET_RPKT_COUNT:
-   sts   RPKT_N_PKT_L, ZL
-   sts   RPKT_N_PKT_H, ZH
+    sts   RPKT_N_PKT_L, ZL
+    sts   RPKT_N_PKT_H, ZH
 
-   rcall SPI_MASTER_TRANSMIT
-   sts   RPKT_BYTE_COUNT_L, RETURN_VALUE
-   rcall SPI_MASTER_TRANSMIT
-   sts   RPKT_BYTE_COUNT_H, RETURN_VALUE
+    rcall SPI_MASTER_TRANSMIT
+    sts   RPKT_BYTE_COUNT_L, RETURN_VALUE
+    rcall SPI_MASTER_TRANSMIT
+    sts   RPKT_BYTE_COUNT_H, RETURN_VALUE
 
-   rcall SPI_MASTER_TRANSMIT
-   sts   RPKT_STATUS2, RETURN_VALUE
-   rcall SPI_MASTER_TRANSMIT
-   sts   RPKT_STATUS3, RETURN_VALUE
-   SPI_END_ETH
+    rcall SPI_MASTER_TRANSMIT
+    sts   RPKT_STATUS2, RETURN_VALUE
+    rcall SPI_MASTER_TRANSMIT
+    sts   RPKT_STATUS3, RETURN_VALUE
+    SPI_END_ETH
 ETH_READ_RECEIVE_HEADER_END:
-   pop   ZH
-   pop   ZL
-   ret
+    pop   ZH
+    pop   ZL
+    ret
 
 /* BEWARE, calls to ETH_READ_RECEIVE_HEADER_ERROR are done before any
- * modification of the SRAM, so, it is same to call ETH_PKT_PROCESSED */
+ * modification of the SRAM, so, it is save to call ETH_PKT_PROCESSED */
 ETH_READ_RECEIVE_HEADER_ERROR:
 #if 1
-   /* DEBUGGING */
-   ldi   TMP1, DEBUG_OPT_RECEIVE_BUFFER
-   sts   DEBUG_OPT, TMP1
-   rcall ETH_SEND_DEBUG
+    /* DEBUGGING */
+    ldi   TMP1, DEBUG_OPT_RECEIVE_BUFFER
+    sts   DEBUG_OPT, TMP1
+    rcall ETH_SEND_DEBUG
 #endif
-   ldi   RETURN_VALUE, 1
-   SPI_END_ETH
-   mov   ARG_REG1, ZH
-   rcall MAIN_WRITE_TO_LCD_AS_HEX
-   mov   ARG_REG1, ZL
-   rcall MAIN_WRITE_TO_LCD_AS_HEX
-   rcall ETH_PKT_PROCESSED
-   ERR_ETH_SET_ERROR
-   rjmp  ETH_READ_RECEIVE_HEADER_END
+    ldi   RETURN_VALUE, 1
+    SPI_END_ETH
+#if 0
+    mov   ARG_REG1, ZH
+    rcall MAIN_WRITE_TO_LCD_AS_HEX
+    mov   ARG_REG1, ZL
+    rcall MAIN_WRITE_TO_LCD_AS_HEX
+    rcall ETH_PKT_PROCESSED
+    ERR_ETH_SET_ERROR
+#endif
+    PRINT 'E'
+    rjmp  ETH_READ_RECEIVE_HEADER_END
+/* }}} */
 
 /*******************************************************************************
+ * Read Ethernet header (Mac addresses and Type/Len {{{
  ******************************************************************************/
+/* TYPE/LENGTH
+ * The type/length field is a 2-byte field which defines which protocol the
+ * following packet data belongs to.  Alternately, if the field is filled with
+ * the contents of 05DCh (1500) or any smaller number, the field is considered a
+ * length field and it specifies the amount of non-padding data which follows in
+ * the data field. */
 ETH_READ_MAC_ADDRS_N_LEN_TYPE:
-   ldi SPI_DATA, 0x3A
-   SPI_SELECT_ETH
-   rcall SPI_MASTER_TRANSMIT
+    ldi   ARG_REG1, ETH_SPI_CMD_RBM
+    SPI_SELECT_ETH
+    rcall SPI_MASTER_TRANSMIT
 
-   /* Using register Z for SRAM write incremental */
-   push  R30
-   push  R31
+    /* Using register Z for SRAM write incremental */
+    push  ZL
+    push  ZH
 
-   /* Mac address SRC/DST and Type/len is all continuous in memory */
-   ldi   TMP1, 14
-   ldi   R31, hi8(ETH_HEADER)
-   ldi   R30, lo8(ETH_HEADER)
+    /* Mac address SRC/DST and Type/len is all continuous in memory */
+    ldi   TMP1, 14
+    ldi   ZH, hi8(ETH_HEADER)
+    ldi   ZL, lo8(ETH_HEADER)
 ETH_READ_MAC_ADDRS_N_LEN_TYPE_KEEP_READING:
-   rcall SPI_MASTER_TRANSMIT
-   st    Z+, RETURN_VALUE
-   dec   TMP1
-   brne  ETH_READ_MAC_ADDRS_N_LEN_TYPE_KEEP_READING
+    rcall SPI_MASTER_TRANSMIT
+    st    Z+, RETURN_VALUE
+    dec   TMP1
+    brne  ETH_READ_MAC_ADDRS_N_LEN_TYPE_KEEP_READING
 
-   pop   R31
-   pop   R30
-   SPI_END_ETH
-   ret
+    pop   ZH
+    pop   ZL
+    SPI_END_ETH
+    ret
+/* }}} */
 
 /*******************************************************************************
+ * Free the space of the packet that was processed {{{
  ******************************************************************************/
 ETH_PKT_PROCESSED:
-   /* Set BANK 0 */
-   ldi   ARG_REG1, ECON1
-   ldi   ARG_REG2, ECON1_BSEL0 | ECON1_BSEL1
-   rcall ETH_BIT_FIELD_CLEAR
+    /* Set BANK 0 */
+    ldi   ARG_REG1, ECON1
+    ldi   ARG_REG2, ECON1_BSEL0 | ECON1_BSEL1
+    rcall ETH_BIT_FIELD_CLEAR
 
-   /* Move the RX Read Point to the next packet */
-   ldi   ARG_REG1, ERXRDPTL
-   lds   ARG_REG2, RPKT_N_PKT_L
-   rcall ETH_WRITE_CONTROL_REGISTER
+    /* Move the RX Read Point to the next packet */
+    ldi   ARG_REG1, ERXRDPTL
+    lds   ARG_REG2, RPKT_N_PKT_L
+    rcall ETH_WRITE_CONTROL_REGISTER
 
-   ldi   ARG_REG1, ERXRDPTH
-   lds   ARG_REG2, RPKT_N_PKT_H
-   rcall ETH_WRITE_CONTROL_REGISTER
+    ldi   ARG_REG1, ERXRDPTH
+    lds   ARG_REG2, RPKT_N_PKT_H
+    rcall ETH_WRITE_CONTROL_REGISTER
 
-   /* Decrement received packet count */
-   ldi   ARG_REG1, ECON2
-   ldi   ARG_REG2, ECON2_PKTDEC
-   rcall ETH_BIT_FIELD_SET
+    /* Decrement received packet count */
+    ldi   ARG_REG1, ECON2
+    ldi   ARG_REG2, ECON2_PKTDEC
+    rcall ETH_BIT_FIELD_SET
 
-   /* Move the Read Pointer to the next packet */
-   ldi   ARG_REG1, ERDPTL
-   lds   ARG_REG2, RPKT_N_PKT_L
-   rcall ETH_WRITE_CONTROL_REGISTER
+    /* Move the Read Pointer to the next packet */
+    ldi   ARG_REG1, ERDPTL
+    lds   ARG_REG2, RPKT_N_PKT_L
+    rcall ETH_WRITE_CONTROL_REGISTER
 
-   ldi   ARG_REG1, ERDPTH
-   lds   ARG_REG2, RPKT_N_PKT_H
-   rcall ETH_WRITE_CONTROL_REGISTER
+    ldi   ARG_REG1, ERDPTH
+    lds   ARG_REG2, RPKT_N_PKT_H
+    rcall ETH_WRITE_CONTROL_REGISTER
 
-   ret
+    ret
+/* }}} */
 
 /*******************************************************************************
+ * Write message header, Per packet control byte + Mac addresses + Type/Len {{{
  ******************************************************************************/
 /* Per packet control byte {{{
 bit 7-4 Unused
 
 bit 3 PHUGEEN: Per Packet Huge Frame Enable bit
 When POVERRIDE = 1:
-    1 = The packet will be transmitted in whole
-    0 = The MAC will transmit up to the number of bytes specified by MAMXFL. If the packet is larger
-        than MAMXFL, it will be aborted after MAMXFL is reached.
+     1 = The packet will be transmitted in whole
+     0 = The MAC will transmit up to the number of bytes specified by MAMXFL. If the packet is larger
+         than MAMXFL, it will be aborted after MAMXFL is reached.
 When POVERRIDE = 0:
-    This bit is ignored.
+     This bit is ignored.
 
 bit 2 PPADEN: Per Packet Padding Enable bit
 When POVERRIDE = 1:
-    1 = The packet will be zero padded to 60 bytes if it is less than 60 bytes
-    0 = The packet will be transmitted without adding any padding bytes
+     1 = The packet will be zero padded to 60 bytes if it is less than 60 bytes
+     0 = The packet will be transmitted without adding any padding bytes
 When POVERRIDE = 0:
-    This bit is ignored.
+     This bit is ignored.
 
 bit 1 PCRCEN: Per Packet CRC Enable bit
 When POVERRIDE = 1:
-    1 = A valid CRC will be calculated and attached to the frame
-    0 = No CRC will be appended. The last 4 bytes of the frame will be checked for validity as a
-        CRC.
+     1 = A valid CRC will be calculated and attached to the frame
+     0 = No CRC will be appended. The last 4 bytes of the frame will be checked for validity as a
+         CRC.
 When POVERRIDE = 0:
-    This bit is ignored.
+     This bit is ignored.
 
 bit 0 POVERRIDE: Per Packet Override bit
-    1 = The values of PCRCEN, PPADEN and PHUGEEN will override the configuration defined by MACON3
-    0 = The values in MACON3 will be used to determine how the packet will be transmitted
+     1 = The values of PCRCEN, PPADEN and PHUGEEN will override the configuration defined by MACON3
+     0 = The values in MACON3 will be used to determine how the packet will be transmitted
 }}} */
 #define PPCB_PHUGEEN   0x08
 #define PPCB_PPADEN    0x04
 #define PPCB_PCRCEN    0x02
 #define PPCB_POVERRIDE 0x01
 ETH_WRITE_BUFFER_PACKET_HEADER:
-   /* Set BANK 0 */
-   push ZL
-   push ZH
-   push R16 /* Counter */
-   push R17 /* Data holder */
-   ldi   ARG_REG1, ECON1
-   ldi   ARG_REG2, ECON1_BSEL0 | ECON1_BSEL1
-   rcall ETH_BIT_FIELD_CLEAR
+    /* Set BANK 0 */
+    push ZL
+    push ZH
+    push R16 /* Counter */
+    push R17 /* Data holder */
+    /* Set BANK 0 */
+    ldi   ARG_REG1, ECON1
+    ldi   ARG_REG2, ECON1_BSEL0 | ECON1_BSEL1
+    rcall ETH_BIT_FIELD_CLEAR
 
-   /* Set Write Pointer EWRPT to start of transmit buffer */
-   ldi   ARG_REG1, EWRPTL
-   ldi   ARG_REG2, BUF_TX_ST_L
-   rcall ETH_WRITE_CONTROL_REGISTER
+    /* Set Write Pointer EWRPT to start of transmit buffer */
+    ldi   ARG_REG1, EWRPTL
+    ldi   ARG_REG2, BUF_TX_ST_L
+    rcall ETH_WRITE_CONTROL_REGISTER
 
-   ldi   ARG_REG1, EWRPTH
-   ldi   ARG_REG2, BUF_TX_ST_H
-   rcall ETH_WRITE_CONTROL_REGISTER
+    ldi   ARG_REG1, EWRPTH
+    ldi   ARG_REG2, BUF_TX_ST_H
+    rcall ETH_WRITE_CONTROL_REGISTER
 
-   /* Send write command */
-   ldi SPI_DATA, 0x7A
-   SPI_SELECT_ETH
-   rcall SPI_MASTER_TRANSMIT
+    /* Send write command */
+    ldi   ARG_REG1, ETH_SPI_CMD_WBM
+    SPI_SELECT_ETH
+    rcall SPI_MASTER_TRANSMIT
 
-   /* Write the packet header { */
-   ldi SPI_DATA, PPCB_POVERRIDE | PPCB_PCRCEN | PPCB_PPADEN
-   rcall SPI_MASTER_TRANSMIT
+    /* Write the packet header { */
+    ldi   ARG_REG1, PPCB_POVERRIDE | PPCB_PCRCEN | PPCB_PPADEN
+    rcall SPI_MASTER_TRANSMIT
 
-   /* Write Dst Mac address */
-   ldi ZH, 0x0
-   ldi ZL, MAC_ADDR_OTHER
-   ldi R16, 6
+    /* Write Dst Mac address */
+    ldi   ZH, 0x0
+    ldi   ZL, MAC_ADDR_OTHER
+    ldi   R16, 6
 ETH_WRITE_BUFFER_MAC_DST:
-   ld  SPI_DATA, Z+
-   rcall SPI_MASTER_TRANSMIT
-   dec R16
-   brne ETH_WRITE_BUFFER_MAC_DST
+    ld    ARG_REG1, Z+
+    rcall SPI_MASTER_TRANSMIT
+    dec   R16
+    brne  ETH_WRITE_BUFFER_MAC_DST
 
-   /* Write Src Mac address */
-   ldi R16, MAC_SIZE_IN_BYTES
-   ldi ZL, lo8(EEPROM_MAC_ADDR)
-   ldi ZH, hi8(EEPROM_MAC_ADDR)
+    /* Write Src Mac address */
+    ldi   R16, MAC_SIZE_IN_BYTES
+    ldi   ZL, lo8(EEPROM_MAC_ADDR)
+    ldi   ZH, hi8(EEPROM_MAC_ADDR)
 ETH_WRITE_BUFFER_PACKET_HEADER_WRITE_SRC_MAC:
-   out  _SFR_IO_ADDR(EEARH), ZH
-   out  _SFR_IO_ADDR(EEARL), ZL
-   sbi  _SFR_IO_ADDR(EECR), EERE
-   in   SPI_DATA, _SFR_IO_ADDR(EEDR)
-   rcall SPI_MASTER_TRANSMIT
-   adiw ZL, 1
-   dec R16
-   brne ETH_WRITE_BUFFER_PACKET_HEADER_WRITE_SRC_MAC
+    out   _SFR_IO_ADDR(EEARH), ZH
+    out   _SFR_IO_ADDR(EEARL), ZL
+    sbi   _SFR_IO_ADDR(EECR), EERE
+    in    ARG_REG1, _SFR_IO_ADDR(EEDR)
+    rcall SPI_MASTER_TRANSMIT
+    adiw  ZL, 1
+    dec   R16
+    brne  ETH_WRITE_BUFFER_PACKET_HEADER_WRITE_SRC_MAC
 
-   /* Write Type/Len */
-   lds  SPI_DATA, TYPE_LEN_H
-   rcall SPI_MASTER_TRANSMIT
-   lds  SPI_DATA, TYPE_LEN_L
-   rcall SPI_MASTER_TRANSMIT
+    /* Write Type/Len */
+    lds   ARG_REG1, TYPE_LEN_H
+    rcall SPI_MASTER_TRANSMIT
+    lds   ARG_REG1, TYPE_LEN_L
+    rcall SPI_MASTER_TRANSMIT
 
-   /* } */
+    /* } */
 
-   SPI_END_ETH
+    SPI_END_ETH
 
-   pop R17
-   pop R16
-   pop ZH
-   pop ZL
-   ret
+    pop R17
+    pop R16
+    pop ZH
+    pop ZL
+    ret
+/* }}} */
+
+/*******************************************************************************
+ * Send write command and leave SPI waiting {{{
+ ******************************************************************************/
+ETH_SET_LISTEN_ON_SPI:
+    /* Send write command */
+    ldi   ARG_REG1, ETH_SPI_CMD_WBM
+    SPI_SELECT_ETH
+    rcall SPI_MASTER_TRANSMIT
+
+#define ETH_END_LISTEN_ON_SPI SPI_END_ETH
+/* }}} */
 
 /*******************************************************************************
  * Write Payload {{{
@@ -1161,105 +1166,113 @@ ETH_WRITE_BUFFER_PACKET_HEADER_WRITE_SRC_MAC:
  * ARG_REG1 is number of byte to write
  ******************************************************************************/
 ETH_WRITE_BUFFER_PACKET_PAYLOAD:
-   /* Send write command */
-   ldi SPI_DATA, 0x7A
-   SPI_SELECT_ETH
-   rcall SPI_MASTER_TRANSMIT
+    /* Send write command */
+    push  TMP1
+    mov   TMP1, ARG_REG1
+    ldi   ARG_REG1, ETH_SPI_CMD_WBM
+    SPI_SELECT_ETH
+    rcall SPI_MASTER_TRANSMIT
 
 ETH_WRITE_BUFFER_PACKET_PAYLOAD_KEEP_WRITING:
-   ld  SPI_DATA, Z+
-   rcall SPI_MASTER_TRANSMIT
-   dec ARG_REG1
-   brne ETH_WRITE_BUFFER_PACKET_PAYLOAD_KEEP_WRITING
+    ld    ARG_REG1, Z+
+    rcall SPI_MASTER_TRANSMIT
+    dec   TMP1
+    brne  ETH_WRITE_BUFFER_PACKET_PAYLOAD_KEEP_WRITING
+    pop   TMP1
+    SPI_END_ETH
+    ret
+/* }}} */
 
+/*******************************************************************************
+ * Finish Write Payload {{{
+ ******************************************************************************/
 ETH_WRITE_BUFFER_PACKET_PAYLOAD_FINISH:
-   SPI_END_ETH
-   /* Set BANK 0 */
-   ldi   ARG_REG1, ECON1
-   ldi   ARG_REG2, ECON1_BSEL0 | ECON1_BSEL1
-   rcall ETH_BIT_FIELD_CLEAR
+    /* Set BANK 0 */
+    ldi   ARG_REG1, ECON1
+    ldi   ARG_REG2, ECON1_BSEL0 | ECON1_BSEL1
+    rcall ETH_BIT_FIELD_CLEAR
 
-   /* read EWRPT */
-   push  ZH
-   push  ZL
-   ldi   SPI_DATA, EWRPTL
-   rcall ETH_READ_CONTROL_REGISTER
-   mov   ZL, RETURN_VALUE
-   ldi   SPI_DATA, EWRPTH
-   rcall ETH_READ_CONTROL_REGISTER
-   mov   ZH, RETURN_VALUE
+    /* read EWRPT */
+    push  ZH
+    push  ZL
+    ldi   ARG_REG1, EWRPTL
+    rcall ETH_READ_CONTROL_REGISTER
+    mov   ZL, RETURN_VALUE
+    ldi   ARG_REG1, EWRPTH
+    rcall ETH_READ_CONTROL_REGISTER
+    mov   ZH, RETURN_VALUE
 
-   sbiw  ZL, 1
+    sbiw  ZL, 1
 
-   ldi   ARG_REG1, ETXNDL
-   mov   ARG_REG2, ZL
-   rcall ETH_WRITE_CONTROL_REGISTER
-   ldi   ARG_REG1, ETXNDH
-   mov   ARG_REG2, ZH
-   rcall ETH_WRITE_CONTROL_REGISTER
+    ldi   ARG_REG1, ETXNDL
+    mov   ARG_REG2, ZL
+    rcall ETH_WRITE_CONTROL_REGISTER
+    ldi   ARG_REG1, ETXNDH
+    mov   ARG_REG2, ZH
+    rcall ETH_WRITE_CONTROL_REGISTER
 
-   pop   ZL
-   pop   ZH
-   /* Clear EIR.TXIF, set EIE.TXIE and set EIE.INTIE
-    *   to enable an interrupt when done (if desired).
-    *   Start the transmission process by setting
-    */
+    pop   ZL
+    pop   ZH
+    /* Clear EIR.TXIF, set EIE.TXIE and set EIE.INTIE
+     *   to enable an interrupt when done (if desired).
+     *   Start the transmission process by setting
+     */
 
-   ldi   ARG_REG1, EIR
-   ldi   ARG_REG2, EIR_TXIF
-   rcall ETH_BIT_FIELD_CLEAR
+    ldi   ARG_REG1, EIR
+    ldi   ARG_REG2, EIR_TXIF
+    rcall ETH_BIT_FIELD_CLEAR
 
-   ldi   ARG_REG1, EIE
-   ldi   ARG_REG2, EIE_TXIE | EIE_INTIE
-   rcall ETH_BIT_FIELD_SET
+    ldi   ARG_REG1, EIE
+    ldi   ARG_REG2, EIE_TXIE | EIE_INTIE
+    rcall ETH_BIT_FIELD_SET
 
-   /* Set bits to send packet */
-   ldi   ARG_REG1, ECON1
-   ldi   ARG_REG2, ECON1_TXRTS
-   rcall ETH_BIT_FIELD_SET
+    /* Set bits to send packet */
+    ldi   ARG_REG1, ECON1
+    ldi   ARG_REG2, ECON1_TXRTS
+    rcall ETH_BIT_FIELD_SET
 
-   ldi   ZL, 200
+    ldi   ZL, 200
 DEBUG_WAIT:
-   dec   ZL
-   brne DEBUG_WAIT
+    dec   ZL
+    brne DEBUG_WAIT
 
 ETH_WRITE_BUFFER_PACKET_PAYLOAD_FINISH_WAIT:
-   ldi   SPI_DATA, ECON1
-   rcall ETH_READ_CONTROL_REGISTER
-   sbrc  RETURN_VALUE, 3
-   rjmp  ETH_WRITE_BUFFER_PACKET_PAYLOAD_FINISH_WAIT
+    ldi   ARG_REG1, ECON1
+    rcall ETH_READ_CONTROL_REGISTER
+    sbrc  RETURN_VALUE, 3
+    rjmp  ETH_WRITE_BUFFER_PACKET_PAYLOAD_FINISH_WAIT
 
 #if 0
-   ldi   SPI_DATA, ESTAT
-   rcall ETH_READ_CONTROL_REGISTER
-   mov   ARG_REG1, RETURN_VALUE
-   rcall MAIN_WRITE_TO_LCD_AS_HEX
+    ldi   SPI_DATA, ESTAT
+    rcall ETH_READ_CONTROL_REGISTER
+    mov   ARG_REG1, RETURN_VALUE
+    rcall MAIN_WRITE_TO_LCD_AS_HEX
 #endif
 
-   ldi   ARG_REG1, EIR
-   ldi   ARG_REG2, EIR_TXIF
-   rcall ETH_BIT_FIELD_CLEAR
+    ldi   ARG_REG1, EIR
+    ldi   ARG_REG2, EIR_TXIF
+    rcall ETH_BIT_FIELD_CLEAR
 
-   ret
+    ret
 /* }}} */
 
 /*******************************************************************************
  * Check receive status vector {{{
  ******************************************************************************/
 /* RPKT_STATUS3 {{{
-   31      Zero                               0
-   30      Receive VLAN Type Detected         Current frame was recognized as a VLAN tagged frame.
-   29      Receive Unknown Opcode             Current frame was recognized as a control frame but it contained an
-                                              unknown opcode.
-   28      Receive Pause Control Frame        Current frame was recognized as a control frame containing a valid pause
-                                              frame opcode and a valid destination address.
-   27      Receive Control Frame              Current frame was recognized as a control frame for having a valid
-                                              type/length designating it as a control frame.
-   26      Dribble Nibble                     Indicates that after the end of this packet, an additional 1 to 7 bits were
-                                              received. The extra bits were thrown away.
-   25      Receive Broadcast Packet           Indicates packet received had a valid Broadcast address.
-   24      Receive Multicast Packet           Indicates packet received had a valid Multicast address.
-   }}} */
+    31      Zero                               0
+    30      Receive VLAN Type Detected         Current frame was recognized as a VLAN tagged frame.
+    29      Receive Unknown Opcode             Current frame was recognized as a control frame but it contained an
+                                               unknown opcode.
+    28      Receive Pause Control Frame        Current frame was recognized as a control frame containing a valid pause
+                                               frame opcode and a valid destination address.
+    27      Receive Control Frame              Current frame was recognized as a control frame for having a valid
+                                               type/length designating it as a control frame.
+    26      Dribble Nibble                     Indicates that after the end of this packet, an additional 1 to 7 bits were
+                                               received. The extra bits were thrown away.
+    25      Receive Broadcast Packet           Indicates packet received had a valid Broadcast address.
+    24      Receive Multicast Packet           Indicates packet received had a valid Multicast address.
+    }}} */
 #define RPKT_STATUS3_ZERO                           7
 #define RPKT_STATUS3_RECEIVE_VLAN_TYPE_DETECTED     6
 #define RPKT_STATUS3_RECEIVE_UNKNOWN_OPCODE         5
@@ -1270,20 +1283,20 @@ ETH_WRITE_BUFFER_PACKET_PAYLOAD_FINISH_WAIT:
 #define RPKT_STATUS3_RECEIVE_MULTICAST_PACKET       0
 
 /* RPKT_STATUS2 {{{
-   23      Received Ok                        Indicates that at the packet had a valid CRC and no symbol errors.
-   22      Length Out of Range                Indicates that frame type/length field was larger than 1500 bytes (type field).
-   21      Length Check Error                 Indicates that frame length field value in the packet does not match the
-                                              actual data byte length and specifies a valid length.
-   20      CRC Error                          Indicates that frame CRC field value does not match the CRC calculated
-                                              by the MAC.
-   19      Reserved
-   18      Carrier Event Previously Seen      Indicates that at some time since the last receive, a carrier event was
-                                              detected. The carrier event is not associated with this packet. A carrier
-                                              event is activity on the receive channel that does not result in a packet
-                                              receive attempt being made.
-   17      Reserved
-   16      Long Event/Drop Event              Indicates a packet over 50,000 bit times occurred or that a packet was dropped since the last receive.
-   }}} */
+    23      Received Ok                        Indicates that at the packet had a valid CRC and no symbol errors.
+    22      Length Out of Range                Indicates that frame type/length field was larger than 1500 bytes (type field).
+    21      Length Check Error                 Indicates that frame length field value in the packet does not match the
+                                               actual data byte length and specifies a valid length.
+    20      CRC Error                          Indicates that frame CRC field value does not match the CRC calculated
+                                               by the MAC.
+    19      Reserved
+    18      Carrier Event Previously Seen      Indicates that at some time since the last receive, a carrier event was
+                                               detected. The carrier event is not associated with this packet. A carrier
+                                               event is activity on the receive channel that does not result in a packet
+                                               receive attempt being made.
+    17      Reserved
+    16      Long Event/Drop Event              Indicates a packet over 50,000 bit times occurred or that a packet was dropped since the last receive.
+    }}} */
 #define RPKT_STATUS2_RECEIVED_OK                    7
 #define RPKT_STATUS2_LENGTH_OUT_OF_RANGE            6
 #define RPKT_STATUS2_LENGTH_CHECK_ERROR             5
@@ -1295,253 +1308,232 @@ ETH_WRITE_BUFFER_PACKET_PAYLOAD_FINISH_WAIT:
 
 /* {{{
  15-0      Received Byte Count                Indicates length of the received frame. This includes the destination
-                                              address, source address, type/length, data, padding and CRC fields. This
-                                              field is stored in little-endian format.
-   }}} */
+                                               address, source address, type/length, data, padding and CRC fields. This
+                                               field is stored in little-endian format.
+    }}} */
 
 ETH_CHECK_RECEIVE_STATUS_VECTOR:
-   lds  TMP1, RPKT_STATUS3
+    lds  TMP1, RPKT_STATUS3
 
-   /* Drop away anything that is not only broadcast or multicast */
-   andi TMP1, ~((1 << RPKT_STATUS3_RECEIVE_BROADCAST_PACKET) | (1 << RPKT_STATUS3_RECEIVE_MULTICAST_PACKET))
-   tst  TMP1
-   brne ETH_CHECK_RECEIVE_STATUS_VECTOR_FAILURE
+    /* Drop away anything that is not only broadcast or multicast */
+    andi TMP1, ~((1 << RPKT_STATUS3_RECEIVE_BROADCAST_PACKET) | (1 << RPKT_STATUS3_RECEIVE_MULTICAST_PACKET))
+    tst  TMP1
+    brne ETH_CHECK_RECEIVE_STATUS_VECTOR_FAILURE
 #if 0
-   sbrc TMP1, RPKT_STATUS3_ZERO /* Check that this bit must be zero */
-   rjmp ETH_CHECK_RECEIVE_STATUS_VECTOR_FAILURE
+    sbrc TMP1, RPKT_STATUS3_ZERO /* Check that this bit must be zero */
+    rjmp ETH_CHECK_RECEIVE_STATUS_VECTOR_FAILURE
 
-   sbrc TMP1, RPKT_STATUS3_RECEIVE_UNKNOWN_OPCODE
-   rjmp ETH_CHECK_RECEIVE_STATUS_VECTOR_FAILURE
+    sbrc TMP1, RPKT_STATUS3_RECEIVE_UNKNOWN_OPCODE
+    rjmp ETH_CHECK_RECEIVE_STATUS_VECTOR_FAILURE
 #endif
 
-   lds  TMP1, RPKT_STATUS2
+    lds  TMP1, RPKT_STATUS2
 
-   sbrs TMP1, RPKT_STATUS2_RECEIVED_OK
-   rjmp ETH_CHECK_RECEIVE_STATUS_VECTOR_FAILURE
+    sbrs TMP1, RPKT_STATUS2_RECEIVED_OK
+    rjmp ETH_CHECK_RECEIVE_STATUS_VECTOR_FAILURE
 
-   sbrc TMP1, RPKT_STATUS2_LENGTH_CHECK_ERROR
-   rjmp ETH_CHECK_RECEIVE_STATUS_VECTOR_FAILURE
+    sbrc TMP1, RPKT_STATUS2_LENGTH_CHECK_ERROR
+    rjmp ETH_CHECK_RECEIVE_STATUS_VECTOR_FAILURE
 
-   sbrc TMP1, RPKT_STATUS2_CRC_ERROR
-   rjmp ETH_CHECK_RECEIVE_STATUS_VECTOR_FAILURE
+    sbrc TMP1, RPKT_STATUS2_CRC_ERROR
+    rjmp ETH_CHECK_RECEIVE_STATUS_VECTOR_FAILURE
 
-   ldi  RETURN_VALUE, 0
-   ret
-   /* In case of failure, turn on error led, save the status vector into eeprom
-    * to be read, go to sleep */
+    ldi  RETURN_VALUE, 0
+    ret
+    /* In case of failure, turn on error led, save the status vector into eeprom
+     * to be read, go to sleep */
 ETH_CHECK_RECEIVE_STATUS_VECTOR_FAILURE:
-#if 1  /* bypass rest */
-   ERR_ETH_SET_ERROR
-   lds   ARG_REG1, RPKT_N_PKT_H
-   rcall MAIN_WRITE_TO_LCD_AS_HEX
-   lds   ARG_REG1, RPKT_N_PKT_L
-   rcall MAIN_WRITE_TO_LCD_AS_HEX
-   lds   ARG_REG1, RPKT_STATUS3
-   rcall MAIN_WRITE_TO_LCD_AS_HEX
-   lds   ARG_REG1, RPKT_STATUS2
-   rcall MAIN_WRITE_TO_LCD_AS_HEX
-   lds   ARG_REG1, RPKT_BYTE_COUNT_H
-   rcall MAIN_WRITE_TO_LCD_AS_HEX
-   lds   ARG_REG1, RPKT_BYTE_COUNT_L
-   rcall MAIN_WRITE_TO_LCD_AS_HEX
-   ldi   RETURN_VALUE, 1
-   //sleep
-   ret
-#else
-   ldi TMP1, 6
-   ldi YL, lo8(RPKT_N_PKT_L)
-   ldi YH, hi8(RPKT_N_PKT_L)
-   ldi ZL, lo8(EEPROM_RECEIVE_STATUS_VECTOR_ERROR)
-   ldi ZH, hi8(EEPROM_RECEIVE_STATUS_VECTOR_ERROR)
-ETH_CHECK_RECEIVE_STATUS_VECTOR_FAILURE_LOOP:
-   sbic _SFR_IO_ADDR(EECR), EEWE
-   rjmp ETH_WRITE_BUFFER_PACKET_HEADER_WRITE_SRC_MAC
-   out  _SFR_IO_ADDR(EEARH), ZH
-   out  _SFR_IO_ADDR(EEARL), ZL
-   adiw ZL, 1
-   ld   ETH_TMP_REG1, Y+
-   out  _SFR_IO_ADDR(EEDR), ETH_TMP_REG1
-   sbi  _SFR_IO_ADDR(EECR), EEMWE
-   sbi  _SFR_IO_ADDR(EECR), EEWE
-   dec  TMP1
-   brne ETH_CHECK_RECEIVE_STATUS_VECTOR_FAILURE_LOOP
-   ERR_ETH_SET_ERROR
-   sleep
-#endif
+    ERR_ETH_SET_ERROR
+    lds   ARG_REG1, RPKT_N_PKT_H
+    rcall MAIN_WRITE_TO_LCD_AS_HEX
+    lds   ARG_REG1, RPKT_N_PKT_L
+    rcall MAIN_WRITE_TO_LCD_AS_HEX
+    lds   ARG_REG1, RPKT_STATUS3
+    rcall MAIN_WRITE_TO_LCD_AS_HEX
+    lds   ARG_REG1, RPKT_STATUS2
+    rcall MAIN_WRITE_TO_LCD_AS_HEX
+    lds   ARG_REG1, RPKT_BYTE_COUNT_H
+    rcall MAIN_WRITE_TO_LCD_AS_HEX
+    lds   ARG_REG1, RPKT_BYTE_COUNT_L
+    rcall MAIN_WRITE_TO_LCD_AS_HEX
+    ldi   RETURN_VALUE, 1
+    //sleep
+    ret
 /* }}} */
 
 /*******************************************************************************
- * Write debug message into ethernet
+ * Write debug message into Ethernet {{{
  ******************************************************************************/
 ETH_SEND_DEBUG:
-   push  ZL
-   push  ZH
-   push  R16 /* Counter */
-   push  R17 /* Data holder */
-   /* Set BANK 0 */
-   ldi   ARG_REG1, ECON1
-   ldi   ARG_REG2, ECON1_BSEL0 | ECON1_BSEL1
-   rcall ETH_BIT_FIELD_CLEAR
+    push  ZL
+    push  ZH
+    push  R16 /* Counter */
+    push  R17 /* Data holder */
+    /* Set BANK 0 */
+    ldi   ARG_REG1, ECON1
+    ldi   ARG_REG2, ECON1_BSEL0 | ECON1_BSEL1
+    rcall ETH_BIT_FIELD_CLEAR
 
-   /* Set Write Pointer to the end of the transmission buffer less the bytes we
-    * are going to write */
+    /* Set Write Pointer to the end of the transmission buffer less the bytes we
+     * are going to write */
 #if 1
-   ldi   ARG_REG1, EWRPTL
-   ldi   ARG_REG2, lo8(((BUF_TX_ND_H << 8) | BUF_TX_ND_L) - DEBUG_FRAME_SIZE)
-   rcall ETH_WRITE_CONTROL_REGISTER
-   ldi   ARG_REG1, ETXSTL
-   ldi   ARG_REG2, lo8(((BUF_TX_ND_H << 8) | BUF_TX_ND_L) - DEBUG_FRAME_SIZE)
-   rcall ETH_WRITE_CONTROL_REGISTER
+    ldi   ARG_REG1, EWRPTL
+    ldi   ARG_REG2, lo8(((BUF_TX_ND_H << 8) | BUF_TX_ND_L) - DEBUG_FRAME_SIZE)
+    rcall ETH_WRITE_CONTROL_REGISTER
+    ldi   ARG_REG1, ETXSTL
+    ldi   ARG_REG2, lo8(((BUF_TX_ND_H << 8) | BUF_TX_ND_L) - DEBUG_FRAME_SIZE)
+    rcall ETH_WRITE_CONTROL_REGISTER
 
-   ldi   ARG_REG1, EWRPTH
-   ldi   ARG_REG2, hi8(((BUF_TX_ND_H << 8) | BUF_TX_ND_L) - DEBUG_FRAME_SIZE)
-   rcall ETH_WRITE_CONTROL_REGISTER
-   ldi   ARG_REG1, ETXSTH
-   ldi   ARG_REG2, hi8(((BUF_TX_ND_H << 8) | BUF_TX_ND_L) - DEBUG_FRAME_SIZE)
-   rcall ETH_WRITE_CONTROL_REGISTER
+    ldi   ARG_REG1, EWRPTH
+    ldi   ARG_REG2, hi8(((BUF_TX_ND_H << 8) | BUF_TX_ND_L) - DEBUG_FRAME_SIZE)
+    rcall ETH_WRITE_CONTROL_REGISTER
+    ldi   ARG_REG1, ETXSTH
+    ldi   ARG_REG2, hi8(((BUF_TX_ND_H << 8) | BUF_TX_ND_L) - DEBUG_FRAME_SIZE)
+    rcall ETH_WRITE_CONTROL_REGISTER
 #else
-   /* Set Write Pointer EWRPT to start of transmit buffer */
-   ldi   ARG_REG1, EWRPTL
-   ldi   ARG_REG2, BUF_TX_ST_L
-   rcall ETH_WRITE_CONTROL_REGISTER
+    /* Set Write Pointer EWRPT to start of transmit buffer */
+    ldi   ARG_REG1, EWRPTL
+    ldi   ARG_REG2, BUF_TX_ST_L
+    rcall ETH_WRITE_CONTROL_REGISTER
 
-   ldi   ARG_REG1, EWRPTH
-   ldi   ARG_REG2, BUF_TX_ST_H
-   rcall ETH_WRITE_CONTROL_REGISTER
+    ldi   ARG_REG1, EWRPTH
+    ldi   ARG_REG2, BUF_TX_ST_H
+    rcall ETH_WRITE_CONTROL_REGISTER
 #endif
 
-   /* Send write command */
-   ldi   SPI_DATA, 0x7A
-   SPI_SELECT_ETH
-   rcall SPI_MASTER_TRANSMIT
+    /* Send write command */
+    ldi   ARG_REG1, ETH_SPI_CMD_WBM
+    SPI_SELECT_ETH
+    rcall SPI_MASTER_TRANSMIT
 
-   /* Write the packet header { */
-   ldi   SPI_DATA, PPCB_POVERRIDE | PPCB_PCRCEN | PPCB_PPADEN
-   rcall SPI_MASTER_TRANSMIT
+    /* Write the packet header { */
+    ldi   ARG_REG1, PPCB_POVERRIDE | PPCB_PCRCEN | PPCB_PPADEN
+    rcall SPI_MASTER_TRANSMIT
 
-   /* Write Dst Mac address */
-   ldi   R16, MAC_SIZE_IN_BYTES
-   ldi   ZH, hi8(EEPROM_MAC_DEBUG)
-   ldi   ZL, lo8(EEPROM_MAC_DEBUG)
+    /* Write Dst Mac address */
+    ldi   R16, MAC_SIZE_IN_BYTES
+    ldi   ZH, hi8(EEPROM_MAC_DEBUG)
+    ldi   ZL, lo8(EEPROM_MAC_DEBUG)
 ETH_SEND_DEBUG_WRITE_DST_MAC:
-   out   _SFR_IO_ADDR(EEARH), ZH
-   out   _SFR_IO_ADDR(EEARL), ZL
-   sbi   _SFR_IO_ADDR(EECR), EERE
-   in    SPI_DATA, _SFR_IO_ADDR(EEDR)
-   rcall SPI_MASTER_TRANSMIT
-   adiw  ZL, 1
-   dec   R16
-   brne  ETH_SEND_DEBUG_WRITE_DST_MAC
+    out   _SFR_IO_ADDR(EEARH), ZH
+    out   _SFR_IO_ADDR(EEARL), ZL
+    sbi   _SFR_IO_ADDR(EECR), EERE
+    in    ARG_REG1, _SFR_IO_ADDR(EEDR)
+    rcall SPI_MASTER_TRANSMIT
+    adiw  ZL, 1
+    dec   R16
+    brne  ETH_SEND_DEBUG_WRITE_DST_MAC
 
-   /* Write Src Mac address */
-   ldi   R16, MAC_SIZE_IN_BYTES
-   ldi   ZL, lo8(EEPROM_MAC_ADDR)
-   ldi   ZH, hi8(EEPROM_MAC_ADDR)
+    /* Write Src Mac address */
+    ldi   R16, MAC_SIZE_IN_BYTES
+    ldi   ZL, lo8(EEPROM_MAC_ADDR)
+    ldi   ZH, hi8(EEPROM_MAC_ADDR)
 ETH_SEND_DEBUG_WRITE_SRC_MAC:
-   out   _SFR_IO_ADDR(EEARH), ZH
-   out   _SFR_IO_ADDR(EEARL), ZL
-   sbi   _SFR_IO_ADDR(EECR), EERE
-   in    SPI_DATA, _SFR_IO_ADDR(EEDR)
-   rcall SPI_MASTER_TRANSMIT
-   adiw  ZL, 1
-   dec   R16
-   brne  ETH_SEND_DEBUG_WRITE_SRC_MAC
+    out   _SFR_IO_ADDR(EEARH), ZH
+    out   _SFR_IO_ADDR(EEARL), ZL
+    sbi   _SFR_IO_ADDR(EECR), EERE
+    in    ARG_REG1, _SFR_IO_ADDR(EEDR)
+    rcall SPI_MASTER_TRANSMIT
+    adiw  ZL, 1
+    dec   R16
+    brne  ETH_SEND_DEBUG_WRITE_SRC_MAC
 
-   /* Write Type/Len */
+    /* Write Type/Len */
 #define ETHER_TYPE_DEBUG 0x1987
-   ldi   SPI_DATA, hi8(ETHER_TYPE_DEBUG)
-   rcall SPI_MASTER_TRANSMIT
-   ldi   SPI_DATA, lo8(ETHER_TYPE_DEBUG)
-   rcall SPI_MASTER_TRANSMIT
+    ldi   ARG_REG1, hi8(ETHER_TYPE_DEBUG)
+    rcall SPI_MASTER_TRANSMIT
+    ldi   ARG_REG1, lo8(ETHER_TYPE_DEBUG)
+    rcall SPI_MASTER_TRANSMIT
 
-   /* } */
+    /* } */
 
-   lds   R17, DEBUG_OPT
-   cpi   R17, DEBUG_OPT_WRITE_SRAM
-   brne  DEBUG_OPT_2
+    lds   R17, DEBUG_OPT
+    cpi   R17, DEBUG_OPT_WRITE_SRAM
+    brne  DEBUG_OPT_2
 
 DEBUG_OPT_1:
-   lds   ZL, DEBUG_ADDR_L
-   lds   ZH, DEBUG_ADDR_H
-   lds   R16, DEBUG_LEN
+    lds   ZL, DEBUG_ADDR_L
+    lds   ZH, DEBUG_ADDR_H
+    lds   R16, DEBUG_LEN
 DEBUG_OPT_1_LOOP:
-   ld    SPI_DATA, Z+
-   rcall SPI_MASTER_TRANSMIT
-   dec   R16
-   brne  DEBUG_OPT_1_LOOP
-   rjmp  DEBUG_OPT_END
+    ld    ARG_REG1, Z+
+    rcall SPI_MASTER_TRANSMIT
+    dec   R16
+    brne  DEBUG_OPT_1_LOOP
+    rjmp  DEBUG_OPT_END
 
 DEBUG_OPT_2:
-   cpi   R17, DEBUG_OPT_RECEIVE_BUFFER
-   brne  DEBUG_OPT_END
-   /* Save read pointer */
-   SPI_END_ETH
-   ldi   SPI_DATA, ERDPTL
-   rcall ETH_READ_CONTROL_REGISTER
-   push  RETURN_VALUE
-   ldi   SPI_DATA, ERDPTH
-   rcall ETH_READ_CONTROL_REGISTER
-   push  RETURN_VALUE
+    cpi   R17, DEBUG_OPT_RECEIVE_BUFFER
+    brne  DEBUG_OPT_END
+    /* Save read pointer */
+    SPI_END_ETH
+    ldi   ARG_REG1, ERDPTL
+    rcall ETH_READ_CONTROL_REGISTER
+    push  RETURN_VALUE
+    ldi   ARG_REG1, ERDPTH
+    rcall ETH_READ_CONTROL_REGISTER
+    push  RETURN_VALUE
 
-   /* Set read pointer to beginning of READ BUFFER */
-   ldi   ARG_REG1, ERDPTL
-   ldi   ARG_REG2, BUF_RX_ST_L
-   rcall ETH_WRITE_CONTROL_REGISTER
-   ldi   ARG_REG1, ERDPTH
-   ldi   ARG_REG2, BUF_RX_ST_H
-   rcall ETH_WRITE_CONTROL_REGISTER
+    /* Set read pointer to beginning of READ BUFFER */
+    ldi   ARG_REG1, ERDPTL
+    ldi   ARG_REG2, BUF_RX_ST_L
+    rcall ETH_WRITE_CONTROL_REGISTER
+    ldi   ARG_REG1, ERDPTH
+    ldi   ARG_REG2, BUF_RX_ST_H
+    rcall ETH_WRITE_CONTROL_REGISTER
 
-   /* Read from READ BUFFER and write to WRITE BUFFER */
-   /* TODO: DEBUG_PAYLOAD_SIZE <- R16 */
+    /* Read from READ BUFFER and write to WRITE BUFFER */
+    /* TODO: DEBUG_PAYLOAD_SIZE <- R16 */
 #if 1
-   ldi   R16, DEBUG_PAYLOAD_SIZE
+    ldi   R16, DEBUG_PAYLOAD_SIZE
 DEBUG_OPT_2_WRITE_PAYLOAD:
-   /* Send read command */
-   ldi   SPI_DATA, 0x3A
-   SPI_SELECT_ETH
-   rcall SPI_MASTER_TRANSMIT
-   rcall SPI_MASTER_TRANSMIT
-   push  RETURN_VALUE
-   SPI_END_ETH
-   /* Send write command */
-   ldi   SPI_DATA, 0x7A
-   SPI_SELECT_ETH
-   rcall SPI_MASTER_TRANSMIT
-   pop   SPI_DATA
-   rcall SPI_MASTER_TRANSMIT
-   SPI_END_ETH
-   dec   R16
-   brne  DEBUG_OPT_2_WRITE_PAYLOAD
+    /* Send read command */
+    ldi   ARG_REG1, ETH_SPI_CMD_RBM
+    SPI_SELECT_ETH
+    rcall SPI_MASTER_TRANSMIT
+    rcall SPI_MASTER_TRANSMIT
+    push  RETURN_VALUE
+    SPI_END_ETH
+    /* Send write command */
+    ldi   ARG_REG1, ETH_SPI_CMD_WBM
+    SPI_SELECT_ETH
+    rcall SPI_MASTER_TRANSMIT
+    pop   ARG_REG1
+    rcall SPI_MASTER_TRANSMIT
+    SPI_END_ETH
+    dec   R16
+    brne  DEBUG_OPT_2_WRITE_PAYLOAD
 #endif
 
-   /* Restore read pointer */
-   ldi   ARG_REG1, ERDPTH
-   pop   ARG_REG2
-   rcall ETH_WRITE_CONTROL_REGISTER
-   ldi   ARG_REG1, ERDPTL
-   pop   ARG_REG2
-   rcall ETH_WRITE_CONTROL_REGISTER
+    /* Restore read pointer */
+    ldi   ARG_REG1, ERDPTH
+    pop   ARG_REG2
+    rcall ETH_WRITE_CONTROL_REGISTER
+    ldi   ARG_REG1, ERDPTL
+    pop   ARG_REG2
+    rcall ETH_WRITE_CONTROL_REGISTER
 
 DEBUG_OPT_END:
-   SPI_END_ETH
-   rcall ETH_WRITE_BUFFER_PACKET_PAYLOAD_FINISH
+    SPI_END_ETH
+    rcall ETH_WRITE_BUFFER_PACKET_PAYLOAD_FINISH
 
-   pop   R17
-   pop   R16
-   pop   ZH
-   pop   ZL
+    pop   R17
+    pop   R16
+    pop   ZH
+    pop   ZL
 
-   /* Set BANK 0 */
-   ldi   ARG_REG1, ECON1
-   ldi   ARG_REG2, ECON1_BSEL0 | ECON1_BSEL1
-   rcall ETH_BIT_FIELD_CLEAR
-   /* RESET TRANSMIT START */
-   ldi ARG_REG1, ETXSTL
-   ldi ARG_REG2, BUF_TX_ST_L
-   rcall ETH_WRITE_CONTROL_REGISTER
-   ldi ARG_REG1, ETXSTH
-   ldi ARG_REG2, BUF_TX_ST_H
-   rcall ETH_WRITE_CONTROL_REGISTER
-   ret
+    /* Set BANK 0 */
+    ldi   ARG_REG1, ECON1
+    ldi   ARG_REG2, ECON1_BSEL0 | ECON1_BSEL1
+    rcall ETH_BIT_FIELD_CLEAR
+    /* RESET TRANSMIT START */
+    ldi ARG_REG1, ETXSTL
+    ldi ARG_REG2, BUF_TX_ST_L
+    rcall ETH_WRITE_CONTROL_REGISTER
+    ldi ARG_REG1, ETXSTH
+    ldi ARG_REG2, BUF_TX_ST_H
+    rcall ETH_WRITE_CONTROL_REGISTER
+    ret
+/* }}} */
 
 #endif
