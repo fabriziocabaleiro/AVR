@@ -10,6 +10,8 @@
 #define ARG_REG1         R18
 #define ARG_REG2         R19
 #define RETURN_VALUE     R20
+/* TODO: Could be done without private register */
+#define DEBUG_REG_COUNT  R24
 
 /*******************************************************************************
  * SPI Slave selection
@@ -22,39 +24,67 @@
 #define SPI_END_ETH      sbi _SFR_IO_ADDR(PORTB), SPI_SS_ETH
 
 /*******************************************************************************
- * SRAM variables
+ * EEPROM variables
  ******************************************************************************/
 #define EEPROM_MAC_ADDR   0x0000
 #define EEPROM_IP_ADDR    0x0006
 #define EEPROM_MAC_DEBUG  0x000A
 #define EEPROM_RECEIVE_STATUS_VECTOR_ERROR 0x001A /* holds 6 bytes TODO: get correct address for it */
 
+/*******************************************************************************
+ * SRAM variables
+ ******************************************************************************/
 /* Receive packet header */
 #define RPKT_N_PKT_L      0x0060
 #define RPKT_N_PKT_H      0x0061
 #define RPKT_BYTE_COUNT_L 0x0062
 #define RPKT_BYTE_COUNT_H 0x0063
-#define RPKT_STATUS2      0x0065
-#define RPKT_STATUS3      0x0066
+#define RPKT_STATUS2      0x0064
+#define RPKT_STATUS3      0x0065
 
 /* Pending packages to process */
-#define RPKT_PENDING_CNT  0x0067
+#define RPKT_PENDING_CNT  0x0066
 
 /* Mac addresses */
-#define ETH_HEADER        0x0068
+#define ETH_HEADER        0x0067
 #define MAC_ADDR_MYSELF   ETH_HEADER
-#define MAC_ADDR_OTHER    0x006E
-#define TYPE_LEN_H        0x0074
-#define TYPE_LEN_L        0x0075
+#define MAC_ADDR_OTHER    0x006D
+#define TYPE_LEN_H        0x0073
+#define TYPE_LEN_L        0x0074
 
-#define IP_ADDR_0         0x0076
-#define IP_ADDR_1         0x0077
-#define IP_ADDR_2         0x0078
-#define IP_ADDR_3         0x0079
+#define IP_ADDR_0         0x0075
+#define IP_ADDR_1         0x0076
+#define IP_ADDR_2         0x0077
+#define IP_ADDR_3         0x0078
 
-#define ARP_PAYLOAD       0x007A /* Need 28 bytes, next available memory: 0x96 */
+#define ARP_PAYLOAD       0x007A /* Need 28 bytes, next available memory: 0x95 */
 #define ARP_PAYLOAD_LEN       28
 
+/******** 
+ * IPv4 * 
+ ********/
+/* Max header size 15 * 4 = 60  therefore next available address 0x0D2 */
+#define IPV4_HEADER                     0x0096
+#define IPV4_HEADER_MAX_LEN                 60
+/* Next available address 0x00D2 */
+#define IPV4_PAYLOAD                    0x00D2
+#define IPV4_PAYLOAD_LEN                   200
+/* Next available address 0x019A */
+#define MESSAGE_PAYLOAD                 0x019A
+#define MESSAGE_PAYLOAD_LEN                 50
+/* Next available address 0x01CC */
+
+/************************************* 
+ * DHT11 Temperature/Humidity sensor * 
+ *************************************/
+/* In which step is with respect to communication process */
+#define DHT11_PAYLOAD                   0x01CC
+#define DHT11_PAYLOAD_LEN                    5 /* 40 Bits */
+/* Next available address 0x01D1 */
+#define DHT11_STEP                      0x01D1
+
+
+#if 0
 /* DEBUGGING FUNCTIONALITY */
 #define DEBUG_OPT                0x0196
 #define DEBUG_OPT_WRITE_SRAM     0
@@ -70,10 +100,8 @@
 #define DEBUG_PAYLOAD_SIZE               250
 #define DEBUG_FRAME_SIZE                 (DEBUG_PAYLOAD_SIZE + ETH_HEADER_SIZE + PER_PACKET_CONTROL_BYTE_SIZE + TRANSMISSION_STATUS_VECTOR_SIZE)
 #define DEBUG_PAYLOAD                    0x0096 /* Lets leave 200 bytes here, therefore next available address is 0x15E */
+#endif
 
-#define IPV4_HEADER                      0x15E /* Max header size 15 * 4 = 60  therefore next available address 0x19A*/
-#define IPV4_PAYLOAD                     0x19A /* Next available address 0x262 */
-#define IPV4_PAYLOAD_LEN                   200
 
 /*******************************************************************************
  * Miscellaneous
@@ -86,6 +114,10 @@
 
 #define MAC_SIZE_IN_BYTES  6
 #define IPV4_SIZE_IN_BYTES 4
+
+/* Own messages */
+#define MESSAGE_TYPE_LEN 0x1987
+
 
 /* Ethernet type from wikipedia {{{ */
 // EtherType Protocol
@@ -196,6 +228,7 @@ lcd_write_reg_as_hex_write:
     clt   /* clear T */
     rjmp  lcd_write_reg_as_hex_twice
 lcd_write_reg_as_hex_end:
+    SPI_END_LCD
     pop  RETURN_VALUE
     pop  ARG_REG1
     pop  TMP1
@@ -220,6 +253,7 @@ rcall MAIN_WRITE_TO_LCD_AS_HEX
     ldi   ARG_REG1, \val
     SPI_SELECT_LCD
     rcall SPI_MASTER_TRANSMIT
+    SPI_END_LCD
     pop   RETURN_VALUE
     pop   ARG_REG1
 .endm

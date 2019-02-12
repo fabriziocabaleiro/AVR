@@ -1,6 +1,6 @@
 GCC-OPT=-mmcu=atmega8 -std=gnu99 -g
 
-main.elf: main.S spi.S enc28j60.S defs.h arp.S ipv4.S
+main.elf: main.S spi.S enc28j60.S defs.h arp.S ipv4.S dht11.S
 	avr-gcc $(GCC-OPT) $< -o $@
 	avr-objcopy -O ihex -R .eeprom -R .fuse -R .lock -R .signature $@ main.hex
 	avr-size -A main.hex

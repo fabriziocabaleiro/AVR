@@ -15,6 +15,8 @@
 #define SPI_SCK_BIT   PB5
 #define SPI_SCK_DDR   DDRB
 
+//#define SPI_SLOW
+
 SPI_MASTER_INIT:
    ;----------------------------------------------------------------------------
    ; Set SS, so all slaves are not listening
@@ -35,7 +37,11 @@ SPI_MASTER_INIT:
                (1 << SPI_SS_LCD)| \
                (1 << SPI_SS_ETH))
     out _SFR_IO_ADDR(SPI_MOSI_DDR), TMP1
+#ifdef SPI_SLOW
+    ldi TMP1, (1 << SPE)|(1 << MSTR)|(1 << SPR1)|(1 << SPR0)
+#else
     ldi TMP1, (1 << SPE)|(1 << MSTR)|(1 << SPR1)
+#endif
     out _SFR_IO_ADDR(SPCR), TMP1
     ret
 
@@ -59,6 +65,10 @@ SPI_WAIT_TRANSMIT:
 
     ; Clear SS for both slaves
     SPI_END_LCD
+
+#ifdef SPI_SLOW
+    rcall DELAY_TMP
+#endif
 
     ; Get received message
     in RETURN_VALUE, _SFR_IO_ADDR(SPDR)

@@ -103,27 +103,15 @@ IPV4_RESPONSE_IF_PING:
     push  TMP1
     push  ZL
     push  ZH
+    push  YL
+    push  YH
 
-    /* Check if Type of service "ping" */
+    /* Check if protocol ICMP */
     ldi   ZL, lo8(IPV4_HEADER)
     ldi   ZH, hi8(IPV4_HEADER)
-    ldd   TMP1, Z + IPV4_TOS
-    cpi   TMP1, IPV4_TOS_PING
-    brne  IPV4_NOT_PING_1
-    /* Check if protocol ICMP */
     ldd   TMP1, Z + IPV4_PROTOCOL
     cpi   TMP1, IPV4_PROTOCOL_PING
-    brne  IPV4_NOT_PING_1
-
-    rjmp  IPV4_IS_PING
-
-IPV4_NOT_PING_1:
-    pop   ZH
-    pop   ZL
-    pop   TMP1
-    pop   COUNTER
-    ldi   RETURN_VALUE, 1
-    ret
+    brne  IPV4_NOT_PING
 
 IPV4_IS_PING:
     /* Write Ethernet header to write buffer */
@@ -190,20 +178,23 @@ IPV4_RESPONSE_IF_PING_READ_PAYLOAD:
     ldi   ZL, lo8(IPV4_PAYLOAD)
     ldi   ZH, hi8(IPV4_PAYLOAD)
 
-    /* ARG_REG1 & Z must be not changed by IPV4_PING_CHECKSUM */
-    push  YL
-    push  YH
-    rcall IPV4_PING_CHECKSUM
-    std   Z + IPV4_ICMP_CHECKSUM, YH
+    /* Could check that received checksum is correct, but, why should I care? */
+    /* Clear received checksum */
+    clr   TMP1
+    std   Z + IPV4_ICMP_CHECKSUM + 0, TMP1
+    std   Z + IPV4_ICMP_CHECKSUM + 1, TMP1
+    /* ARG_REG1 & Z must be not changed by INTERNET_CHECKSUM_RFC1071 */
+    rcall INTERNET_CHECKSUM_RFC1071
+    std   Z + IPV4_ICMP_CHECKSUM + 0, YH
     std   Z + IPV4_ICMP_CHECKSUM + 1, YL
-    pop   YH
-    pop   YL
 
     rcall ETH_WRITE_BUFFER_PACKET_PAYLOAD
     rcall ETH_WRITE_BUFFER_PACKET_PAYLOAD_FINISH
 
     ldi   RETURN_VALUE, 0
 IPV4_RESPONSE_IF_PING_END:
+    pop   YH
+    pop   YL
     pop   ZH
     pop   ZL
     pop   TMP1
@@ -212,30 +203,30 @@ IPV4_RESPONSE_IF_PING_END:
 
 IPV4_NOT_PING:
     ldi   RETURN_VALUE, 1
-    rjmp  IPV4_RESPONSE_IF_PING_END
     ERR_ETH_SET_ERROR
+    rjmp  IPV4_RESPONSE_IF_PING_END
 IPV4_PING_PAYLOAD_TOO_BIG:
     ldi   RETURN_VALUE, 2
     ERR_ETH_SET_ERROR
     rjmp  IPV4_RESPONSE_IF_PING_END
 
 /*******************************************************************************
- * Calculate checksum with carry
- * Value is written into Y
- * Previous value of Y is lost
- * Using address set by Z
- * Using ARG_REG1 as counter
+ * Internet Checksum RFC 1071
+ * Byte order independent
+ *
+ * Input:
+ *   ZH:ZL     Address to start reading from
+ *   ARG_REG1  Bytes to read, if odd, then, rounded down.
+ *
+ * Return value (checksum) in ZH:ZL
+ * previous value of Z is lost, caller must take care of it.
  ******************************************************************************/
-IPV4_PING_CHECKSUM:
+INTERNET_CHECKSUM_RFC1071:
     push  ZL
     push  ZH
     push  ARG_REG1
     push  DATA
 
-    /* Clear received checksum */
-    ldi   DATA, 0
-    std   Z + IPV4_ICMP_CHECKSUM, DATA
-    std   Z + IPV4_ICMP_CHECKSUM + 1, DATA
     clr   YL
     clr   YH
 
@@ -244,11 +235,9 @@ IPV4_PING_CHECKSUM:
 
 IPV4_PING_CHECKSUM_LOOP:
     ld    DATA, Z+
-    push  DATA
+    adc   YH, DATA
     ld    DATA, Z+
     adc   YL, DATA
-    pop   DATA
-    adc   YH, DATA
     dec   ARG_REG1
     brne  IPV4_PING_CHECKSUM_LOOP
 
@@ -256,8 +245,10 @@ IPV4_PING_CHECKSUM_LOOP:
     /* If the last addition generated a Carry, then add zero with carry, which
      * could also generate a Carry into YH, so, add zero with carry as well */
     ldi   DATA, 0
-    adc   YL, DATA
+IPV4_PING_CHECKSUM_REMAINING_CARRY:
     adc   YH, DATA
+    adc   YL, DATA
+    brcs  IPV4_PING_CHECKSUM_REMAINING_CARRY
 
 IPV4_PING_CHECKSUM_END:
     com   YL
@@ -267,7 +258,6 @@ IPV4_PING_CHECKSUM_END:
     pop   ARG_REG1
     pop   ZH
     pop   ZL
-    ERR_ETH_SET_ERROR
     ret
 
 #endif

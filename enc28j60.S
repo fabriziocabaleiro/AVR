@@ -178,6 +178,7 @@ EPAUSH          Pause Timer Value High Byte (EPAUS<15:8>)                       
 #define ECON1_CSUMEN      0x10
 #define ECON1_TXRTS       0x08
 #define ECON1_RXEN        0x04
+#define ECON1_RXEN_BIT       3
 #define ECON1_BSEL1       0x02
 #define ECON1_BSEL0       0x01
 /* }}} */
@@ -632,6 +633,40 @@ ETH_ENABLE_RECEIVE:
     ret
 /* }}} */
 
+#if 0 /* {{{ Doesn't look to generate less code */
+/*******************************************************************************
+ * Set Bank xy
+ * ARG_REG1: bank [0,3]
+ ******************************************************************************/
+ETH_SET_BANK:
+    push  TMP1
+    mov   TMP1, ARG_REG1
+    /* Bank 3 is the less used, so, cleaning at the beginning both bits is not
+     * that bad idea */
+    ldi   ARG_REG1, ECON1
+    ldi   ARG_REG2, ECON1_BSEL0 | ECON1_BSEL1
+    rcall ETH_BIT_FIELD_CLEAR
+    cpi   TMP1, 1
+    breq  ETH_SET_BANK_1
+    brge  ETH_SET_BANK_2_3
+    rjmp  ETH_SET_BANK_END
+ETH_SET_BANK_1:
+    ldi   ARG_REG1, ECON1
+    ldi   ARG_REG2, ECON1_BSEL0
+    rcall ETH_BIT_FIELD_SET
+ETH_SET_BANK_2_3:
+    cpi   TMP, 2
+    brne  ETH_SET_BANK_3
+ETH_SET_BANK_2:
+    rjmp  ETH_SET_BANK_END
+ETH_SET_BANK_3:
+    rjmp  ETH_SET_BANK_END
+ETH_SET_BANK_END:
+    pop   TMP1
+    ret
+#endif
+/* }}} */
+
 /*******************************************************************************
  * Enable interrupts, TODO: add more info {{{
  ******************************************************************************/
@@ -907,69 +942,162 @@ ETH_READ_BUFFER_START:
  * Receive enc28j60 header {{{
  ******************************************************************************/
 ETH_READ_RECEIVE_HEADER:
-    ldi   ARG_REG1, ETH_SPI_CMD_RBM
-    SPI_SELECT_ETH
     push  ZL
     push  ZH
+    push  TMP1
+    ldi   ARG_REG1, ETH_SPI_CMD_RBM
+    SPI_SELECT_ETH
     rcall SPI_MASTER_TRANSMIT
-    /* Save Status vector into SRAM */
-    /* Get and check next packet pointer */
+
+    /* Read the whole receive satus vector */
+    ldi   TMP1, 6
+    ldi   ZH, hi8(RPKT_N_PKT_L)
+    ldi   ZL, lo8(RPKT_N_PKT_L)
+ETH_READ_RECEIVE_HEADER_LOOP:
     rcall SPI_MASTER_TRANSMIT
-    mov   ZL, RETURN_VALUE
-    rcall SPI_MASTER_TRANSMIT
-    mov   ZH, RETURN_VALUE
+    st    Z+, RETURN_VALUE
+    dec   TMP1
+    brne  ETH_READ_RECEIVE_HEADER_LOOP
+    
     /* Check that pointer is within receive buffer, seems that control packages
      * don't set the next packet pointer, therefore reading this value as zero */
-    cpi   ZH, BUF_RX_ST_H
-    brpl  ETH_READ_RECEIVE_HEADER_GET_RPKT_COUNT
-    breq  ETH_READ_RECEIVE_HEADER_CHECK_N_PKT_L
-    /* ZH is lower than expected */
-    rjmp  ETH_READ_RECEIVE_HEADER_ERROR
-ETH_READ_RECEIVE_HEADER_CHECK_N_PKT_L:
-    cpi   ZL, BUF_RX_ST_L
-    brge  ETH_READ_RECEIVE_HEADER_GET_RPKT_COUNT
-    /* ZH:ZL is lower than expected */
-    rjmp  ETH_READ_RECEIVE_HEADER_ERROR
-ETH_READ_RECEIVE_HEADER_GET_RPKT_COUNT:
-    sts   RPKT_N_PKT_L, ZL
-    sts   RPKT_N_PKT_H, ZH
-
-    rcall SPI_MASTER_TRANSMIT
-    sts   RPKT_BYTE_COUNT_L, RETURN_VALUE
-    rcall SPI_MASTER_TRANSMIT
-    sts   RPKT_BYTE_COUNT_H, RETURN_VALUE
-
-    rcall SPI_MASTER_TRANSMIT
-    sts   RPKT_STATUS2, RETURN_VALUE
-    rcall SPI_MASTER_TRANSMIT
-    sts   RPKT_STATUS3, RETURN_VALUE
     SPI_END_ETH
 ETH_READ_RECEIVE_HEADER_END:
+    pop   TMP1
     pop   ZH
     pop   ZL
     ret
+/* }}} */
 
-/* BEWARE, calls to ETH_READ_RECEIVE_HEADER_ERROR are done before any
- * modification of the SRAM, so, it is save to call ETH_PKT_PROCESSED */
-ETH_READ_RECEIVE_HEADER_ERROR:
-#if 1
-    /* DEBUGGING */
-    ldi   TMP1, DEBUG_OPT_RECEIVE_BUFFER
-    sts   DEBUG_OPT, TMP1
-    rcall ETH_SEND_DEBUG
-#endif
-    ldi   RETURN_VALUE, 1
-    SPI_END_ETH
-#if 0
-    mov   ARG_REG1, ZH
-    rcall MAIN_WRITE_TO_LCD_AS_HEX
-    mov   ARG_REG1, ZL
-    rcall MAIN_WRITE_TO_LCD_AS_HEX
-    rcall ETH_PKT_PROCESSED
+/*******************************************************************************
+ * Check receive status vector {{{
+ ******************************************************************************/
+/* RPKT_STATUS3 {{{
+    31  Zero
+        0
+    30  Receive VLAN Type Detected
+        Current frame was recognized as a VLAN tagged frame.
+    29  Receive Unknown Opcode
+        Current frame was recognized as a control frame but it contained an
+        unknown opcode.
+    28  Receive Pause Control Frame
+        Current frame was recognized as a control frame containing a valid pause
+        frame opcode and a valid destination address.
+    27  Receive Control Frame
+        Current frame was recognized as a control frame for having a valid
+        type/length designating it as a control frame.
+    26  Dribble Nibble
+        Indicates that after the end of this packet, an additional 1 to 7 bits
+        were received. The extra bits were thrown away.
+    25  Receive Broadcast Packet
+        Indicates packet received had a valid Broadcast address.
+    24  Receive Multicast Packet
+        Indicates packet received had a valid Multicast address.
+}}} */
+#define RPKT_STATUS3_ZERO                           7
+#define RPKT_STATUS3_RECEIVE_VLAN_TYPE_DETECTED     6
+#define RPKT_STATUS3_RECEIVE_UNKNOWN_OPCODE         5
+#define RPKT_STATUS3_RECEIVE_PAUSE_CONTROL_FRAME    4
+#define RPKT_STATUS3_RECEIVE_CONTROL_FRAME          3
+#define RPKT_STATUS3_DRIBBLE_NIBBLE                 2
+#define RPKT_STATUS3_RECEIVE_BROADCAST_PACKET       1
+#define RPKT_STATUS3_RECEIVE_MULTICAST_PACKET       0
+
+/* RPKT_STATUS2 {{{
+    23  Received Ok
+        Indicates that at the packet had a valid CRC and no symbol errors.
+    22  Length Out of Range
+        Indicates that frame type/length field was larger than 1500 bytes (type
+        field).
+    21  Length Check Error
+        Indicates that frame length field value in the packet does not match the
+        actual data byte length and specifies a valid length.
+    20  CRC Error
+        Indicates that frame CRC field value does not match the CRC calculated
+        by the MAC.
+    19  Reserved
+    18  Carrier Event Previously Seen
+        Indicates that at some time since the last receive, a carrier event was
+        detected. The carrier event is not associated with this packet. A
+        carrier event is activity on the receive channel that does not result in
+        a packet receive attempt being made.
+    17  Reserved
+    16  Long Event/Drop Event
+        Indicates a packet over 50,000 bit times occurred or that a packet was
+        dropped since the last receive.
+}}} */
+#define RPKT_STATUS2_RECEIVED_OK                    7
+#define RPKT_STATUS2_LENGTH_OUT_OF_RANGE            6
+#define RPKT_STATUS2_LENGTH_CHECK_ERROR             5
+#define RPKT_STATUS2_CRC_ERROR                      4
+//#define RPKT_STATUS2_RESERVED                       3
+#define RPKT_STATUS2_CARRIER_EVENT_PREVIOUSLY_SEEN  2
+//#define RPKT_STATUS2_RESERVED                       1
+#define RPKT_STATUS2_LONG_EVENT_DROP_EVENT          0
+
+/* {{{
+    15-0  Received Byte Count
+    Indicates length of the received frame. This includes the destination
+    address, source address, type/length, data, padding and CRC fields. This
+    field is stored in little-endian format.
+}}} */
+
+ETH_CHECK_RECEIVE_STATUS_VECTOR:
+    lds  TMP1, RPKT_STATUS3
+
+    /* Drop away anything that is not only broadcast or multicast */
+    andi TMP1, ~((1 << RPKT_STATUS3_RECEIVE_BROADCAST_PACKET) | (1 << RPKT_STATUS3_RECEIVE_MULTICAST_PACKET))
+    tst  TMP1
+    brne ETH_CHECK_RECEIVE_STATUS_VECTOR_FAILURE
+
+    lds  TMP1, RPKT_STATUS2
+
+    sbrs TMP1, RPKT_STATUS2_RECEIVED_OK
+    rjmp ETH_CHECK_RECEIVE_STATUS_VECTOR_FAILURE
+
+    sbrc TMP1, RPKT_STATUS2_LENGTH_CHECK_ERROR
+    rjmp ETH_CHECK_RECEIVE_STATUS_VECTOR_FAILURE
+
+    sbrc TMP1, RPKT_STATUS2_CRC_ERROR
+    rjmp ETH_CHECK_RECEIVE_STATUS_VECTOR_FAILURE
+
+    ldi  RETURN_VALUE, 0
+    ret
+    /* In case of failure, turn on error led, save the status vector into eeprom
+     * to be read, go to sleep */
+ETH_CHECK_RECEIVE_STATUS_VECTOR_FAILURE:
     ERR_ETH_SET_ERROR
-#endif
-    PRINT 'E'
-    rjmp  ETH_READ_RECEIVE_HEADER_END
+    push  ZH
+    push  ZL
+    push  ARG_REG1
+
+    rcall ETH_WRITE_BUFFER_PACKET_HEADER
+
+    lds   TMP1, TYPE_LEN_H
+    push  TMP1
+    lds   TMP1, TYPE_LEN_L
+    push  TMP1
+    ldi   TMP1, hi8(MESSAGE_TYPE_LEN)
+    sts   TYPE_LEN_H, TMP1
+    ldi   TMP1, lo8(MESSAGE_TYPE_LEN)
+    sts   TYPE_LEN_L, TMP1
+
+    ldi   ZH, hi8(RPKT_N_PKT_L)
+    ldi   ZL, lo8(RPKT_N_PKT_L)
+    ldi   ARG_REG1, 6
+    rcall ETH_WRITE_BUFFER_PACKET_PAYLOAD
+    rcall ETH_WRITE_BUFFER_PACKET_PAYLOAD_FINISH
+
+    pop   TMP1
+    sts   TYPE_LEN_H, TMP1
+    pop   TMP1
+    sts   TYPE_LEN_L, TMP1
+
+    pop   ARG_REG1
+    pop   ZL
+    pop   ZH
+    ldi   RETURN_VALUE, 1
+    ret
 /* }}} */
 
 /*******************************************************************************
@@ -1079,7 +1207,6 @@ bit 0 POVERRIDE: Per Packet Override bit
 #define PPCB_PCRCEN    0x02
 #define PPCB_POVERRIDE 0x01
 ETH_WRITE_BUFFER_PACKET_HEADER:
-    /* Set BANK 0 */
     push ZL
     push ZH
     push R16 /* Counter */
@@ -1231,15 +1358,10 @@ ETH_WRITE_BUFFER_PACKET_PAYLOAD_FINISH:
     ldi   ARG_REG2, ECON1_TXRTS
     rcall ETH_BIT_FIELD_SET
 
-    ldi   ZL, 200
-DEBUG_WAIT:
-    dec   ZL
-    brne DEBUG_WAIT
-
 ETH_WRITE_BUFFER_PACKET_PAYLOAD_FINISH_WAIT:
     ldi   ARG_REG1, ECON1
     rcall ETH_READ_CONTROL_REGISTER
-    sbrc  RETURN_VALUE, 3
+    sbrc  RETURN_VALUE, ECON1_RXEN_BIT
     rjmp  ETH_WRITE_BUFFER_PACKET_PAYLOAD_FINISH_WAIT
 
 #if 0
@@ -1256,111 +1378,7 @@ ETH_WRITE_BUFFER_PACKET_PAYLOAD_FINISH_WAIT:
     ret
 /* }}} */
 
-/*******************************************************************************
- * Check receive status vector {{{
- ******************************************************************************/
-/* RPKT_STATUS3 {{{
-    31      Zero                               0
-    30      Receive VLAN Type Detected         Current frame was recognized as a VLAN tagged frame.
-    29      Receive Unknown Opcode             Current frame was recognized as a control frame but it contained an
-                                               unknown opcode.
-    28      Receive Pause Control Frame        Current frame was recognized as a control frame containing a valid pause
-                                               frame opcode and a valid destination address.
-    27      Receive Control Frame              Current frame was recognized as a control frame for having a valid
-                                               type/length designating it as a control frame.
-    26      Dribble Nibble                     Indicates that after the end of this packet, an additional 1 to 7 bits were
-                                               received. The extra bits were thrown away.
-    25      Receive Broadcast Packet           Indicates packet received had a valid Broadcast address.
-    24      Receive Multicast Packet           Indicates packet received had a valid Multicast address.
-    }}} */
-#define RPKT_STATUS3_ZERO                           7
-#define RPKT_STATUS3_RECEIVE_VLAN_TYPE_DETECTED     6
-#define RPKT_STATUS3_RECEIVE_UNKNOWN_OPCODE         5
-#define RPKT_STATUS3_RECEIVE_PAUSE_CONTROL_FRAME    4
-#define RPKT_STATUS3_RECEIVE_CONTROL_FRAME          3
-#define RPKT_STATUS3_DRIBBLE_NIBBLE                 2
-#define RPKT_STATUS3_RECEIVE_BROADCAST_PACKET       1
-#define RPKT_STATUS3_RECEIVE_MULTICAST_PACKET       0
-
-/* RPKT_STATUS2 {{{
-    23      Received Ok                        Indicates that at the packet had a valid CRC and no symbol errors.
-    22      Length Out of Range                Indicates that frame type/length field was larger than 1500 bytes (type field).
-    21      Length Check Error                 Indicates that frame length field value in the packet does not match the
-                                               actual data byte length and specifies a valid length.
-    20      CRC Error                          Indicates that frame CRC field value does not match the CRC calculated
-                                               by the MAC.
-    19      Reserved
-    18      Carrier Event Previously Seen      Indicates that at some time since the last receive, a carrier event was
-                                               detected. The carrier event is not associated with this packet. A carrier
-                                               event is activity on the receive channel that does not result in a packet
-                                               receive attempt being made.
-    17      Reserved
-    16      Long Event/Drop Event              Indicates a packet over 50,000 bit times occurred or that a packet was dropped since the last receive.
-    }}} */
-#define RPKT_STATUS2_RECEIVED_OK                    7
-#define RPKT_STATUS2_LENGTH_OUT_OF_RANGE            6
-#define RPKT_STATUS2_LENGTH_CHECK_ERROR             5
-#define RPKT_STATUS2_CRC_ERROR                      4
-//#define RPKT_STATUS2_RESERVED                       3
-#define RPKT_STATUS2_CARRIER_EVENT_PREVIOUSLY_SEEN  2
-//#define RPKT_STATUS2_RESERVED                       1
-#define RPKT_STATUS2_LONG_EVENT_DROP_EVENT          0
-
-/* {{{
- 15-0      Received Byte Count                Indicates length of the received frame. This includes the destination
-                                               address, source address, type/length, data, padding and CRC fields. This
-                                               field is stored in little-endian format.
-    }}} */
-
-ETH_CHECK_RECEIVE_STATUS_VECTOR:
-    lds  TMP1, RPKT_STATUS3
-
-    /* Drop away anything that is not only broadcast or multicast */
-    andi TMP1, ~((1 << RPKT_STATUS3_RECEIVE_BROADCAST_PACKET) | (1 << RPKT_STATUS3_RECEIVE_MULTICAST_PACKET))
-    tst  TMP1
-    brne ETH_CHECK_RECEIVE_STATUS_VECTOR_FAILURE
 #if 0
-    sbrc TMP1, RPKT_STATUS3_ZERO /* Check that this bit must be zero */
-    rjmp ETH_CHECK_RECEIVE_STATUS_VECTOR_FAILURE
-
-    sbrc TMP1, RPKT_STATUS3_RECEIVE_UNKNOWN_OPCODE
-    rjmp ETH_CHECK_RECEIVE_STATUS_VECTOR_FAILURE
-#endif
-
-    lds  TMP1, RPKT_STATUS2
-
-    sbrs TMP1, RPKT_STATUS2_RECEIVED_OK
-    rjmp ETH_CHECK_RECEIVE_STATUS_VECTOR_FAILURE
-
-    sbrc TMP1, RPKT_STATUS2_LENGTH_CHECK_ERROR
-    rjmp ETH_CHECK_RECEIVE_STATUS_VECTOR_FAILURE
-
-    sbrc TMP1, RPKT_STATUS2_CRC_ERROR
-    rjmp ETH_CHECK_RECEIVE_STATUS_VECTOR_FAILURE
-
-    ldi  RETURN_VALUE, 0
-    ret
-    /* In case of failure, turn on error led, save the status vector into eeprom
-     * to be read, go to sleep */
-ETH_CHECK_RECEIVE_STATUS_VECTOR_FAILURE:
-    ERR_ETH_SET_ERROR
-    lds   ARG_REG1, RPKT_N_PKT_H
-    rcall MAIN_WRITE_TO_LCD_AS_HEX
-    lds   ARG_REG1, RPKT_N_PKT_L
-    rcall MAIN_WRITE_TO_LCD_AS_HEX
-    lds   ARG_REG1, RPKT_STATUS3
-    rcall MAIN_WRITE_TO_LCD_AS_HEX
-    lds   ARG_REG1, RPKT_STATUS2
-    rcall MAIN_WRITE_TO_LCD_AS_HEX
-    lds   ARG_REG1, RPKT_BYTE_COUNT_H
-    rcall MAIN_WRITE_TO_LCD_AS_HEX
-    lds   ARG_REG1, RPKT_BYTE_COUNT_L
-    rcall MAIN_WRITE_TO_LCD_AS_HEX
-    ldi   RETURN_VALUE, 1
-    //sleep
-    ret
-/* }}} */
-
 /*******************************************************************************
  * Write debug message into Ethernet {{{
  ******************************************************************************/
@@ -1535,5 +1553,6 @@ DEBUG_OPT_END:
     rcall ETH_WRITE_CONTROL_REGISTER
     ret
 /* }}} */
+#endif
 
 #endif
