@@ -1,62 +1,156 @@
 /* vim: set filetype=S foldmethod=marker: */
-#include "enc28j60.S"
+.NOLIST
+#include <avr/io.h>
+#include "enc28j60.h"
+#include "ipv4.h"
 #include "defs.h"
-#ifndef __IPV4_S__
-#define __IPV4_S__
+.LIST
 
-#if 0 /* IPv4 header */
-    0               1               2               3
-    0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
-   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- 0 |Version|  IHL  |Type of Service|          Total Length         |
-   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- 4 |         Identification        |Flags|      Fragment Offset    |
-   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- 8 |  Time to Live |    Protocol   |         Header Checksum       |
-   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-12 |                       Source Address                          |
-   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-16 |                    Destination Address                        |
-   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-20 |                    Options                    |    Padding    |
-   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-#endif
-#define IPV4_VERSION          0
-#define IPV4_IHL              0 /* Internet Header Length in words of 4 bytes */
-#define IPV4_TOS              1
-#define IPV4_TOTAL_LENGTH     2 /* In bytes */
-#define IPV4_IDENTIFICATION   4
-#define IPV4_FLAGS            6
-#define IPV4_FRAG_OFFSET      6
-#define IPV4_TTL              8
-#define IPV4_PROTOCOL         9
-#define IPV4_H_CHECKSUM      10
-#define IPV4_SRC_ADDR        12
-#define IPV4_DST_ADDR        16
-#define IPV4_OPTIONS         20
+.global IPV4_HANDLE_PKT
+.global INTERNET_CHECKSUM_RFC1071
+.global IPV4_PREPARE_DEFAULT_HEADER_20_40_BYTES
 
-#define IPV4_ICMP_TOM         0 /* Type of message */
-#define IPV4_ICMP_CODE        1
-#define IPV4_ICMP_CHECKSUM    2
-#define IPV4_ICMP_HEADER      4
-#define IPV4_ICMP_PAYLOAD     8 /* Optional */
+#define DATA    TMP_REG2
+#define IPV4_HEADER_BITFIELD_REG R1
+#pragma GCC poison R1
 
-/* TODO: improve defines */
-#define IPV4_TOS_PING         0
-#define IPV4_PROTOCOL_PING    1
-
-#define COUNTER R16
-#define DATA    R17
 #define READ_NEXT_BYTE rcall SPI_MASTER_TRANSMIT
 
+
 /*******************************************************************************
- * Read IPv4 Header
+ * Handle IPv4 packet {{{
+ * Check protocol (tcp, udp, etc) and port to deliver to corresponding routine
+ * IP version != 4 will be ignore
  ******************************************************************************/
-IPV4_READ_HEADER:
-    push  COUNTER
+IPV4_HANDLE_PKT:
     push  ZH
     push  ZL
 
+    /* Read IPv4 Header {{{ */
+    ldi   ZL, lo8(IPV4_HEADER)
+    ldi   ZH, hi8(IPV4_HEADER)
+    rcall ETH_READ_BUFFER_START
+
+    /* Read the first byte, which contains the version and the header length,
+     * assign counter with the length and check that version is 4, if not,
+     * return 1 and exit */
+    READ_NEXT_BYTE
+    st    Z+, RETURN_VALUE
+    mov   COUNTER_REG, RETURN_VALUE
+    andi  RETURN_VALUE, 0xF0
+    cpi   RETURN_VALUE, 0x40
+    /* Only IPv4 will be handle, other versions will be ignore */
+    breq  PACKET_IS_IPV4
+    rjmp  IPV4_HANDLE_EXIT_SUCCESS
+PACKET_IS_IPV4:
+    andi  COUNTER_REG, 0x0F
+    /* Length is in 32bits words, as reading bytes, then IHL * 4, then subtract
+     * one as the first bytes was already read */
+    lsl   COUNTER_REG
+    lsl   COUNTER_REG
+    /* Taking the chance to store the Internet Header Length in bytes */
+    sts   IPV4_IHL_IN_BYTES, COUNTER_REG
+    /* We already read one byte (version|IHL), so, subtract 1 */
+    subi  COUNTER_REG, 1
+    /* Read the rest of the IPv4 header */
+READ_HEADER:
+    READ_NEXT_BYTE
+    st    Z+, RETURN_VALUE
+    dec   COUNTER_REG
+    brne  READ_HEADER
+    ETH_READ_BUFFER_END
+    /* }}} */
+    /* Check if IPv4 packet is for me, set IPV4_PACKET_FOR_ME {{{
+     * Beware EEPROM_READ_N_INC does not modify TMP_REG[123]
+     * DHCP may have an IPv4 Dst address different than mine... */
+    push  YL
+    push  YH
+
+    ldi   TMP_REG2, 0 /* My IP addr counter */
+    mov   TMP_REG3, 0 /* Broadcast addr counter */
+    ldi   YH, hi8(EEPROM_IP_ADDR)
+    ldi   YL, lo8(EEPROM_IP_ADDR)
+    ldi   ZL, lo8(IPV4_HEADER)
+    ldi   ZH, hi8(IPV4_HEADER)
+    ldi   COUNTER_REG, IPV4_SIZE_IN_BYTES
+CHECK_IP_ADDR:
+    rcall EEPROM_READ_N_INC
+    ldd   TMP_REG1, Z + IPV4_DST_ADDR
+    cp    TMP_REG1, RETURN_VALUE
+    brne  NOT_MY_IP
+    inc   TMP_REG2
+NOT_MY_IP:
+    cpi   TMP_REG1, 0xFF
+    brne  NOT_BROADCAST
+    inc   TMP_REG3
+NOT_BROADCAST:
+    adiw  ZL, 1
+    dec   COUNTER_REG
+    brne  CHECK_IP_ADDR
+
+    pop   YH
+    pop   YL
+
+    /* IPV4_SIZE_IN_BYTES is 4, therefore we can check if the fourth bit in the
+     * reg is set and set IPV4_PACKET_FOR_ME accordantly */ 
+    ldi   TMP_REG1, 0
+    sbrc  TMP_REG2, IPV4_SIZE_IN_BYTES
+    ldi   TMP_REG1, 1
+    sbrc  TMP_REG3, IPV4_SIZE_IN_BYTES
+    ldi   TMP_REG1, 1
+    sts   IPV4_PACKET_FOR_ME, TMP_REG1
+
+    /* }}} */
+    /* Deliver packet using IPv4 protocol {{{ */
+    /* Faster than setting ZH:ZL, just subtract... previously added value */
+    sbiw  ZL, IPV4_SIZE_IN_BYTES
+    /* Load Internet protocol number */
+    ldd   TMP_REG2, Z + IPV4_PROTOCOL
+
+    /* We may receive a DHCP packet that doesn't have our current IP address,
+     * therefore we ignore IPV4_PACKET_FOR_ME for the moment */
+    cpi   TMP_REG2, INTERNET_PROTOCOL_NUMBER_USER_DATAGRAM
+    brne  RETURN_IF_IP_PACKET_NOT_FOR_ME
+    rcall UDP_HANDLE_PKT
+    rjmp  IPV4_HANDLE_EXIT_SUCCESS
+
+RETURN_IF_IP_PACKET_NOT_FOR_ME:
+    sbrc  TMP_REG1, 1
+    rjmp  IPV4_HANDLE_EXIT_SUCCESS
+TRY_PROTOCOL_ICMP:
+    cpi   TMP_REG2, INTERNET_PROTOCOL_NUMBER_ICMP
+    brne  TRY_PROTOCOL_TCP
+    rcall ICMP_HANDLE_PKT
+    rjmp  IPV4_HANDLE_EXIT_SUCCESS
+
+TRY_PROTOCOL_TCP:
+#if 0
+    cpi   TMP_REG2, INTERNET_PROTOCOL_NUMBER_TCP
+    brne  TRY_PROTOCOL_UDP
+    /* TCP not implemented yet */
+    rcall TCP_HANDLE_PKT
+    rjmp  IPV4_HANDLE_EXIT_SUCCESS
+#endif
+
+    /* }}} */
+
+IPV4_HANDLE_EXIT_SUCCESS:
+    ldi   RETURN_VALUE, 0
+IPV4_HANDLE_END:
+    pop   ZL
+    pop   ZH
+    ret
+
+UNSUPPORTED_PROTOCOL:
+    ldi   RETURN_VALUE, 1
+    rjmp  IPV4_HANDLE_END
+/* }}} */
+
+/*******************************************************************************
+ * Read IPv4 Header {{{
+ ******************************************************************************/
+#if 0
+IPV4_READ_HEADER:
     ldi   ZL, lo8(IPV4_HEADER)
     ldi   ZH, hi8(IPV4_HEADER)
 
@@ -66,160 +160,46 @@ IPV4_READ_HEADER:
      * return 1 and exit */
     READ_NEXT_BYTE
     st    Z+, RETURN_VALUE
-    mov   COUNTER, RETURN_VALUE
-    andi  COUNTER, 0x0F
+    mov   COUNTER_REG, RETURN_VALUE
+    andi  COUNTER_REG, 0x0F
     swap  RETURN_VALUE
     andi  RETURN_VALUE, 0x0F
     cpi   RETURN_VALUE, 0x04
-    brne  IPV4_WRONG_VERSION
+    brne  NOT_IPV4
     /* Length is in 32bits words, as reading bytes, then IHL * 4, then subtract
      * one as the first bytes was already read */
-    lsl   COUNTER
-    lsl   COUNTER
-    subi  COUNTER, 1
+    lsl   COUNTER_REG
+    lsl   COUNTER_REG
+    /* Taking the chance to store the Internet Header Length in bytes */
+    sts   IPV4_IHL_IN_BYTES, COUNTER_REG
+    subi  COUNTER_REG, 1
 
-IPV4_READ_HEADER_LOOP:
+READ_HEADER:
     READ_NEXT_BYTE
     st    Z+, RETURN_VALUE
-    dec   COUNTER
-    brne  IPV4_READ_HEADER_LOOP
-
-IPV4_READ_HEADER_FINISH:
-    ETH_READ_BUFFER_END
-    pop   ZL
-    pop   ZH
-    pop   COUNTER
-    ret
-
-IPV4_WRONG_VERSION:
-    ldi   RETURN_VALUE, 1
-    rjmp  IPV4_READ_HEADER_FINISH
-
-/*******************************************************************************
- * PING
- ******************************************************************************/
-IPV4_RESPONSE_IF_PING:
-    push  COUNTER
-    push  TMP1
-    push  ZL
-    push  ZH
-    push  YL
-    push  YH
-
-    /* Check if protocol ICMP */
-    ldi   ZL, lo8(IPV4_HEADER)
-    ldi   ZH, hi8(IPV4_HEADER)
-    ldd   TMP1, Z + IPV4_PROTOCOL
-    cpi   TMP1, IPV4_PROTOCOL_PING
-    brne  IPV4_NOT_PING
-
-IPV4_IS_PING:
-    /* Write Ethernet header to write buffer */
-    rcall ETH_WRITE_BUFFER_PACKET_HEADER
-
-    /* Read IPv4 Payload into SRAM */
-    /* First check that payload is smaller than 200 bytes */
-    ldd   COUNTER, Z + IPV4_TOTAL_LENGTH
-    cpi   COUNTER, 0
-    brne  IPV4_PING_PAYLOAD_TOO_BIG
-    ldd   COUNTER, Z + IPV4_TOTAL_LENGTH + 1
-    cpi   COUNTER, IPV4_PAYLOAD_LEN
-    brlt  IPV4_PING_PAYLOAD_TOO_BIG
-
-    /* Before reading PING PAYLOAD, swap IP addresses (preparing ipv4 response
-     * header */
-    push  COUNTER
-    ldi   COUNTER, MAC_SIZE_IN_BYTES
-IPV4_RESPONSE_IF_PING_SWAP_IP_ADDR:
-    ldd   TMP1, Z + IPV4_SRC_ADDR
-    push  TMP1
-    ldd   TMP1, Z + IPV4_DST_ADDR
-    std   Z + IPV4_SRC_ADDR, TMP1
-    pop   TMP1
-    std   Z + IPV4_DST_ADDR, TMP1
-    adiw  ZL, 1
-    dec   COUNTER
-    brne  IPV4_RESPONSE_IF_PING_SWAP_IP_ADDR
-    pop   COUNTER
-
-    /* Read payload */
-    ldi   ZL, lo8(IPV4_PAYLOAD)
-    ldi   ZH, hi8(IPV4_PAYLOAD)
-    rcall ETH_READ_BUFFER_START
-IPV4_RESPONSE_IF_PING_READ_PAYLOAD:
-    READ_NEXT_BYTE
-    st    Z+, RETURN_VALUE
-    dec   COUNTER
-    brne  IPV4_RESPONSE_IF_PING_READ_PAYLOAD
-    ETH_READ_BUFFER_END
-
-    /* First byte of PING payload is 8 for request and 0 for reply */
-    ldi   TMP1, 0
-    sts   IPV4_PAYLOAD, TMP1
-
-    /* TODO: calculate checksum */
-    ldi   ZL, lo8(IPV4_HEADER)
-    ldi   ZH, hi8(IPV4_HEADER)
-    ldd   ARG_REG1, Z + IPV4_IHL
-    lsl   ARG_REG1 /* IHL * 4 to be in bytes */
-    lsl   ARG_REG1
-    push  ARG_REG1
-    push  ZL
-    push  ZH
-    rcall ETH_WRITE_BUFFER_PACKET_PAYLOAD
-    pop   ZH
-    pop   ZL
-    pop   ARG_REG1
-
-    /* Total length - IHL * 4 is the size of the payload */
-    ldd   TMP1, Z + IPV4_TOTAL_LENGTH + 1
-    sub   TMP1, ARG_REG1
-    mov   ARG_REG1, TMP1
-    ldi   ZL, lo8(IPV4_PAYLOAD)
-    ldi   ZH, hi8(IPV4_PAYLOAD)
-
-    /* Could check that received checksum is correct, but, why should I care? */
-    /* Clear received checksum */
-    clr   TMP1
-    std   Z + IPV4_ICMP_CHECKSUM + 0, TMP1
-    std   Z + IPV4_ICMP_CHECKSUM + 1, TMP1
-    /* ARG_REG1 & Z must be not changed by INTERNET_CHECKSUM_RFC1071 */
-    rcall INTERNET_CHECKSUM_RFC1071
-    std   Z + IPV4_ICMP_CHECKSUM + 0, YH
-    std   Z + IPV4_ICMP_CHECKSUM + 1, YL
-
-    rcall ETH_WRITE_BUFFER_PACKET_PAYLOAD
-    rcall ETH_WRITE_BUFFER_PACKET_PAYLOAD_FINISH
+    dec   COUNTER_REG
+    brne  READ_HEADER
 
     ldi   RETURN_VALUE, 0
-IPV4_RESPONSE_IF_PING_END:
-    pop   YH
-    pop   YL
-    pop   ZH
-    pop   ZL
-    pop   TMP1
-    pop   COUNTER
+IPV4_READ_HEADER_FINISH:
+    ETH_READ_BUFFER_END
     ret
 
-IPV4_NOT_PING:
+NOT_IPV4:
     ldi   RETURN_VALUE, 1
-    ERR_ETH_SET_ERROR
-    rjmp  IPV4_RESPONSE_IF_PING_END
-IPV4_PING_PAYLOAD_TOO_BIG:
-    ldi   RETURN_VALUE, 2
-    ERR_ETH_SET_ERROR
-    rjmp  IPV4_RESPONSE_IF_PING_END
-
+    rjmp  IPV4_READ_HEADER_FINISH
+#endif
+/* }}} */
 /*******************************************************************************
- * Internet Checksum RFC 1071
+ * Internet Checksum RFC 1071 {{{
  * Byte order independent
  *
  * Input:
  *   ZH:ZL     Address to start reading from
  *   ARG_REG1  Bytes to read, if odd, then, rounded down.
  *
- * Return value (checksum) in ZH:ZL
- * previous value of Z is lost, caller must take care of it.
+ * Return value (checksum) in Y
+ * previous value of Y is lost, caller must take care of it.
  ******************************************************************************/
 INTERNET_CHECKSUM_RFC1071:
     push  ZL
@@ -259,5 +239,74 @@ IPV4_PING_CHECKSUM_END:
     pop   ZH
     pop   ZL
     ret
+/* }}} */
 
-#endif
+/*******************************************************************************
+ * Prepare IPv4 header {{{
+ * This routine returns the size of the header
+ * ARG_REG1 total size
+ ******************************************************************************/
+IPV4_PREPARE_DEFAULT_HEADER_20_40_BYTES:
+    push  YH
+    push  YL
+    push  ZH
+    push  ZL
+
+    /* Read from */
+    ldi   YL, lo8(EEPROM_IP_HEADER)
+    ldi   YH, hi8(EEPROM_IP_HEADER)
+    ldi   COUNTER_REG, EEPROM_IP_HEADER_LEN_TIL_CHK_SUM
+    /* Write to */
+    ldi   ZL, lo8(IPV4_HEADER)
+    ldi   ZH, hi8(IPV4_HEADER)
+IPV4_PREPARE_HEADER_GET_FROM_EEPROM:
+    rcall EEPROM_READ_N_INC
+    st    Z+, RETURN_VALUE
+    dec   COUNTER_REG
+    brne  IPV4_PREPARE_HEADER_GET_FROM_EEPROM
+    /* till here we have 10 bytes written. Now we have to write checksum and
+     * src/dst IP addresses */
+    /* Write zero checksum for the moment */
+    clr   TMP_REG1
+    st    Z+, TMP_REG1
+    st    Z+, TMP_REG1
+
+    /* SRC IP Address */
+    ldi   YL, lo8(EEPROM_IP_ADDR)
+    ldi   YH, hi8(EEPROM_IP_ADDR)
+    ldi   COUNTER_REG, IPV4_SIZE_IN_BYTES
+IPV4_PREPARE_HEADER_GET_IP_FROM_EEPROM:
+    rcall EEPROM_READ_N_INC
+    st    Z+, RETURN_VALUE
+    dec   COUNTER_REG
+    brne  IPV4_PREPARE_HEADER_GET_IP_FROM_EEPROM
+
+    /* DST IP Address */
+    ldi   YL, lo8(IP_ADDR_DST)
+    ldi   YH, hi8(IP_ADDR_DST)
+    ldi   COUNTER_REG, IPV4_SIZE_IN_BYTES
+IPV4_PREPARE_HEADER_GET_IP_FROM_EEPROM_DST:
+    ld    TMP_REG1, Y+
+    st    Z+, TMP_REG1
+    dec   COUNTER_REG
+    brne  IPV4_PREPARE_HEADER_GET_IP_FROM_EEPROM_DST
+
+    /* Update Total length and calculate Checksum */
+    ldi   ZL, lo8(IPV4_HEADER)
+    ldi   ZH, hi8(IPV4_HEADER)
+    std   Z + (IPV4_TOTAL_LENGTH + 1), ARG_REG1
+
+    ldi   ARG_REG1, IPV4_DEFAULT_HEADER_LEN
+    rcall INTERNET_CHECKSUM_RFC1071
+    std   Z + (IPV4_H_CHECKSUM + 0), YH
+    std   Z + (IPV4_H_CHECKSUM + 1), YL
+
+    ldi   RETURN_VALUE, IPV4_DEFAULT_HEADER_LEN
+
+    pop   ZL
+    pop   ZH
+    pop   YL
+    pop   YH
+    ret
+/* }}} */
+

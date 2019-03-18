@@ -1,18 +1,37 @@
 /* This file contains only definitions and constants used globally */
-#ifndef __DEFS_H__
-#define __DEFS_H__
+#ifndef _DEFS_H_
+#define _DEFS_H_
+
+/*******************************************************************************
+ * Global configuration
+ ******************************************************************************/
+#define F_CPU 1000000 /* Default value of internal RC oscillator */
+#define USE_DHT11
 
 /*******************************************************************************
  * Registers
  ******************************************************************************/
-#define MAIN_COUNTER_REG R16
-#define TMP1             R17
-#define ARG_REG1         R18
-#define ARG_REG2         R19
-#define RETURN_VALUE     R20
+/* Register used for temporary values, they may be change after any rcall */
+#define TMP_REG1         R16
+#define TMP_REG2         R17
+#define TMP_REG3         R18
+/* Register used to pass arguments to routines */
+#define ARG_REG1         R19
+#define ARG_REG2         R20
+/* Register used to pass values back from routines */
+#define RETURN_VALUE     R21
+/* Counter */
+#define COUNTER_REG      R22
 /* TODO: Could be done without private register */
-#define DEBUG_REG_COUNT  R24
+#define DEBUG_REG_COUNT  R25
 
+#pragma GCC poison R16
+#pragma GCC poison R17
+#pragma GCC poison R18
+#pragma GCC poison R19
+#pragma GCC poison R20
+#pragma GCC poison R21
+#pragma GCC poison R22
 /*******************************************************************************
  * SPI Slave selection
  ******************************************************************************/
@@ -26,38 +45,51 @@
 /*******************************************************************************
  * EEPROM variables
  ******************************************************************************/
-#define EEPROM_MAC_ADDR   0x0000
-#define EEPROM_IP_ADDR    0x0006
-#define EEPROM_MAC_DEBUG  0x000A
-#define EEPROM_RECEIVE_STATUS_VECTOR_ERROR 0x001A /* holds 6 bytes TODO: get correct address for it */
+// #define EEPROM_MAC_ADDR                0x0000 /* [0x0000, 0x0005] */
+// #define EEPROM_IP_ADDR                 0x0006 /* [0x0006, 0x0009] */
+// #define EEPROM_MAC_DEBUG               0x000A /* [0x000A, 0x000F] */
+// #define EEPROM_IP_HEADER               0x0010 /* [0x0010, 0x0019] */
+/* Only storing 10 bytes of 20, missing checksum and IP addrs */
+#define EEPROM_IP_HEADER_LEN_TIL_CHK_SUM   10
+#define EEPROM_IP_HEADER_LEN               20
+
+// #define EEPROM_DHCP_HEADER             0x0024
+#define EEPROM_DHCP_HEADER_LEN              8
+
+// #define EEPROM_DHCP_MAGIC_COOKIE       0x002C
+#define EEPROM_DHCP_MAGIC_COOKIE_LEN        4
+
+// #define EEPROM_DEBUG                   0x0040
 
 /*******************************************************************************
  * SRAM variables
  ******************************************************************************/
 /* Receive packet header */
-#define RPKT_N_PKT_L      0x0060
-#define RPKT_N_PKT_H      0x0061
-#define RPKT_BYTE_COUNT_L 0x0062
-#define RPKT_BYTE_COUNT_H 0x0063
-#define RPKT_STATUS2      0x0064
-#define RPKT_STATUS3      0x0065
+#define RPKT_N_PKT_L            0x0060
+#define RPKT_N_PKT_H            0x0061
+#define RPKT_BYTE_COUNT_L       0x0062
+#define RPKT_BYTE_COUNT_H       0x0063
+#define RPKT_STATUS2            0x0064
+#define RPKT_STATUS3            0x0065
+#define RPKT_STATUS_VECTOR_LEN       6
 
 /* Pending packages to process */
 #define RPKT_PENDING_CNT  0x0066
 
 /* Mac addresses */
+/* This fields are updated every time we receive a new packet */
 #define ETH_HEADER        0x0067
 #define MAC_ADDR_MYSELF   ETH_HEADER
 #define MAC_ADDR_OTHER    0x006D
 #define TYPE_LEN_H        0x0073
 #define TYPE_LEN_L        0x0074
 
-#define IP_ADDR_0         0x0075
-#define IP_ADDR_1         0x0076
-#define IP_ADDR_2         0x0077
-#define IP_ADDR_3         0x0078
+/* This is the default IP address to send packages to,
+ * it should be set by password authentication or something else, but, for now,
+ * just assigning it through ping request */
+#define IP_ADDR_DST       0x0075
 
-#define ARP_PAYLOAD       0x007A /* Need 28 bytes, next available memory: 0x95 */
+#define ARP_PAYLOAD       0x007A /* Need 28 bytes, next available memory: 0x96 */
 #define ARP_PAYLOAD_LEN       28
 
 /******** 
@@ -66,12 +98,15 @@
 /* Max header size 15 * 4 = 60  therefore next available address 0x0D2 */
 #define IPV4_HEADER                     0x0096
 #define IPV4_HEADER_MAX_LEN                 60
-/* Next available address 0x00D2 */
-#define IPV4_PAYLOAD                    0x00D2
+#define IPV4_DEFAULT_HEADER_LEN             20
+#define IPV4_PACKET_FOR_ME              0x00D2
+#define IPV4_IHL_IN_BYTES               0x00D3
+/* Next available address 0x00D3 */
+#define IPV4_PAYLOAD                    0x00D4
 #define IPV4_PAYLOAD_LEN                   200
-/* Next available address 0x019A */
-#define MESSAGE_PAYLOAD                 0x019A
-#define MESSAGE_PAYLOAD_LEN                 50
+/* Next available address 0x019B */
+#define MESSAGE_PAYLOAD                 0x019C
+#define MESSAGE_PAYLOAD_LEN                 48
 /* Next available address 0x01CC */
 
 /************************************* 
@@ -81,7 +116,34 @@
 #define DHT11_PAYLOAD                   0x01CC
 #define DHT11_PAYLOAD_LEN                    5 /* 40 Bits */
 /* Next available address 0x01D1 */
-#define DHT11_STEP                      0x01D1
+
+/*********************
+ * ADC reading MQ135 *
+ *********************/
+#define MQ135_PAYLOAD                   0x01D1 /* 2 bytes */
+#define MQ135_PAYLOAD_LEN                    2
+
+/***************************
+ * Communication variables *
+ ***************************/
+#define COMM_MAC_DST                    0x01D3 /* 6 bytes */
+#define COMM_TYPE_LEN                   0x01D9 /* 2 bytes */
+#define COMM_PKT_LEN                    0x01DB /* 1 byte  */
+
+/* Pointer to Dst MAC address */
+#define ENC_MAC_DST_PTR                 0x01DC /* 2 bytes */
+/* Pointer to TYPE/LEN value */
+#define ENC_TYPE_LEN_PTR                0x01DE /* 2 bytes */
+/* Addresses in SRAM are 11 bits long, first MSB of the MAC Dst pointer set to
+ * one means broadcast */
+#define ENC_MAC_DST_PTR_BROADCAST_BIT        7
+/* As above, if this bit is set, then TYPE/LEN is IPv4 */
+#define ENC_TYPE_LEN_PTR_IPv4                7
+
+/**************************
+ * DHCP SERVER IP ADDRESS *
+ **************************/
+#define DHCP_SERVER_IP_ADDR             0x01E0 /* 4 bytes */
 
 
 #if 0
@@ -107,7 +169,7 @@
  * Miscellaneous
  ******************************************************************************/
 #define ERR_ARP_ERR_BIT   PB0
-#define ERR_ARP_SET_DDR   sbi _SFR_IO_ADDR(DDRB), ERR_ARP_ERR_BIT
+#define ERR_ARP_SET_DDR   sbi _SFR_IO_ADDR(DDRB),  ERR_ARP_ERR_BIT
 #define ERR_ARP_SET_ERROR sbi _SFR_IO_ADDR(PORTB), ERR_ARP_ERR_BIT
 #define ERR_ETH_SET_ERROR sbi _SFR_IO_ADDR(PORTB), ERR_ARP_ERR_BIT
 #define ERR_ARP_CLR_ERROR cbi _SFR_IO_ADDR(PORTB), ERR_ARP_ERR_BIT
@@ -118,6 +180,8 @@
 /* Own messages */
 #define MESSAGE_TYPE_LEN 0x1987
 
+/* Also defined in enc28j60.S */
+#define ETH_END_LISTEN_ON_SPI SPI_END_ETH
 
 /* Ethernet type from wikipedia {{{ */
 // EtherType Protocol
@@ -176,86 +240,5 @@
 0x9100 VLAN-tagged (IEEE 802.1Q) frame with double tagging
 #endif
 /* }}} */
-
-/*******************************************************************************
- *
- ******************************************************************************/
-DELAY_TMP:
-    push R16
-    push R17
-    ldi  R17, 4
-DELAY_TMP_W2:
-    ldi  R16, 250
-DELAY_TMP_W1:
-    dec  R16
-    nop
-    nop
-    nop
-    nop
-    nop
-    nop
-    nop
-    brne DELAY_TMP_W1
-    dec  R17
-    brne DELAY_TMP_W2
-    pop  R17
-    pop  R16
-    ret
-
-MAIN_WRITE_TO_LCD_AS_HEX:
-    push TMP1
-    push ARG_REG1
-    push RETURN_VALUE
-    set /* control the twice "loop", set T */
-lcd_write_reg_as_hex_twice:
-    swap ARG_REG1 /* higher part first */
-    mov  TMP1, ARG_REG1
-    andi TMP1, 0x0F
-    cpi  TMP1, 0x0A
-    brge lcd_write_reg_as_hex_over_9
-    ori  TMP1, 0x30
-    rjmp lcd_write_reg_as_hex_write
-lcd_write_reg_as_hex_over_9:
-    ori  TMP1, 0x40
-    subi TMP1, 0x09
-lcd_write_reg_as_hex_write:
-    push ARG_REG1
-    mov  ARG_REG1, TMP1
-    SPI_SELECT_LCD
-    rcall SPI_MASTER_TRANSMIT
-    pop  ARG_REG1
-    brtc  lcd_write_reg_as_hex_end /* end if T == 0 */
-    clt   /* clear T */
-    rjmp  lcd_write_reg_as_hex_twice
-lcd_write_reg_as_hex_end:
-    SPI_END_LCD
-    pop  RETURN_VALUE
-    pop  ARG_REG1
-    pop  TMP1
-    ret
-
-.macro  PRINT_REG bsel1 bsel0 reg
-ldi   ARG_REG1, 0x1F
-ldi   ARG_REG2, 0x3
-rcall ETH_BIT_FIELD_CLEAR
-ldi   ARG_REG1, 0x1F
-ldi   ARG_REG2, \bsel1 | \bsel0
-rcall ETH_BIT_FIELD_SET
-ldi   ARG_REG1, \reg
-rcall ETH_READ_CONTROL_REGISTER
-mov   ARG_REG1, RETURN_VALUE
-rcall MAIN_WRITE_TO_LCD_AS_HEX
-.endm
-
-.macro PRINT val
-    push  ARG_REG1
-    push  RETURN_VALUE
-    ldi   ARG_REG1, \val
-    SPI_SELECT_LCD
-    rcall SPI_MASTER_TRANSMIT
-    SPI_END_LCD
-    pop   RETURN_VALUE
-    pop   ARG_REG1
-.endm
 
 #endif

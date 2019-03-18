@@ -1,21 +1,112 @@
-; vim: set filetype=S:
+/* vim: set filetype=S foldmethod=marker: */
 .NOLIST
 #ifndef __AVR_ATmega8__
-#define __AVR_ATmega8__
-#include <unistd.h>
+#   define __AVR_ATmega8__
 #endif
 #include <avr/io.h>
 #include <avr/interrupt.h>
+#include "defs.h"
+#include "enc28j60.h"
 .LIST
 
-#include "defs.h"
-#include "spi.S"
-#include "enc28j60.S"
-#include "arp.S"
-#include "ipv4.S"
-#include "dht11.S"
+.section .text
+.global main
+.global INT0_vect
 
-#if 0 /* Testing */
+/*******************************************************************************
+ * TODO: remove {{{
+ ******************************************************************************/
+#if 1
+.global DELAY_TMP
+DELAY_TMP:
+    push TMP_REG2
+    push TMP_REG1
+    ldi  TMP_REG1, 4
+DELAY_TMP_W2:
+    ldi  TMP_REG2, 250
+DELAY_TMP_W1:
+    dec  TMP_REG2
+    nop
+    nop
+    nop
+    nop
+    nop
+    nop
+    nop
+    brne DELAY_TMP_W1
+    dec  TMP_REG1
+    brne DELAY_TMP_W2
+    pop  TMP_REG1
+    pop  TMP_REG2
+    ret
+
+.global MAIN_WRITE_TO_LCD_AS_HEX
+MAIN_WRITE_TO_LCD_AS_HEX:
+    push TMP_REG2
+    push ARG_REG1
+    push RETURN_VALUE
+    set /* control the twice "loop", set T */
+lcd_write_reg_as_hex_twice:
+    swap ARG_REG1 /* higher part first */
+    mov  TMP_REG2, ARG_REG1
+    andi TMP_REG2, 0x0F
+    cpi  TMP_REG2, 0x0A
+    brge lcd_write_reg_as_hex_over_9
+    ori  TMP_REG2, 0x30
+    rjmp lcd_write_reg_as_hex_write
+lcd_write_reg_as_hex_over_9:
+    ori  TMP_REG2, 0x40
+    subi TMP_REG2, 0x09
+lcd_write_reg_as_hex_write:
+    push ARG_REG1
+    mov  ARG_REG1, TMP_REG2
+    SPI_SELECT_LCD
+    rcall SPI_MASTER_TRANSMIT
+    pop  ARG_REG1
+    brtc  lcd_write_reg_as_hex_end /* end if T == 0 */
+    clt   /* clear T */
+    rjmp  lcd_write_reg_as_hex_twice
+lcd_write_reg_as_hex_end:
+    SPI_END_LCD
+    pop  RETURN_VALUE
+    pop  ARG_REG1
+    pop  TMP_REG2
+    ret
+
+.macro  PRINT_REG bsel1 bsel0 reg
+ldi   ARG_REG1, 0x1F
+ldi   ARG_REG2, 0x3
+rcall ETH_BIT_FIELD_CLEAR
+ldi   ARG_REG1, 0x1F
+ldi   ARG_REG2, \bsel1 | \bsel0
+rcall ETH_BIT_FIELD_SET
+ldi   ARG_REG1, \reg
+rcall ETH_READ_CONTROL_REGISTER
+mov   ARG_REG1, RETURN_VALUE
+rcall MAIN_WRITE_TO_LCD_AS_HEX
+.endm
+
+.macro PRINT val
+    push  ARG_REG1
+    push  RETURN_VALUE
+    ldi   ARG_REG1, \val
+    SPI_SELECT_LCD
+    rcall SPI_MASTER_TRANSMIT
+    SPI_END_LCD
+    pop   RETURN_VALUE
+    pop   ARG_REG1
+.endm
+
+.macro PRINTR reg
+    push  ARG_REG1
+    push  RETURN_VALUE
+    mov   ARG_REG1, \reg
+    rcall MAIN_WRITE_TO_LCD_AS_HEX
+    pop   RETURN_VALUE
+    pop   ARG_REG1
+.endm
+#endif /* }}} */
+#if 0 /* Testing  {{{ */
 .section .data
 .global MAC_ADDRESS
 
@@ -24,42 +115,48 @@ MAC_ADDRESS:
 
 //.global __do_copy_data
 //.global __do_clear_bss
-#endif
+#endif /* }}} */
+#if 0 /* TESTING {{{ */
+.global IPV4_HEADER_DATA
+.section .rodata
+.STR:
+    .string "fabriziofabrizio"
+    .data
+    .type IPV4_HEADER_DATA, @object
+    .size IPV4_HEADER_DATA, 4
+#endif /* }}} */
 
-.section .text // Don't know if necessary
-.global main
-.global INT0_vect
-.global INT1_vect
-
+/*******************************************************************************
+ * main, initialize everything {{{
+ ******************************************************************************/
 main:
     /* Set interrupt on INT0 falling edge */
-    in    TMP1, _SFR_IO_ADDR(MCUCR)
+    in    TMP_REG2, _SFR_IO_ADDR(MCUCR)
     // TODO: Decide which one to use
-    ori   TMP1, (1 << ISC01)
-    andi  TMP1, ~((1 << ISC00)|(1 << ISC01))
-    out   _SFR_IO_ADDR(MCUCR), TMP1
+    ori   TMP_REG2, (1 << ISC01)
+    andi  TMP_REG2, ~((1 << ISC00)|(1 << ISC01))
+    out   _SFR_IO_ADDR(MCUCR), TMP_REG2
 
-    in    TMP1, _SFR_IO_ADDR(GICR)
-    ori   TMP1, (1 << INT0)
-    out   _SFR_IO_ADDR(GICR), TMP1
+    in    TMP_REG2, _SFR_IO_ADDR(GICR)
+    ori   TMP_REG2, (1 << INT0)
+    out   _SFR_IO_ADDR(GICR), TMP_REG2
 
     cbi   _SFR_IO_ADDR(DDRD), PD2
 
     /* Set global interrupt enable, sleep mode and sleep enable */
-    in   TMP1, _SFR_IO_ADDR(MCUCR)
-    sbr  TMP1, (1 << SE)
-    out  _SFR_IO_ADDR(MCUCR), TMP1
+    in   TMP_REG2, _SFR_IO_ADDR(MCUCR)
+    sbr  TMP_REG2, (1 << SE)
+    out  _SFR_IO_ADDR(MCUCR), TMP_REG2
 
-    /* Set LED errors */
-    ERR_ARP_SET_DDR
-
-    ldi   MAIN_COUNTER_REG, 255
+    ldi   TMP_REG1, 255
 MAIN_DELAY:
     rcall DELAY_TMP
-    dec MAIN_COUNTER_REG
+    dec TMP_REG1
     brne MAIN_DELAY
 
+#ifdef USE_DHT11
     rcall DHT11_SETUP
+#endif
     rcall SPI_MASTER_INIT
     rcall ETH_SOFTWARE_RESET
     rcall ETH_BUFFER_INIT
@@ -67,25 +164,58 @@ MAIN_DELAY:
     rcall ETH_MISC_INIT
     rcall ETH_ENABLE_RECEIVE
     rcall ETH_ENABLE_RECEIVE_INTERRUPT
+    /* Set LED errors */
+    ERR_ARP_SET_DDR
 
     ldi DEBUG_REG_COUNT, 0
+    /* Get IP from DHCP */
+    rcall DHCP_DISCOVER
     sei
 
-loop:
-    sleep
-    rjmp loop
+/* }}} */
 
-MAIN_PACKET:
+/*******************************************************************************
+ * LOOP {{{
+ ******************************************************************************/
+LOOP:
+    sleep
+    rjmp LOOP
+/* }}} */
+
+/*******************************************************************************
+ * Received packet interrupt routine {{{
+ ******************************************************************************/
+INT0_vect:
+    push  TMP_REG2
+    in    TMP_REG2, _SFR_IO_ADDR(SREG)
+    push  TMP_REG2
+    rcall HANDLE_PACKET
+    ldi   ARG_REG1, ENC_COMMON_EIR
+    ldi   ARG_REG2, ENC_COMMON_EIR_PKTIF
+    rcall ETH_BIT_FIELD_CLEAR
+    pop   TMP_REG2
+    out   _SFR_IO_ADDR(SREG), TMP_REG2
+    pop   TMP_REG2
+    reti
+/* }}} */
+
+/*******************************************************************************
+ * Handle received packet {{{
+ * enc28j60 will trigger an interrupt whenever a packet is received.
+ ******************************************************************************/
+HANDLE_PACKET:
     ERR_ARP_CLR_ERROR
 
-    /* select bank */
-    ldi   ARG_REG1, ECON1
-    ldi   ARG_REG2, ECON1_BSEL0
+    /* enc28j60 interrupt could be trigger by different sources, therefore check
+     * if we have pending packets after receiving the interrupt.
+     * Set Bank 1, read packet counter */
+    ldi   ARG_REG1, ENC_COMMON_ECON1
+    ldi   ARG_REG2, ENC_COMMON_ECON1_BSEL0
     rcall ETH_BIT_FIELD_SET
-    ldi   ARG_REG1, ECON1
-    ldi   ARG_REG2, ECON1_BSEL1
+    ldi   ARG_REG1, ENC_COMMON_ECON1
+    ldi   ARG_REG2, ENC_COMMON_ECON1_BSEL1
     rcall ETH_BIT_FIELD_CLEAR
-    ldi   ARG_REG1, EPKTCNT
+    ldi   ARG_REG1, ENC_BANK1_EPKTCNT
     rcall ETH_READ_CONTROL_REGISTER
     sts   RPKT_PENDING_CNT, RETURN_VALUE
 
@@ -93,8 +223,8 @@ MAIN_PACKET:
     tst   RETURN_VALUE
     brne  PROCESS_PACKET
     ret
-PROCESS_PACKET:
 
+PROCESS_PACKET:
     /* Next Read Pointer */
     rcall ETH_READ_RECEIVE_HEADER
     rcall ETH_CHECK_RECEIVE_STATUS_VECTOR
@@ -103,17 +233,32 @@ PROCESS_PACKET:
 
     rcall ETH_READ_MAC_ADDRS_N_LEN_TYPE
 
-    /* TYPE/LENGTH, values below 0x05DC are length, otherwise, type.
-     * enc28j60 tells us if type or length */
-    lds   TMP1, RPKT_STATUS2
-    sbrc  TMP1, RPKT_STATUS2_LENGTH_OUT_OF_RANGE
+    lds   TMP_REG2, RPKT_STATUS3
+    sbrs  TMP_REG2, RPKT_STATUS3_RECEIVE_BROADCAST_PACKET
+    rjmp  CHK_RPKT_STATUS2
+    /* Check if broadcast was sent by me {{{ */
+    ldi   YH, hi8(EEPROM_MAC_ADDR)
+    ldi   YL, lo8(EEPROM_MAC_ADDR)
+    ldi   ZH, hi8(MAC_ADDR_OTHER)
+    ldi   ZL, lo8(MAC_ADDR_OTHER)
+    ldi   TMP_REG1, MAC_SIZE_IN_BYTES
+CHECK_BROADCAST_MAC_ADDR:
+    rcall EEPROM_READ_N_INC
+    ld    TMP_REG2, Z+
+    cp    TMP_REG2, RETURN_VALUE
+    brne  CHK_RPKT_STATUS2
+    dec   TMP_REG1
+    brne  CHECK_BROADCAST_MAC_ADDR
+    /* Src MAC addr from broadcast is mine, skip packet */
+    rjmp  SKIP_ETH_PKT /* }}} */
+
+CHK_RPKT_STATUS2:
+    lds   TMP_REG2, RPKT_STATUS2
+    sbrc  TMP_REG2, RPKT_STATUS2_LENGTH_OUT_OF_RANGE
     rjmp  TYPE_LEN_TYPE
-    rjmp  TYPE_LEN_LENGTH
+    rjmp  SKIP_ETH_PKT /* no support for type/length = length packets */
 
-TYPE_LEN_LENGTH:
-    rjmp  PACKET_END
-
-TYPE_LEN_TYPE:
+TYPE_LEN_TYPE: /* {{{ */
     lds   ZH, TYPE_LEN_H
     lds   ZL, TYPE_LEN_L
 TYPE_LEN_IPV4:
@@ -123,112 +268,42 @@ TYPE_LEN_IPV4:
     cpi   ZL, lo8(ETHER_TYPE_IPV4)
     brne  TYPE_LEN_ARP
 
-    rcall IPV4_READ_HEADER
-    rcall IPV4_RESPONSE_IF_PING
+    rcall IPV4_HANDLE_PKT
     cpi   RETURN_VALUE, 0
     brne  ERROR
     rjmp  PACKET_END
-
-TYPE_LEN_ARP:
+/* }}} */
+TYPE_LEN_ARP: /* {{{ */
     /* Check Type/Len is ARP or jump to next type/len */
     cpi   ZH, hi8(ETHER_TYPE_ARP)
     brne  TYPE_LEN_UNKNOWN
     cpi   ZL, lo8(ETHER_TYPE_ARP)
     brne  TYPE_LEN_UNKNOWN
 
-    rcall ARP_PROCESS
+    rcall ARP_HANDLE_PKT
     cpi   RETURN_VALUE, 0
-    brne  NO_ARP_PACKET
-    /* Write ARP Reply */
-    rcall ETH_WRITE_BUFFER_PACKET_HEADER
-    ldi   ZH, 0
-    ldi   ZL, ARP_PAYLOAD
-    ldi   ARG_REG1, 28
-    rcall ETH_WRITE_BUFFER_PACKET_PAYLOAD
-    rcall ETH_WRITE_BUFFER_PACKET_PAYLOAD_FINISH
+    brne  ERROR
     rjmp  PACKET_END
-
+/* }}} */
 TYPE_LEN_UNKNOWN:
-    ERR_ETH_SET_ERROR
-    rjmp PACKET_END
-
 PACKET_END:
-NO_ARP_PACKET:
 SKIP_ETH_PKT:
     rcall ETH_PKT_PROCESSED
-
+#if 0 // {{{
     inc   DEBUG_REG_COUNT
     cpi   DEBUG_REG_COUNT, 4
     brne  SKIP_MESSAGE
-    rcall SEND_MESSAGE
+#ifdef USE_DHT11
+    rcall DHT11_READ
+#endif
+    rcall SEND_PACKET
     ldi   DEBUG_REG_COUNT, 0
+    rcall DHCP_DISCOVER
 SKIP_MESSAGE:
-    ret //rjmp loop
+#endif // }}} 
+    ret
 
 ERROR:
     ERR_ETH_SET_ERROR
     rjmp  SKIP_ETH_PKT
-
-/*******************************************************************************
- * Write message to PC
- ******************************************************************************/
-SEND_MESSAGE:
-    push ZL
-    push ZH
-
-    lds   TMP1, TYPE_LEN_H
-    push  TMP1
-    lds   TMP1, TYPE_LEN_L
-    push  TMP1
-    ldi   TMP1, hi8(MESSAGE_TYPE_LEN)
-    sts   TYPE_LEN_H, TMP1
-    ldi   TMP1, lo8(MESSAGE_TYPE_LEN)
-    sts   TYPE_LEN_L, TMP1
-
-    ldi   ZL, lo8(MESSAGE_PAYLOAD)
-    ldi   ZH, hi8(MESSAGE_PAYLOAD)
-    ldi   TMP1, 0xFF
-    st    Z+, TMP1
-    in    TMP1, _SFR_IO_ADDR(TCNT1H)
-    st    Z+, TMP1
-    in    TMP1, _SFR_IO_ADDR(TCNT1L)
-    st    Z+, TMP1
-    ldi   TMP1, 0xFF
-    st    Z+, TMP1
-
-    rcall ETH_WRITE_BUFFER_PACKET_HEADER
-    ldi   ZL, lo8(MESSAGE_PAYLOAD)
-    ldi   ZH, hi8(MESSAGE_PAYLOAD)
-    ldi   ARG_REG1, 16
-    rcall ETH_WRITE_BUFFER_PACKET_PAYLOAD
-
-    rcall DHT11_READ
-    ldi   ZL, lo8(DHT11_PAYLOAD)
-    ldi   ZH, hi8(DHT11_PAYLOAD)
-    ldi   ARG_REG1, 16 ; DHT11_PAYLOAD_LEN + 2
-    rcall ETH_WRITE_BUFFER_PACKET_PAYLOAD
-
-    rcall ETH_WRITE_BUFFER_PACKET_PAYLOAD_FINISH
-
-    pop   TMP1
-    sts   TYPE_LEN_H, TMP1
-    pop   TMP1
-    sts   TYPE_LEN_L, TMP1
-
-    pop  ZH
-    pop  ZL
-    ret
-
-INT0_vect:
-    push  TMP1
-    in    TMP1, _SFR_IO_ADDR(SREG)
-    push  TMP1
-    rcall MAIN_PACKET
-    ldi   ARG_REG1, EIR
-    ldi   ARG_REG2, EIR_PKTIF
-    rcall ETH_BIT_FIELD_CLEAR
-    pop   TMP1
-    out   _SFR_IO_ADDR(SREG), TMP1
-    pop   TMP1
-    reti
-
+/* }}} */
