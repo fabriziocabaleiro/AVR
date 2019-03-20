@@ -1,5 +1,5 @@
-#ifndef __TCP_H__
-#define __TCP_H__
+#ifndef _TCP_H_
+#define _TCP_H_
 
 #include "services.h"
 

@@ -1,5 +1,5 @@
-#ifndef __UDP_H__
-#define __UDP_H__
+#ifndef _UDP_H_
+#define _UDP_H_
 
 #include "services.h"
 

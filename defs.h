@@ -1,17 +1,17 @@
-/* This file contains only definitions and constants used globally */
+/* vim: set foldmethod=marker: */
 #ifndef _DEFS_H_
 #define _DEFS_H_
 
 #include "eeprom_data.h"
 
 /*******************************************************************************
- * Global configuration
+ * Global configuration {{{
  ******************************************************************************/
 #define F_CPU 1000000 /* Default value of internal RC oscillator */
 #define USE_DHT11
-
+/* }}} */
 /*******************************************************************************
- * Registers
+ * Registers {{{
  ******************************************************************************/
 /* Register used for temporary values, they may be change after any rcall */
 #define TMP_REG1         R16
@@ -34,8 +34,9 @@
 #pragma GCC poison R20
 #pragma GCC poison R21
 #pragma GCC poison R22
+/* }}} */
 /*******************************************************************************
- * SPI Slave selection
+ * SPI Slave selection {{{
  ******************************************************************************/
 #define SPI_SS_ETH       PB1
 #define SPI_SS_LCD       PB2
@@ -43,9 +44,9 @@
 #define SPI_SELECT_ETH   cbi _SFR_IO_ADDR(PORTB), SPI_SS_ETH
 #define SPI_END_LCD      sbi _SFR_IO_ADDR(PORTB), SPI_SS_LCD
 #define SPI_END_ETH      sbi _SFR_IO_ADDR(PORTB), SPI_SS_ETH
-
+/* }}} */
 /*******************************************************************************
- * SRAM variables
+ * SRAM variables {{{
  ******************************************************************************/
 /* Receive packet header */
 #define RPKT_N_PKT_L            0x0060
@@ -127,7 +128,30 @@
  * DHCP SERVER IP ADDRESS *
  **************************/
 #define DHCP_SERVER_IP_ADDR             0x01E0 /* 4 bytes */
-
+/* }}} */
+/*******************************************************************************
+ * Miscellaneous {{{
+ ******************************************************************************/
+/* EtherType Protocol */
+#define ETHER_TYPE_LEN         0x05DC /* Equal or smaller to this, then is a length */
+#define ETHER_TYPE_IPV4        0x0800
+#define ETHER_TYPE_ARP         0x0806
+#define ETHER_TYPE_WAKE_ON_LAN 0x0842
+#define ETHER_TYPE_IPV6        0x86DD
+/* Error macros */
+#define ERR_ARP_ERR_BIT   PB0
+#define ERR_ARP_SET_DDR   sbi _SFR_IO_ADDR(DDRB),  ERR_ARP_ERR_BIT
+#define ERR_ARP_SET_ERROR sbi _SFR_IO_ADDR(PORTB), ERR_ARP_ERR_BIT
+#define ERR_ETH_SET_ERROR sbi _SFR_IO_ADDR(PORTB), ERR_ARP_ERR_BIT
+#define ERR_ARP_CLR_ERROR cbi _SFR_IO_ADDR(PORTB), ERR_ARP_ERR_BIT
+/* IP address sizes */
+#define MAC_SIZE_IN_BYTES  6
+#define IPV4_SIZE_IN_BYTES 4
+/* Own messages */
+#define MESSAGE_TYPE_LEN 0x1987
+/* Also defined in enc28j60.S */
+#define ETH_END_LISTEN_ON_SPI SPI_END_ETH
+/* }}} */
 
 #if 0
 /* DEBUGGING FUNCTIONALITY */
@@ -147,81 +171,5 @@
 #define DEBUG_PAYLOAD                    0x0096 /* Lets leave 200 bytes here, therefore next available address is 0x15E */
 #endif
 
-
-/*******************************************************************************
- * Miscellaneous
- ******************************************************************************/
-#define ERR_ARP_ERR_BIT   PB0
-#define ERR_ARP_SET_DDR   sbi _SFR_IO_ADDR(DDRB),  ERR_ARP_ERR_BIT
-#define ERR_ARP_SET_ERROR sbi _SFR_IO_ADDR(PORTB), ERR_ARP_ERR_BIT
-#define ERR_ETH_SET_ERROR sbi _SFR_IO_ADDR(PORTB), ERR_ARP_ERR_BIT
-#define ERR_ARP_CLR_ERROR cbi _SFR_IO_ADDR(PORTB), ERR_ARP_ERR_BIT
-
-#define MAC_SIZE_IN_BYTES  6
-#define IPV4_SIZE_IN_BYTES 4
-
-/* Own messages */
-#define MESSAGE_TYPE_LEN 0x1987
-
-/* Also defined in enc28j60.S */
-#define ETH_END_LISTEN_ON_SPI SPI_END_ETH
-
-/* Ethernet type from wikipedia {{{ */
-// EtherType Protocol
-#define ETHER_TYPE_LEN   0x05DC /* Equal or smaller to this, then is a length */
-#define ETHER_TYPE_IPV4  0x0800 /* Internet Protocol version 4 (IPv4) */
-#define ETHER_TYPE_ARP   0x0806 /* Address Resolution Protocol (ARP)  */
-#if 0
-0x0842 Wake-on-LAN[9]
-0x22F3 IETF TRILL Protocol
-0x22EA Stream Reservation Protocol
-0x6003 DECnet Phase IV
-0x8035 Reverse Address Resolution Protocol
-0x809B AppleTalk (Ethertalk)
-0x80F3 AppleTalk Address Resolution Protocol (AARP)
-0x8100 VLAN-tagged frame (IEEE 802.1Q) and Shortest Path Bridging IEEE 802.1aq with NNI compatibility[10]
-0x8137 IPX
-0x8204 QNX Qnet
-0x86DD Internet Protocol Version 6 (IPv6)
-0x8808 Ethernet flow control
-0x8809 Ethernet Slow Protocols[11] such as the Link Aggregation Control Protocol
-0x8819 CobraNet
-0x8847 MPLS unicast
-0x8848 MPLS multicast
-0x8863 PPPoE Discovery Stage
-0x8864 PPPoE Session Stage
-0x886D Intel Advanced Networking Services [12]
-0x8870 Jumbo Frames (Obsoleted draft-ietf-isis-ext-eth-01)
-0x887B HomePlug 1.0 MME
-0x888E EAP over LAN (IEEE 802.1X)
-0x8892 PROFINET Protocol
-0x889A HyperSCSI (SCSI over Ethernet)
-0x88A2 ATA over Ethernet
-0x88A4 EtherCAT Protocol
-0x88A8 Provider Bridging (IEEE 802.1ad) & Shortest Path Bridging IEEE 802.1aq[10]
-0x88AB Ethernet Powerlink[citation needed]
-0x88B8 GOOSE (Generic Object Oriented Substation event)
-0x88B9 GSE (Generic Substation Events) Management Services
-0x88BA SV (Sampled Value Transmission)
-0x88CC Link Layer Discovery Protocol (LLDP)
-0x88CD SERCOS III
-0x88DC WSMP, WAVE Short Message Protocol
-0x88E1 HomePlug AV MME[citation needed]
-0x88E3 Media Redundancy Protocol (IEC62439-2)
-0x88E5 MAC security (IEEE 802.1AE)
-0x88E7 Provider Backbone Bridges (PBB) (IEEE 802.1ah)
-0x88F7 Precision Time Protocol (PTP) over Ethernet (IEEE 1588)
-0x88F8 NC-SI
-0x88FB Parallel Redundancy Protocol (PRP)
-0x8902 IEEE 802.1ag Connectivity Fault Management (CFM) Protocol / ITU-T Recommendation Y.1731 (OAM)
-0x8906 Fibre Channel over Ethernet (FCoE)
-0x8914 FCoE Initialization Protocol
-0x8915 RDMA over Converged Ethernet (RoCE)
-0x891D TTEthernet Protocol Control Frame (TTE)
-0x892F High-availability Seamless Redundancy (HSR)
-0x9000 Ethernet Configuration Testing Protocol[13]
-0x9100 VLAN-tagged (IEEE 802.1Q) frame with double tagging
-#endif
-/* }}} */
 
 #endif

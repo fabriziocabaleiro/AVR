@@ -1,5 +1,5 @@
-#ifndef __SPI_H__
-#define __SPI_H__
+#ifndef _SPI_H_
+#define _SPI_H_
 
 /*------+------+------+----------------+
 | SPI2X | SPR1 | SPR0 |  SCK Frequency |
