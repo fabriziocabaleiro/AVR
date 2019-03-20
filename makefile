@@ -1,33 +1,81 @@
-GCC-OPT=-mmcu=atmega8 -std=gnu99 -g -Wall
-OBJS=main.o spi.o enc28j60.o arp.o ipv4.o dht11.o eeprom.o udp.o comm.o adc.o dhcp.o tcp.o icmp.o eeprom_data.o
+################################################################################
+#                          ATmega8 + ENC28J60 + DHT11                          #
+################################################################################
+OBJS = main.o         \
+       spi.o          \
+       enc28j60.o     \
+       arp.o          \
+       ipv4.o         \
+       dht11.o        \
+       eeprom.o       \
+       udp.o          \
+       comm.o         \
+       adc.o          \
+       dhcp.o         \
+       tcp.o          \
+       icmp.o
 
-main.elf: ${OBJS}
-	avr-gcc ${GCC-OPT} $^ -o $@
+DEPDIR = Deps
+OBJDIR = Objs
+GCCOPT = -mmcu=atmega8 -std=gnu99 -g -Wall
+
+# GCC flags for dependencies auto generation
+DEPOPTS = -MP -MMD -MF ${DEPDIR}/$(notdir $@).d 
+
+main.elf: $(addprefix ${OBJDIR}/, ${OBJS})
+	avr-gcc ${GCCOPT} $^ -o $@
 	avr-objcopy -O ihex -R .eeprom -R .fuse -R .lock -R .signature $@ main.hex
 	@echo Sizes:
 	@avr-size -B main.hex
-	@avr-size -B ${OBJS} | sed 1d | sort -n -r
+	@avr-size -B $(addprefix ${OBJDIR}/, ${OBJS}) | sed 1d | sort -n -r
+	@# Update cscope and ctags database
+	$(eval FILES := $(shell sed -n '/:$$/s/:$$//p' ${DEPDIR}/* | sort -u) \
+		${OBJS:.o=.S} eeprom_data.S)
+	@cscope -k -b -q ${FILES}
+	@ctags ${FILES}
 
-# TODO: fix dependency on header file
-%.o: %.S defs.h
-	avr-gcc ${GCC-OPT} -c -o $@ $<
+# Implicit rules with pattern rules
+# On the first go, without dependencies in ./${DEPDIR}, this implicit rule will apply
+# and dependency file will be generated.
+${OBJDIR}/%.o: %.S | eeprom_data.h ${DEPDIR} ${OBJDIR}
+	avr-gcc ${DEPOPTS} ${GCCOPT} -c -o $@ $<
 
 install:
-	/usr/bin/avrdude -c usbasp -p m8 -U flash:w:main.hex
+	/usr/bin/avrdude -D -c usbasp -p m8 -U flash:w:main.hex
+
+# EEPROM install
+einstall:
 	/usr/bin/avrdude -c usbasp -p m8 -U eeprom:w:eeprom_data.hex
 
-eeprom:
+read:
+	/usr/bin/avrdude -c usbasp -p m8 -U flash:r:main_out.hex:i
+
+# EEPROM read
+eread:
 	/usr/bin/avrdude -c usbasp -p m8 -U eeprom:r:eeprom_out.hex:i
 	cat eeprom_out.hex
 
-eeprom_data.o: eeprom_data.S
+eeprom_data.hex eeprom_data.h: eeprom_data.S
 	avr-gcc $< -c -o eeprom_data.elf
-	avr-gcc ${GCC-OPT} -c -o $@ $< 
 	avr-objcopy -O ihex eeprom_data.elf eeprom_data.hex
-
-
-read:
-	/usr/bin/avrdude -c usbasp -p m8 -U flash:r:main2.hex:i
+	avr-nm --no-sort -B eeprom_data.elf | awk 'BEGIN {                     \
+		printf "#ifndef _EEPROM_DATA_H_\n";                            \
+		printf "#define _EEPROM_DATA_H_\n\n";                          \
+		printf "/* Auto generated, based on eeprom_data.S */\n\n"      \
+		} {                                                            \
+		printf "#define %-40s 0x%04X\n", $$3, strtonum("0x"$$1);         \
+		} END {                                                        \
+			printf "\n#endif\n";                                   \
+		} ' > eeprom_data.h
 
 clean:
-	rm ${OBJS} main.elf
+	test -d ${DEPDIR} && rm -r ${DEPDIR}
+	test -d ${OBJDIR} && rm -r ${OBJDIR}
+	rm *.elf *.hex eeprom_data.h cscope* tags
+
+# Generate directory if doesn't exists
+${OBJDIR} ${DEPDIR}:
+	test -d $@ || mkdir $@
+
+# Include automatic dependencies
+-include $(wildcard ${DEPDIR}/*)

@@ -2,6 +2,8 @@
 #ifndef _DEFS_H_
 #define _DEFS_H_
 
+#include "eeprom_data.h"
+
 /*******************************************************************************
  * Global configuration
  ******************************************************************************/
@@ -41,25 +43,6 @@
 #define SPI_SELECT_ETH   cbi _SFR_IO_ADDR(PORTB), SPI_SS_ETH
 #define SPI_END_LCD      sbi _SFR_IO_ADDR(PORTB), SPI_SS_LCD
 #define SPI_END_ETH      sbi _SFR_IO_ADDR(PORTB), SPI_SS_ETH
-
-/*******************************************************************************
- * EEPROM variables
- ******************************************************************************/
-// #define EEPROM_MAC_ADDR                0x0000 /* [0x0000, 0x0005] */
-// #define EEPROM_IP_ADDR                 0x0006 /* [0x0006, 0x0009] */
-// #define EEPROM_MAC_DEBUG               0x000A /* [0x000A, 0x000F] */
-// #define EEPROM_IP_HEADER               0x0010 /* [0x0010, 0x0019] */
-/* Only storing 10 bytes of 20, missing checksum and IP addrs */
-#define EEPROM_IP_HEADER_LEN_TIL_CHK_SUM   10
-#define EEPROM_IP_HEADER_LEN               20
-
-// #define EEPROM_DHCP_HEADER             0x0024
-#define EEPROM_DHCP_HEADER_LEN              8
-
-// #define EEPROM_DHCP_MAGIC_COOKIE       0x002C
-#define EEPROM_DHCP_MAGIC_COOKIE_LEN        4
-
-// #define EEPROM_DEBUG                   0x0040
 
 /*******************************************************************************
  * SRAM variables
