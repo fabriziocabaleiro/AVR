@@ -128,6 +128,17 @@
  * DHCP SERVER IP ADDRESS *
  **************************/
 #define DHCP_SERVER_IP_ADDR             0x01E0 /* 4 bytes */
+#define DHCP_XID_LAST_BYTE              0x01E4 /* 1 byte  */
+
+/*************
+ * DEBUGGING *
+ *************/
+#define EEPROM_DEBUG_R0_7    0x01E5
+#define EEPROM_DEBUG_R8_15   0x01E6
+#define EEPROM_DEBUG_R16_23  0x01E7
+#define EEPROM_DEBUG_R24_31  0x01E8
+#define EEPROM_DEBUG_YL      0x01E9
+#define EEPROM_DEBUG_YH      0x01EA
 /* }}} */
 /*******************************************************************************
  * Miscellaneous {{{

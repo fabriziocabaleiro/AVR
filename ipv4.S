@@ -66,8 +66,11 @@ READ_HEADER:
     push  YL
     push  YH
 
-    ldi   TMP_REG2, 0 /* My IP addr counter */
-    mov   TMP_REG3, 0 /* Broadcast addr counter */
+/* Setting RECEIVED_IP* bits at the beginning, then subtracting, if 4
+ * subtractions, then the MSB of the nibble will be zero */
+#define RECEIVED_IP_IS_MINE_BIT      3
+#define RECEIVED_IP_IS_BROADCAST_BIT 7
+    clr   TMP_REG2 /* Using nibble to check My IP addr or Broadcast */
     ldi   YH, hi8(EEPROM_IP_ADDR)
     ldi   YL, lo8(EEPROM_IP_ADDR)
     ldi   ZL, lo8(IPV4_HEADER)
@@ -78,11 +81,11 @@ CHECK_IP_ADDR:
     ldd   TMP_REG1, Z + IPV4_DST_ADDR
     cp    TMP_REG1, RETURN_VALUE
     brne  NOT_MY_IP
-    inc   TMP_REG2
+    subi  TMP_REG2, -0x01
 NOT_MY_IP:
     cpi   TMP_REG1, 0xFF
     brne  NOT_BROADCAST
-    inc   TMP_REG3
+    subi  TMP_REG2, -0x10
 NOT_BROADCAST:
     adiw  ZL, 1
     dec   COUNTER_REG
@@ -91,34 +94,34 @@ NOT_BROADCAST:
     pop   YH
     pop   YL
 
-    /* IPV4_SIZE_IN_BYTES is 4, therefore we can check if the fourth bit in the
-     * reg is set and set IPV4_PACKET_FOR_ME accordantly */ 
-    ldi   TMP_REG1, 0
-    sbrc  TMP_REG2, IPV4_SIZE_IN_BYTES
-    ldi   TMP_REG1, 1
-    sbrc  TMP_REG3, IPV4_SIZE_IN_BYTES
-    ldi   TMP_REG1, 1
-    sts   IPV4_PACKET_FOR_ME, TMP_REG1
+#if 0 // debug
+    ldi   YL, lo8(EEPROM_DEBUG)
+    ldi   YH, hi8(EEPROM_DEBUG)
+    mov   ARG_REG1, TMP_REG2
+    rcall EEPROM_WRITE_N_INC
+    ERR_ETH_SET_ERROR
+#endif
 
     /* }}} */
     /* Deliver packet using IPv4 protocol {{{ */
     /* Faster than setting ZH:ZL, just subtract... previously added value */
     sbiw  ZL, IPV4_SIZE_IN_BYTES
     /* Load Internet protocol number */
-    ldd   TMP_REG2, Z + IPV4_PROTOCOL
+    ldd   TMP_REG1, Z + IPV4_PROTOCOL
 
     /* We may receive a DHCP packet that doesn't have our current IP address,
      * therefore we ignore IPV4_PACKET_FOR_ME for the moment */
-    cpi   TMP_REG2, INTERNET_PROTOCOL_NUMBER_USER_DATAGRAM
+    cpi   TMP_REG1, INTERNET_PROTOCOL_NUMBER_USER_DATAGRAM
     brne  RETURN_IF_IP_PACKET_NOT_FOR_ME
     rcall UDP_HANDLE_PKT
     rjmp  IPV4_HANDLE_EXIT_SUCCESS
 
 RETURN_IF_IP_PACKET_NOT_FOR_ME:
-    sbrc  TMP_REG1, 1
+    sbrc  TMP_REG2, RECEIVED_IP_IS_MINE_BIT
     rjmp  IPV4_HANDLE_EXIT_SUCCESS
+
 TRY_PROTOCOL_ICMP:
-    cpi   TMP_REG2, INTERNET_PROTOCOL_NUMBER_ICMP
+    cpi   TMP_REG1, INTERNET_PROTOCOL_NUMBER_ICMP
     brne  TRY_PROTOCOL_TCP
     rcall ICMP_HANDLE_PKT
     rjmp  IPV4_HANDLE_EXIT_SUCCESS

@@ -1,4 +1,6 @@
 /* vim: set filetype=S foldmethod=marker: */
+#include "dhcp.h"
+
 EEPROM_MAC_ADDR: /* {{{ */
     .byte 0xFA
     .byte 0xB2
@@ -66,11 +68,10 @@ EEPROM_DHCP_HEADER: /* {{{ */
     .byte 0x06
     /* HOPS */
     .byte 0x00
-    /* XID, 4 bytes */
-    .byte 0x01
-    .byte 0x23
-    .byte 0x45
-    .byte 0x67
+    /* XID is four bytes, but, we use the last one for counter */
+    .byte 0xCA
+    .byte 0xCA
+    .byte 0x00
 EEPROM_DHCP_HEADER_END: /* }}} */
 EEPROM_DHCP_MAGIC_COOKIE: /* {{{ */
     .byte 0x63
@@ -78,3 +79,26 @@ EEPROM_DHCP_MAGIC_COOKIE: /* {{{ */
     .byte 0x53
     .byte 0x63
 EEPROM_DHCP_MAGIC_COOKIE_END: /* }}} */
+EEPROM_DHCP_REQUEST_OPS: /* {{{ */
+    /* Message Request */
+    .byte DHCP_OPTION_DHCP_MSG_TYPE
+    .byte DHCP_OPTION_DHCP_MSG_TYPE_LEN
+    .byte DHCP_OPTION_DHCP_MSG_TYPE_DHCP_REQUEST
+    /* Name of the device */
+    .byte DHCP_OPTION_HOSTNAME
+    .byte 4
+    .byte 'C'
+    .byte 'o'
+    .byte 't'
+    .byte 'e'
+    /* We set the Option and length here and the code is going to write the IP
+     * address */
+    .byte DHCP_OPTION_ADDRESS_REQUEST
+    .byte DHCP_OPTION_ADDRESS_REQUEST_LEN
+EEPROM_DHCP_REQUEST_OPS_END: /* }}} */
+EEPROM_DEBUG_PREFIX: /* {{{ */
+    .byte 0xAB
+    .byte 0xAB
+    .byte 0xAB
+    .byte 0xAB
+EEPROM_DEBUG: /* }}} */

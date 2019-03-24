@@ -2,6 +2,90 @@
 #ifndef _DHCP_H_
 #define _DHCP_H_
 
+#include "services.h"
+
+/* DHCP header {{{
+    0                   1                   2                   3
+    0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+  0 |     op (1)    |   htype (1)   |   hlen (1)    |   hops (1)    |
+    +---------------+---------------+---------------+---------------+
+  4 |                            xid (4)                            |
+    +-------------------------------+-------------------------------+
+  8 |           secs (2)            |           flags (2)           |
+    +-------------------------------+-------------------------------+
+ 12 |                          ciaddr  (4)                          |
+    +---------------------------------------------------------------+
+ 16 |                          yiaddr  (4)                          |
+    +---------------------------------------------------------------+
+ 20 |                          siaddr  (4)                          |
+    +---------------------------------------------------------------+
+ 24 |                          giaddr  (4)                          |
+    +---------------------------------------------------------------+
+ 28 |                          chaddr  (16)                         |
+    +---------------------------------------------------------------+
+ 44 |                          sname   (64)                         |
+    +---------------------------------------------------------------+
+108 |                          file    (128)                        |
+    +---------------------------------------------------------------+
+236 |                          options (variable)                   |
+    +---------------------------------------------------------------+
+
+   FIELD      OCTETS       DESCRIPTION
+   -----      ------       -----------
+
+   op            1  Message op code / message type.
+                    1 = BOOTREQUEST, 2 = BOOTREPLY
+   htype         1  Hardware address type, see ARP section in "Assigned
+                    Numbers" RFC; e.g., '1' = 10mb ethernet.
+   hlen          1  Hardware address length (e.g.  '6' for 10mb
+                    ethernet).
+   hops          1  Client sets to zero, optionally used by relay agents
+                    when booting via a relay agent.
+   xid           4  Transaction ID, a random number chosen by the
+                    client, used by the client and server to associate
+                    messages and responses between a client and a
+                    server.
+   secs          2  Filled in by client, seconds elapsed since client
+                    began address acquisition or renewal process.
+   flags         2  Flags (see figure 2).
+   ciaddr        4  Client IP address; only filled in if client is in
+                    BOUND, RENEW or REBINDING state and can respond
+                    to ARP requests.
+   yiaddr        4  'your' (client) IP address.
+   siaddr        4  IP address of next server to use in bootstrap;
+                    returned in DHCPOFFER, DHCPACK by server.
+   giaddr        4  Relay agent IP address, used in booting via a
+                    relay agent.
+   chaddr       16  Client hardware address.
+   sname        64  Optional server host name, null terminated string.
+   file        128  Boot file name, null terminated string; "generic"
+                    name or null in DHCPDISCOVER, fully qualified
+                    directory-path name in DHCPOFFER.
+   options     var  Optional parameters field.  See the options
+                    documents for a list of defined options.
+}}} */
+/* DHCP Header data structure {{{ */
+#define DHCP_OP         0 
+#define DHCP_HTYPE      1
+#define DHCP_HLEN       2
+#define DHCP_HOPS       3
+#define DHCP_XID        4
+#define DHCP_SECS       8
+#define DHCP_FLAGS     10
+#define DHCP_CIADDR    12 
+#define DHCP_YIADDR    16
+#define DHCP_SIADDR    20 
+#define DHCP_GIADDR    24 
+#define DHCP_CHADDR    28
+#define DHCP_SNAME     44 
+#define DHCP_FILE     108 
+#define DHCP_OPTIONS  236 
+/* }}} */
+/* DHCP OPCODE VALUES {{{ */
+#define DHCP_OP_BOOTREQUEST 1
+#define DHCP_OP_BOOTREPLY   2
+/* }}} */
 /* DHCP OPTIONS {{{ */
 /* Meaning None. [RFC2132] */
 #define DHCP_OPTION_PAD                                         0
@@ -595,88 +679,6 @@
 /* Meaning None. [RFC2132] */
 #define DHCP_OPTION_END                                         255
 #define DHCP_OPTION_END_LEN                                     0
-/* }}} */
-/* DHCP header {{{
-    0                   1                   2                   3
-    0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
-    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-  0 |     op (1)    |   htype (1)   |   hlen (1)    |   hops (1)    |
-    +---------------+---------------+---------------+---------------+
-  4 |                            xid (4)                            |
-    +-------------------------------+-------------------------------+
-  8 |           secs (2)            |           flags (2)           |
-    +-------------------------------+-------------------------------+
- 12 |                          ciaddr  (4)                          |
-    +---------------------------------------------------------------+
- 16 |                          yiaddr  (4)                          |
-    +---------------------------------------------------------------+
- 20 |                          siaddr  (4)                          |
-    +---------------------------------------------------------------+
- 24 |                          giaddr  (4)                          |
-    +---------------------------------------------------------------+
- 28 |                          chaddr  (16)                         |
-    +---------------------------------------------------------------+
- 44 |                          sname   (64)                         |
-    +---------------------------------------------------------------+
-108 |                          file    (128)                        |
-    +---------------------------------------------------------------+
-236 |                          options (variable)                   |
-    +---------------------------------------------------------------+
-
-   FIELD      OCTETS       DESCRIPTION
-   -----      ------       -----------
-
-   op            1  Message op code / message type.
-                    1 = BOOTREQUEST, 2 = BOOTREPLY
-   htype         1  Hardware address type, see ARP section in "Assigned
-                    Numbers" RFC; e.g., '1' = 10mb ethernet.
-   hlen          1  Hardware address length (e.g.  '6' for 10mb
-                    ethernet).
-   hops          1  Client sets to zero, optionally used by relay agents
-                    when booting via a relay agent.
-   xid           4  Transaction ID, a random number chosen by the
-                    client, used by the client and server to associate
-                    messages and responses between a client and a
-                    server.
-   secs          2  Filled in by client, seconds elapsed since client
-                    began address acquisition or renewal process.
-   flags         2  Flags (see figure 2).
-   ciaddr        4  Client IP address; only filled in if client is in
-                    BOUND, RENEW or REBINDING state and can respond
-                    to ARP requests.
-   yiaddr        4  'your' (client) IP address.
-   siaddr        4  IP address of next server to use in bootstrap;
-                    returned in DHCPOFFER, DHCPACK by server.
-   giaddr        4  Relay agent IP address, used in booting via a
-                    relay agent.
-   chaddr       16  Client hardware address.
-   sname        64  Optional server host name, null terminated string.
-   file        128  Boot file name, null terminated string; "generic"
-                    name or null in DHCPDISCOVER, fully qualified
-                    directory-path name in DHCPOFFER.
-   options     var  Optional parameters field.  See the options
-                    documents for a list of defined options.
-}}} */
-/* DHCP Header data structure {{{ */
-#define DHCP_OP         0 
-#define DHCP_HTYPE      1
-#define DHCP_HLEN       2
-#define DHCP_HOPS       3
-#define DHCP_XID        4
-#define DHCP_SECS       8
-#define DHCP_FLAGS     10
-#define DHCP_CIADDR    12 
-#define DHCP_YIADDR    16
-#define DHCP_SIADDR    20 
-#define DHCP_GIADDR    24 
-#define DHCP_CHADDR    28
-#define DHCP_SNAME     44 
-#define DHCP_FILE     108 
-#define DHCP_OPTIONS  236 
-/* }}} */
-/* DHCP OPCODE VALUES {{{ */
-#define DHCP_OP_BOOTREQUEST 1
-#define DHCP_OP_BOOTREPLY   2
 /* }}} */
 /* DHCP Options and BOOTP Vendor Extensions {{{
    [[1]Docs] [[2]txt|[3]pdf] [[4]draft-ietf-dhc-...] [[5]Tracker]

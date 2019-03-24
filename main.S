@@ -164,11 +164,13 @@ MAIN_DELAY:
     rcall ETH_MISC_INIT
     rcall ETH_ENABLE_RECEIVE
     rcall ETH_ENABLE_RECEIVE_INTERRUPT
+    rcall EEPROM_DEBUG_INIT
     /* Set LED errors */
     ERR_ARP_SET_DDR
 
     ldi DEBUG_REG_COUNT, 0
     /* Get IP from DHCP */
+    sts   DHCP_XID_LAST_BYTE, DEBUG_REG_COUNT
     rcall DHCP_DISCOVER
     sei
 
@@ -190,6 +192,7 @@ INT0_vect:
     in    TMP_REG2, _SFR_IO_ADDR(SREG)
     push  TMP_REG2
     rcall HANDLE_PACKET
+    ERR_ARP_CLR_ERROR
     ldi   ARG_REG1, ENC_COMMON_EIR
     ldi   ARG_REG2, ENC_COMMON_EIR_PKTIF
     rcall ETH_BIT_FIELD_CLEAR
@@ -289,14 +292,14 @@ TYPE_LEN_UNKNOWN:
 PACKET_END:
 SKIP_ETH_PKT:
     rcall ETH_PKT_PROCESSED
-#if 0 // {{{
+#if 1 // {{{
     inc   DEBUG_REG_COUNT
-    cpi   DEBUG_REG_COUNT, 4
+    cpi   DEBUG_REG_COUNT, 40
     brne  SKIP_MESSAGE
 #ifdef USE_DHT11
-    rcall DHT11_READ
+    //rcall DHT11_READ
 #endif
-    rcall SEND_PACKET
+    //rcall SEND_PACKET
     ldi   DEBUG_REG_COUNT, 0
     rcall DHCP_DISCOVER
 SKIP_MESSAGE:

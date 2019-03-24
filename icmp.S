@@ -25,6 +25,8 @@ ICMP_HANDLE_PKT:
     push  YL
     push  YH
 
+    ERR_ETH_SET_ERROR
+
     /* Read message type, if not ICMP_MSG_TYPE_ECHO, then ignore packet */
     rcall ETH_READ_BUFFER_START
     READ_NEXT_BYTE

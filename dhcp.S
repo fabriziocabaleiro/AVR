@@ -14,8 +14,9 @@
 /* Defines {{{ */
 #define READ_NEXT_BYTE rcall SPI_MASTER_TRANSMIT
 
-#define UDP_SRC_PORT                68
-#define UDP_DST_PORT                67
+#define UDP_DST_PORT INTERNET_SERVICE_BOOTPS_67_UDP
+#define UDP_SRC_PORT INTERNET_SERVICE_BOOTPC_68_UDP
+
 #define DHCP_DISCOVERY_UDP_PKT_SIZE  (     8 + /* UDP header */          \
                                       11 * 4 + /* before BOOTP legacy */ \
                                          192 + /* BOOTP legacy */        \
@@ -23,9 +24,17 @@
                                            3 + /* DHCP discover */       \
                                            1   /* endmark */             \
                                    )
-#define DHCP_REQUEST_UDP_PKT_SIZE    (DHCP_DISCOVERY_UDP_PKT_SIZE + 12)
+
+#define DHCP_REQUEST_EXTRA_OPS_LEN (6 + /* Address Request */ \
+                                    6 + /* Server IP address */ \
+                                    6   /* Hostname */ \
+                                    )
+
+#define DHCP_REQUEST_UDP_PKT_SIZE    (DHCP_DISCOVERY_UDP_PKT_SIZE + \
+                                      DHCP_REQUEST_EXTRA_OPS_LEN)
 #define DHCP_DISCOVERY_PKT_SIZE      (DHCP_DISCOVERY_UDP_PKT_SIZE + 20)
-#define DHCP_REQUEST_PKT_SIZE        (DHCP_DISCOVERY_PKT_SIZE + 12)
+#define DHCP_REQUEST_PKT_SIZE        (DHCP_DISCOVERY_PKT_SIZE + \
+                                      DHCP_REQUEST_EXTRA_OPS_LEN)
 
 .macro SR reg
     push  ARG_REG1
@@ -53,15 +62,15 @@ DHCP_REQUEST_DISCOVER_COMMON:
     push  YL
     push  YH
 
+    /* Ethernet Header {{{ */
     ldi   TMP_REG2, (1 << ENC_MAC_DST_PTR_BROADCAST_BIT)
     sts   ENC_MAC_DST_PTR, TMP_REG2
     ldi   TMP_REG2, (1 << ENC_TYPE_LEN_PTR_IPv4)
     sts   ENC_TYPE_LEN_PTR, TMP_REG2
     rcall ETH_WRITE_BUFFER_PACKET_HEADER
-
+    /* }}} */
     rcall ETH_SET_LISTEN_ON_SPI
-
-    /* Write IPv4 Header
+    /* IPv4 Header {{{
      * This header has src as 0.0.0.0, dst as 255.255.255.255, checksum and
      * total length have to be setup
      */
@@ -107,7 +116,9 @@ DHCP_WRITE_IP_HEADER:
     rcall SPI_MASTER_TRANSMIT
     dec   COUNTER_REG
     brne  DHCP_WRITE_IP_HEADER
-
+    /* }}} */
+    /* UDP Header {{{ */
+    /* SRC/DST port {{{ */
     ldi   ARG_REG1, hi8(UDP_SRC_PORT)
     rcall SPI_MASTER_TRANSMIT
     ldi   ARG_REG1, lo8(UDP_SRC_PORT)
@@ -116,8 +127,8 @@ DHCP_WRITE_IP_HEADER:
     rcall SPI_MASTER_TRANSMIT
     ldi   ARG_REG1, lo8(UDP_DST_PORT)
     rcall SPI_MASTER_TRANSMIT
-
-    /* Write the packet size depending if DISCOVERY or REQUEST */
+    /* }}} */
+    /* Write the packet size depending if DISCOVERY or REQUEST {{{ */
     brts  DHCP_WRITE_REQUEST_UDP_PKT_SIZE
     ldi   ARG_REG1, hi8(DHCP_DISCOVERY_UDP_PKT_SIZE)
     rcall SPI_MASTER_TRANSMIT
@@ -130,15 +141,15 @@ DHCP_WRITE_REQUEST_UDP_PKT_SIZE:
     ldi   ARG_REG1, lo8(DHCP_REQUEST_UDP_PKT_SIZE)
     rcall SPI_MASTER_TRANSMIT
 DHCP_UDP_PKT_SIZE_DONE:
-
+    /* }}} */
+    /* UDP Checksum, Zero for ignore {{{ */
     ldi   ARG_REG1, 0
     rcall SPI_MASTER_TRANSMIT
     rcall SPI_MASTER_TRANSMIT
-
-    /************* 
-     * DHCP PART * 
-     *************/
-    /* Write first 8 bytes: OP, HTYPE, HLEN, HOPS AND XID */
+    /* }}} */
+    /* }}} */
+    /* DHCP Body {{{ */
+    /* Write first 8 bytes: OP, HTYPE, HLEN, HOPS AND XID (3 of 4 bytes) {{{ */
     ldi   YL, lo8(EEPROM_DHCP_HEADER)
     ldi   YH, hi8(EEPROM_DHCP_HEADER)
     ldi   COUNTER_REG, (EEPROM_DHCP_HEADER_END - EEPROM_DHCP_HEADER)
@@ -148,16 +159,24 @@ DHCP_REQUEST_IP_SET_HEADER_LOOP_1:
     rcall SPI_MASTER_TRANSMIT
     dec   COUNTER_REG
     brne  DHCP_REQUEST_IP_SET_HEADER_LOOP_1
-
-    /* set SECS, FLAGS, CIADDR, YIADDR to zero */
+    /* }}} */
+    /* Last byte of XID {{{ */
+    lds   ARG_REG1, DHCP_XID_LAST_BYTE
+    brts  SKIP_XID_INC_N_UPDATE
+    inc   ARG_REG1
+    sts   DHCP_XID_LAST_BYTE, ARG_REG1
+SKIP_XID_INC_N_UPDATE:
+    rcall SPI_MASTER_TRANSMIT
+    /* }}} */
+    /* set SECS, FLAGS, CIADDR, YIADDR to zero {{{ */
     ldi   ARG_REG1, 0
     ldi   COUNTER_REG, 12
 DHCP_REQUEST_IP_SET_HEADER_LOOP_2:
     rcall SPI_MASTER_TRANSMIT
     dec   COUNTER_REG
     brne  DHCP_REQUEST_IP_SET_HEADER_LOOP_2
-
-    /* SIADDR to zero or value depending on T */
+    /* }}} */
+    /* SIADDR to zero or value depending on T {{{ */
     ldi   YL, lo8(DHCP_SERVER_IP_ADDR)
     ldi   YH, hi8(DHCP_SERVER_IP_ADDR)
     ldi   COUNTER_REG, IPV4_SIZE_IN_BYTES
@@ -168,16 +187,16 @@ SKIP_REAADING_SERVER_IP:
     rcall SPI_MASTER_TRANSMIT
     dec   COUNTER_REG
     brne  DHCP_REQUEST_IP_SET_HEADER_LOOP_2_1
-    
-    /* GIADDR to zero */
+    /* }}} */
+    /* GIADDR to zero {{{ */
     ldi   ARG_REG1, 0
     ldi   COUNTER_REG, 4
 DHCP_REQUEST_IP_SET_HEADER_LOOP_2_2:
     rcall SPI_MASTER_TRANSMIT
     dec   COUNTER_REG
     brne  DHCP_REQUEST_IP_SET_HEADER_LOOP_2_2
-
-    /* Write own MAC */
+    /* }}} */
+    /* Write own MAC {{{ */
     ldi   YL, lo8(EEPROM_MAC_ADDR)
     ldi   YH, hi8(EEPROM_MAC_ADDR)
     ldi   COUNTER_REG, MAC_SIZE_IN_BYTES
@@ -187,17 +206,18 @@ DHCP_REQUEST_IP_SET_HEADER_LOOP_3:
     rcall SPI_MASTER_TRANSMIT
     dec   COUNTER_REG
     brne  DHCP_REQUEST_IP_SET_HEADER_LOOP_3
-
-    /* header has 16 bytes for mac, as using only 6, there are 10 bytes to write
-     * as zero, then we have 192 bytes of zero (option overload/BOOTS legacy) */
+    /* }}} */
+    /* header has 16 bytes for mac, as using only 6, there are 10 bytes to {{{
+     * write as zero, then we have 192 bytes of zero (option overload/BOOTS
+     * legacy) */
     ldi   ARG_REG1, 0
     ldi   COUNTER_REG, 202
 DHCP_REQUEST_IP_SET_HEADER_LOOP_4:
     rcall SPI_MASTER_TRANSMIT
     dec   COUNTER_REG
     brne  DHCP_REQUEST_IP_SET_HEADER_LOOP_4
-
-    /* Write magic cookie */
+    /* }}} */
+    /* Write magic cookie  {{{ */
     ldi   YL, lo8(EEPROM_DHCP_MAGIC_COOKIE)
     ldi   YH, hi8(EEPROM_DHCP_MAGIC_COOKIE)
     ldi   COUNTER_REG, (EEPROM_DHCP_MAGIC_COOKIE_END - EEPROM_DHCP_MAGIC_COOKIE)
@@ -207,9 +227,10 @@ DHCP_REQUEST_IP_SET_HEADER_LOOP_5:
     rcall SPI_MASTER_TRANSMIT
     dec   COUNTER_REG
     brne  DHCP_REQUEST_IP_SET_HEADER_LOOP_5
-
+    /* }}} */
+    /* DHCP Options {{{ */
     brts  DHCP_REQUEST_OPS
-    /* DHCP Discover */
+    /* DHCP Discover {{{ */
     ldi   ARG_REG1, DHCP_OPTION_DHCP_MSG_TYPE
     rcall SPI_MASTER_TRANSMIT
     ldi   ARG_REG1, DHCP_OPTION_DHCP_MSG_TYPE_LEN
@@ -217,9 +238,9 @@ DHCP_REQUEST_IP_SET_HEADER_LOOP_5:
     ldi   ARG_REG1, DHCP_OPTION_DHCP_MSG_TYPE_DHCP_DISCOVER
     rcall SPI_MASTER_TRANSMIT
     rjmp  DHCP_END_OP
-
-    /* DHCP Request */
-DHCP_REQUEST_OPS:
+    /* }}} */
+DHCP_REQUEST_OPS: /* DHCP Request {{{ */
+#if 0
     /* DHCP message */
     ldi   ARG_REG1, DHCP_OPTION_DHCP_MSG_TYPE
     rcall SPI_MASTER_TRANSMIT
@@ -233,6 +254,17 @@ DHCP_REQUEST_OPS:
     rcall SPI_MASTER_TRANSMIT
     ldi   ARG_REG1, DHCP_OPTION_ADDRESS_REQUEST_LEN
     rcall SPI_MASTER_TRANSMIT
+#else
+    ldi   YL, lo8(EEPROM_DHCP_REQUEST_OPS)
+    ldi   YH, hi8(EEPROM_DHCP_REQUEST_OPS)
+    ldi   COUNTER_REG, (EEPROM_DHCP_REQUEST_OPS_END - EEPROM_DHCP_REQUEST_OPS)
+DHCP_REQUEST_EEPROM_OPS:
+    rcall EEPROM_READ_N_INC
+    mov   ARG_REG1, RETURN_VALUE
+    rcall SPI_MASTER_TRANSMIT
+    dec   COUNTER_REG
+    brne  DHCP_REQUEST_EEPROM_OPS
+#endif
 
     ldi   YL, lo8(EEPROM_IP_ADDR)
     ldi   YH, hi8(EEPROM_IP_ADDR)
@@ -258,12 +290,13 @@ DHCP_SERVER_IP:
     rcall SPI_MASTER_TRANSMIT
     dec   COUNTER_REG
     brne  DHCP_SERVER_IP
-
+    /* }}} */
     /* End OP */
 DHCP_END_OP:
     ldi   ARG_REG1, DHCP_OPTION_END
     rcall SPI_MASTER_TRANSMIT
-
+    /* }}} */
+    /* }}} */
     ETH_END_LISTEN_ON_SPI
     rcall ETH_WRITE_BUFFER_PACKET_PAYLOAD_FINISH
 
@@ -279,24 +312,37 @@ DHCP_END_OP:
 DHCP_HANDLE_PKT:
     push YL
     push YH
-    /* check first 4 bytes to be 0x02 0x01 0x06 0x00 */
+
+    /* Check OP, HTYPE, HLEN, HOPS and XID */
     READ_NEXT_BYTE
     cpi   RETURN_VALUE, 0x02
-    // brne  DHCP_HANDLE_EXIT_FAILURE
-    READ_NEXT_BYTE
-    cpi   RETURN_VALUE, 0x01
-    // brne  DHCP_HANDLE_EXIT_FAILURE
-    READ_NEXT_BYTE
-    cpi   RETURN_VALUE, 0x06
-    // brne  DHCP_HANDLE_EXIT_FAILURE
-    READ_NEXT_BYTE
-    cpi   RETURN_VALUE, 0x00
-    // brne  DHCP_HANDLE_EXIT_FAILURE
+    /* Avoid "relocation truncated to fit: R_AVR_7_PCREL against `no symbol'" by
+     * jumping to an intermedium point */
+    brne  RELOCATION_TRUNCATED_WORK_AROUND
 
-    /* TODO: check id */
+    ldi   YL, lo8(EEPROM_DHCP_HEADER + 1)
+    ldi   YH, hi8(EEPROM_DHCP_HEADER + 1)
+    ldi   COUNTER_REG, 6
+CHECK_DHCP_HEADER:
+    rcall EEPROM_READ_N_INC
+    mov   TMP_REG1, RETURN_VALUE
+    READ_NEXT_BYTE
+    cp    TMP_REG1, RETURN_VALUE
+    brne  DHCP_HANDLE_EXIT_SUCCESS
+    dec   COUNTER_REG
+    brne  CHECK_DHCP_HEADER
+
+    /* Check last byte of the XID */
+    READ_NEXT_BYTE
+    lds   TMP_REG1, DHCP_XID_LAST_BYTE
+    cp    TMP_REG1, RETURN_VALUE
+RELOCATION_TRUNCATED_WORK_AROUND:
+    brne  DHCP_HANDLE_EXIT_SUCCESS
+
+    /* Jump to YIADDR */
     ETH_READ_BUFFER_END
     ldi   ARG_REG1, 0
-    ldi   ARG_REG2, 12
+    ldi   ARG_REG2, 8 /* SECS + FLAGS + CIADDR */
     rcall ETH_MOVE_READ_POINTER
     rcall ETH_READ_BUFFER_START
 
@@ -311,6 +357,7 @@ UPDATE_EEPROM_IP_ADDR:
     dec   COUNTER_REG
     brne  UPDATE_EEPROM_IP_ADDR
     
+#if 0
     ldi   YL, lo8(DHCP_SERVER_IP_ADDR)
     ldi   YH, hi8(DHCP_SERVER_IP_ADDR)
     ldi   COUNTER_REG, IPV4_SIZE_IN_BYTES
@@ -319,11 +366,12 @@ STORE_DHCP_SERVER_IP_ADDR:
     st    Y+, RETURN_VALUE
     dec   COUNTER_REG
     brne  STORE_DHCP_SERVER_IP_ADDR
+#endif
 
-    /* Jump from gateway ip addr to magic cookie */
+    /* Jump from siaddr ip addr to magic cookie */
     ETH_READ_BUFFER_END
     ldi   ARG_REG1, 0
-    ldi   ARG_REG2, 212
+    ldi   ARG_REG2, 216
     rcall ETH_MOVE_READ_POINTER
     rcall ETH_READ_BUFFER_START
 
@@ -340,35 +388,56 @@ CHECK_MAGIC_COOKIE:
     dec   COUNTER_REG
     brne  CHECK_MAGIC_COOKIE
 
-    /* DHCP options */
+    /* DHCP read options {{{ */
+    clt /* Using T to know if DHCP REQUEST needs to be sent */
 KEEP_READING_OP:
     READ_NEXT_BYTE
     /* Check if end of options */
     cpi   RETURN_VALUE, DHCP_OPTION_END
     breq  NO_MORE_OPTIONS
-    /* Check if server sent dhcp message */
+    /* DHCP message {{{ */
     cpi   RETURN_VALUE, DHCP_OPTION_DHCP_MSG_TYPE
-    brne  IGNORE_DHCP_OP
+    brne  TRY_DHCP_OPTION_DHCP_SERVER_ID
     /* DHCP message, we care about dhcp offer */
     READ_NEXT_BYTE /* read size of option, must be 1 */
     READ_NEXT_BYTE
     /* I guess offer is the only one that requires to give an answer */
     cpi   RETURN_VALUE, DHCP_OPTION_DHCP_MSG_TYPE_DHCP_OFFER
     brne  KEEP_READING_OP
-    rcall DHCP_REQUEST
-IGNORE_DHCP_OP:
+    set   /* Setting T, then sending Request depending on T */
+    /* }}} */
+TRY_DHCP_OPTION_DHCP_SERVER_ID: /* {{{ */
+    cpi   RETURN_VALUE, DHCP_OPTION_DHCP_SERVER_ID
+    brne  IGNORE_DHCP_OP
+    READ_NEXT_BYTE /* must be 4 */
+    mov   COUNTER_REG, IPV4_SIZE_IN_BYTES
+    ldi   YL, lo8(DHCP_SERVER_IP_ADDR)
+    ldi   YH, hi8(DHCP_SERVER_IP_ADDR)
+STORE_DHCP_SERVER_IP_ADDR:
+    READ_NEXT_BYTE
+    st    Y+, RETURN_VALUE
+    dec   COUNTER_REG
+    brne  STORE_DHCP_SERVER_IP_ADDR
+    /* }}} */
+IGNORE_DHCP_OP: /* {{{ */
     READ_NEXT_BYTE /* read size of option */
     mov   COUNTER_REG, RETURN_VALUE
 DHCP_OP_READ_CONTENT:
     READ_NEXT_BYTE
     dec   COUNTER_REG
     brne  DHCP_OP_READ_CONTENT
+    /* }}} */
 NO_MORE_OPTIONS:
+    /* }}} */
+
+    /* T was set if DHCP message was offer, so now send the request */
+    brtc  DHCP_HANDLE_EXIT_SUCCESS
+    rcall DHCP_REQUEST
 
 DHCP_HANDLE_EXIT_SUCCESS:
-    ETH_READ_BUFFER_END
     ldi  RETURN_VALUE, 0
 DHCP_HANDLE_EXIT:
+    ETH_READ_BUFFER_END
     pop  YH
     pop  YL
     ret
