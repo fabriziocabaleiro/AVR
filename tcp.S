@@ -8,9 +8,12 @@
 
 .global TCP_HANDLE_PKT
 
-#define READ_NEXT_BYTE rcall SPI_MASTER_TRANSMIT
-
+/*******************************************************************************
+ * TCP Handle {{{
+ * TCP not supported at the moment
+ ******************************************************************************/
 #if 0
 TCP_HANDLE_PKT:
     ret
 #endif
+/* }}} */

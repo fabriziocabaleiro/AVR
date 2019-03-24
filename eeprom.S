@@ -27,7 +27,6 @@ EEPROM_READ_N_INC:
     adiw  YL, 1
     ret
 /* }}} */
-    
 /*******************************************************************************
  * Write ARG_REG1 to EEPROM pointer by Y {{{
  * Y gets incremented after every call
@@ -47,7 +46,9 @@ EEPROM_WRITE_N_INC:
     adiw  YL, 1
     ret
 /* }}} */
-    
+/*******************************************************************************
+ * EEPROM debug init {{{
+ ******************************************************************************/
 EEPROM_DEBUG_INIT:
     /* Clear all the debug register bit fields */
     ldi   TMP_REG1, 0
@@ -64,7 +65,7 @@ EEPROM_DEBUG_INIT:
     sts   EEPROM_DEBUG_YL, TMP_REG1
     
     ret
-
+/* }}} */
 /*******************************************************************************
  * Write ARG_REG1 to EEPROM pointer by Y {{{
  * Y gets incremented after every call

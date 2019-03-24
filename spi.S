@@ -8,7 +8,10 @@
 .global SPI_MASTER_INIT
 .global SPI_MASTER_TRANSMIT
 
-//#define SPI_SLOW /* {{{ */
+/*******************************************************************************
+ * Slow SPI macro {{{
+ ******************************************************************************/
+//#define SPI_SLOW
 #ifdef  SPI_SLOW
 #   define SPI_SCK ((1 << SPR1)|(1 << SPR0))
 #   define SPI_SLOW_DELAY rcall DELAY_TMP
@@ -16,7 +19,6 @@
 #   define SPI_SCK (1 << SPR0)
 #   define SPI_SLOW_DELAY
 #endif /* }}} */
-
 /*******************************************************************************
  * Init SPI {{{
  * Set SS, so all slaves are not listening
@@ -41,7 +43,6 @@ SPI_MASTER_INIT:
     out _SFR_IO_ADDR(SPCR), TMP_REG2
     ret
 /* }}} */
-
 /*******************************************************************************
  * Init SPI {{{
  * We need to:

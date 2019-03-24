@@ -9,34 +9,30 @@
 .global UDP_HANDLE_PKT
 .global UDP_PREPARE_PACKET
 
-#define READ_NEXT_BYTE rcall SPI_MASTER_TRANSMIT
-
 #define UDP_SRC_PORT 7070
 #define UDP_DST_PORT 7070
 #define UDP_PKT_LEN    14
 
-// #define TMP_REG3 ARG_REG1
 #define TMP_REG4 ARG_REG2
-
 
 /*******************************************************************************
  * Handle received UDP packet {{{
  ******************************************************************************/
 UDP_HANDLE_PKT:
     rcall ETH_READ_BUFFER_START
-    READ_NEXT_BYTE
+    ETH_READ_NEXT_BYTE
     mov   TMP_REG1, RETURN_VALUE
-    READ_NEXT_BYTE
+    ETH_READ_NEXT_BYTE
     mov   TMP_REG2, RETURN_VALUE
-    READ_NEXT_BYTE
+    ETH_READ_NEXT_BYTE
     mov   TMP_REG3, RETURN_VALUE
-    READ_NEXT_BYTE
+    ETH_READ_NEXT_BYTE
     mov   TMP_REG4, RETURN_VALUE
     /* TODO: store correctly rest of UDP header */
-    READ_NEXT_BYTE
-    READ_NEXT_BYTE
-    READ_NEXT_BYTE
-    READ_NEXT_BYTE
+    ETH_READ_NEXT_BYTE
+    ETH_READ_NEXT_BYTE
+    ETH_READ_NEXT_BYTE
+    ETH_READ_NEXT_BYTE
 
     /* check if DHCP */
     cpi   TMP_REG1, hi8(INTERNET_SERVICE_BOOTPS_67_UDP)
@@ -53,7 +49,6 @@ NO_DHCP:
     ETH_READ_BUFFER_END
     ret
 /* }}} */
-
 /*******************************************************************************
  * Prepare UDP packet {{{
  * Note: UDP header and payload in IPv4 payload

@@ -20,7 +20,7 @@ OBJDIR = Objs
 GCCOPT = -mmcu=atmega8 -std=gnu99 -g -Wall
 
 # GCC flags for dependencies auto generation
-DEPOPTS = -MP -MMD -MF ${DEPDIR}/$(notdir $@).d 
+DEPOPTS = -MP -MD -MF ${DEPDIR}/$(notdir $@).d 
 
 main.elf: $(addprefix ${OBJDIR}/, ${OBJS})
 	avr-gcc ${GCCOPT} $^ -o $@

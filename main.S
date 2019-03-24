@@ -106,26 +106,6 @@ rcall MAIN_WRITE_TO_LCD_AS_HEX
     pop   ARG_REG1
 .endm
 #endif /* }}} */
-#if 0 /* Testing  {{{ */
-.section .data
-.global MAC_ADDRESS
-
-MAC_ADDRESS:
-.byte 0xFAB312100000 // "fabrizio" //0x00, 0xB3, 0x12, 0x10, 0x00, 0x00
-
-//.global __do_copy_data
-//.global __do_clear_bss
-#endif /* }}} */
-#if 0 /* TESTING {{{ */
-.global IPV4_HEADER_DATA
-.section .rodata
-.STR:
-    .string "fabriziofabrizio"
-    .data
-    .type IPV4_HEADER_DATA, @object
-    .size IPV4_HEADER_DATA, 4
-#endif /* }}} */
-
 /*******************************************************************************
  * main, initialize everything {{{
  ******************************************************************************/
@@ -175,7 +155,6 @@ MAIN_DELAY:
     sei
 
 /* }}} */
-
 /*******************************************************************************
  * LOOP {{{
  ******************************************************************************/
@@ -183,7 +162,6 @@ LOOP:
     sleep
     rjmp LOOP
 /* }}} */
-
 /*******************************************************************************
  * Received packet interrupt routine {{{
  ******************************************************************************/
@@ -201,7 +179,6 @@ INT0_vect:
     pop   TMP_REG2
     reti
 /* }}} */
-
 /*******************************************************************************
  * Handle received packet {{{
  * enc28j60 will trigger an interrupt whenever a packet is received.

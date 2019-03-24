@@ -47,7 +47,6 @@ ETH_READ_CONTROL_REGISTER:
     SPI_END_ETH
     ret
 /* }}} */
-
 /*******************************************************************************
  * Write control register  {{{
  * Send command and address together, then send the new value of the space that
@@ -66,7 +65,6 @@ ETH_WRITE_CONTROL_REGISTER:
     SPI_END_ETH
     ret
 /* }}} */
-
 /*******************************************************************************
  * Set the given bits into the register {{{
  * Inputs:
@@ -83,7 +81,6 @@ ETH_BIT_FIELD_SET:
     SPI_END_ETH
     ret
 /* }}} */
-
 /*******************************************************************************
  * Clear the given bits into the register {{{
  * Inputs:
@@ -100,7 +97,6 @@ ETH_BIT_FIELD_CLEAR:
     SPI_END_ETH
     ret
 /* }}} */
-
 /*******************************************************************************
  * Wait until device is ready {{{
  ******************************************************************************/
@@ -111,7 +107,6 @@ ETH_WAIT_UNTIL_READY:
     rjmp  ETH_WAIT_UNTIL_READY
     ret
 /* }}} */
-
 /*******************************************************************************
  * Enable packet reception {{{
  ******************************************************************************/
@@ -122,7 +117,6 @@ ETH_ENABLE_RECEIVE:
     rcall ETH_BIT_FIELD_SET
     ret
 /* }}} */
-
 /*******************************************************************************
  * Set Bank {{{
  * It seems to be to much extra SPI communication, so, better just set the bank
@@ -144,7 +138,6 @@ ETH_SET_BANK:
     ret
 #endif
 /* }}} */
-
 /*******************************************************************************
  * Enable interrupts, TODO: add more info {{{
  ******************************************************************************/
@@ -154,7 +147,6 @@ ETH_ENABLE_RECEIVE_INTERRUPT:
     rcall ETH_BIT_FIELD_SET
     ret
 /* }}} */
-
 /*******************************************************************************
  * Software reset {{{
  ******************************************************************************/
@@ -165,7 +157,6 @@ ETH_SOFTWARE_RESET:
     SPI_END_ETH
     ret
 /* }}} */
-
 /*******************************************************************************
  * Buffer initialization {{{
  ******************************************************************************/
@@ -266,7 +257,6 @@ ETH_BUFFER_INIT:
     rcall ETH_WAIT_UNTIL_READY
     ret
 /* }}} */
-
 /*******************************************************************************
  * Mac initialization {{{
  ******************************************************************************/
@@ -367,7 +357,6 @@ ETH_MAC_INIT_SET_MAC_LOOP_END:
 
     ret
 /* }}} */
-
 /*******************************************************************************
  * Miscellaneous initialization {{{
  ******************************************************************************/
@@ -380,7 +369,6 @@ ETH_MISC_INIT:
 #endif
     ret
 /* }}} */
-
 /*******************************************************************************
  * PHY initialization {{{
  ******************************************************************************/
@@ -393,7 +381,6 @@ ETH_PHY_INIT: /* ONLY ONCE */
      ret
 #endif
 /* }}} */
-
 /*******************************************************************************
  * Start buffer read {{{
  ******************************************************************************/
@@ -403,7 +390,6 @@ ETH_READ_BUFFER_START:
     rcall SPI_MASTER_TRANSMIT
     ret
 /* }}} */
-
 /*******************************************************************************
  * Receive enc28j60 header {{{
  ******************************************************************************/
@@ -430,7 +416,6 @@ ETH_READ_RECEIVE_HEADER_LOOP:
     pop   ZL
     ret
 /* }}} */
-
 /*******************************************************************************
  * Check receive status vector {{{
  * Returns Zero if packet is good to be processed, else, != 0
@@ -451,7 +436,6 @@ ETH_CHECK_RECEIVE_STATUS_VECTOR:
     /* }}} */
     ret
 /* }}} */
-
 /*******************************************************************************
  * Read Ethernet header (Mac addresses and Type/Len {{{
  * Update the Dst Mac Address ptr and the type/len ptr when reading the header
@@ -497,7 +481,6 @@ ETH_READ_MAC_ADDRS_N_LEN_TYPE_KEEP_READING:
     SPI_END_ETH
     ret
 /* }}} */
-
 /*******************************************************************************
  * Free the space of the packet that was processed {{{
  ******************************************************************************/
@@ -532,7 +515,6 @@ ETH_PKT_PROCESSED:
 
     ret
 /* }}} */
-
 /*******************************************************************************
  * Write message header, Per packet control byte + Mac addresses + Type/Len {{{
  * ENC_MAC_DST_PTR pointer to Dst MAC address
@@ -681,7 +663,6 @@ ETH_WRITE_BUFFER_PACKET_HEADER_END:
 #undef COUNTER
 #undef TMP_PTR_L
 /* }}} */
-
 /*******************************************************************************
  * Send write command and leave SPI waiting {{{
  ******************************************************************************/
@@ -694,7 +675,6 @@ ETH_SET_LISTEN_ON_SPI:
 
 #define ETH_END_LISTEN_ON_SPI SPI_END_ETH
 /* }}} */
-
 /*******************************************************************************
  * Write Payload {{{
  * Z is a pointer to memory to where start writing from
@@ -717,7 +697,6 @@ ETH_WRITE_BUFFER_PACKET_PAYLOAD_KEEP_WRITING:
     SPI_END_ETH
     ret
 /* }}} */
-
 /*******************************************************************************
  * Finish Write Payload {{{
  ******************************************************************************/
@@ -785,7 +764,6 @@ ETH_WRITE_BUFFER_PACKET_PAYLOAD_FINISH_WAIT:
 
     ret
 /* }}} */
-
 /*******************************************************************************
  * Move the RDPT {{{
  *
@@ -882,7 +860,6 @@ UPDATE_ERDPT:
 
     ret
 /* }}} */
-
 /*******************************************************************************
  * Write debug message into Ethernet {{{
  ******************************************************************************/

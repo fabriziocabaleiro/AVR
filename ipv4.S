@@ -14,9 +14,6 @@
 #define IPV4_HEADER_BITFIELD_REG R1
 #pragma GCC poison R1
 
-#define READ_NEXT_BYTE rcall SPI_MASTER_TRANSMIT
-
-
 /*******************************************************************************
  * Handle IPv4 packet {{{
  * Check protocol (tcp, udp, etc) and port to deliver to corresponding routine
@@ -34,7 +31,7 @@ IPV4_HANDLE_PKT:
     /* Read the first byte, which contains the version and the header length,
      * assign counter with the length and check that version is 4, if not,
      * return 1 and exit */
-    READ_NEXT_BYTE
+    ETH_READ_NEXT_BYTE
     st    Z+, RETURN_VALUE
     mov   COUNTER_REG, RETURN_VALUE
     andi  RETURN_VALUE, 0xF0
@@ -54,7 +51,7 @@ PACKET_IS_IPV4:
     subi  COUNTER_REG, 1
     /* Read the rest of the IPv4 header */
 READ_HEADER:
-    READ_NEXT_BYTE
+    ETH_READ_NEXT_BYTE
     st    Z+, RETURN_VALUE
     dec   COUNTER_REG
     brne  READ_HEADER

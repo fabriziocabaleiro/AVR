@@ -9,7 +9,6 @@
 
 .global ICMP_HANDLE_PKT
 
-#define READ_NEXT_BYTE rcall SPI_MASTER_TRANSMIT
 #define IPV4_TOTAL_LENGTH_REG R1
 #pragma GCC poison R1
 
@@ -29,7 +28,7 @@ ICMP_HANDLE_PKT:
 
     /* Read message type, if not ICMP_MSG_TYPE_ECHO, then ignore packet */
     rcall ETH_READ_BUFFER_START
-    READ_NEXT_BYTE
+    ETH_READ_NEXT_BYTE
     cpi   RETURN_VALUE, ICMP_MSG_TYPE_ECHO
     brne  ICMP_HANDLE_PKT_EXIT_SUCCESS
 
@@ -54,7 +53,7 @@ SWAP_IP_ADDR:
     lds   TMP_REG1, IPV4_IHL_IN_BYTES
     sub   COUNTER_REG, TMP_REG1
 READ_PAYLOAD:
-    READ_NEXT_BYTE
+    ETH_READ_NEXT_BYTE
     st    Z+, RETURN_VALUE
     dec   COUNTER_REG
     brne  READ_PAYLOAD

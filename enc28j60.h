@@ -497,5 +497,6 @@ System Reset Command (Soft Reset)
 #  define ENC_BANK2_MACON3_FULL_DUPLEX   0
 #endif /* }}} */
 
+#define ETH_READ_NEXT_BYTE  rcall SPI_MASTER_TRANSMIT
 #define ETH_READ_BUFFER_END SPI_END_ETH
 #endif

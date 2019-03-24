@@ -28,7 +28,6 @@
 /* Reusing RETURN_VALUE as this routine doesn't return anything */
 #define DHT11_COUNTER                      RETURN_VALUE
 /* }}} */
-
 /*******************************************************************************
  * DHT11 setup {{{ 
  * Setup interrupt in falling edge
@@ -49,7 +48,6 @@ DHT11_SETUP:
     cbi   _SFR_IO_ADDR(PORTD), PD3
     ret
 /* }}} */
-
 /*******************************************************************************
  * Read data from sensor {{{
  * Data is store in DHT11_PAYLOAD
@@ -150,7 +148,6 @@ DHT11_TRANSMISSION_LOOP:
     pop   ZL
     ret
 /* }}} */
-
 /*******************************************************************************
  * Handle INT1 interrupt {{{
  * Get and process data in every falling edge

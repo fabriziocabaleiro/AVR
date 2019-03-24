@@ -8,8 +8,9 @@
 .global ADC_DISABLE
 .global ADC_vect
 
-/* ADC prescaler documentation {{{
-
+/*******************************************************************************
+ * ADC prescaler documentation {{{
+ *******************************************************************************
    By default, the successive approximation circuitry requires an input clock
    frequency between 50kHz and 200kHz to get maximum resolution. If a lower
    resolution than 10 bits is needed, the input clock frequency to the ADC can
@@ -33,8 +34,10 @@
   4M / 32 = 125k, so 1 0 1
   8M / 64 = 125k, so 1 1 0
 }}} */
-
-#ifndef F_CPU /* Prescaler setup {{{ */
+/*******************************************************************************
+ * Prescaler setup {{{
+ ******************************************************************************/
+#ifndef F_CPU
 #   error "CPU frequency not specified, cannot calculate ADC prescaler"
 #endif
 
@@ -49,7 +52,6 @@
 #else
 #   error "Unsupported F_CPU value"
 #endif /* }}} */
-
 /*******************************************************************************
  * Enable ADC and start conversion {{{
  * Also setting at the same time:
@@ -62,33 +64,29 @@ ADC_ENABLE_N_START:
     out   _SFR_IO_ADDR(ADCSRA), TMP_REG1
     ret
 /* }}} */
-
 /*******************************************************************************
  * Disable ADC {{{
  ******************************************************************************/
 ADC_DISABLE:
-    in   TMP_REG1, _SFR_IO_ADDR(ADCSRA)
-    cbr  TMP_REG1, (1 << ADEN)
-    out  _SFR_IO_ADDR(ADCSRA), TMP_REG1
+    cbi   _SFR_IO_ADDR(ADCSRA), ADEN
     ret
 /* }}} */
-
 /*******************************************************************************
  * ADC interrupt routine {{{
  * Read the content of [ADCH:ADCL] and store it into SRAM
  ******************************************************************************/
 ADC_vect:
-    push TMP_REG1
-    in   TMP_REG1, _SFR_IO_ADDR(SREG)
-    push TMP_REG1
+    push  TMP_REG1
+    in    TMP_REG1, _SFR_IO_ADDR(SREG)
+    push  TMP_REG1
 
-    in   TMP_REG1, _SFR_IO_ADDR(ADCL)
-    sts  MQ135_PAYLOAD + 1, TMP_REG1
-    in   TMP_REG1, _SFR_IO_ADDR(ADCH)
-    sts  MQ135_PAYLOAD + 0, TMP_REG1
+    in    TMP_REG1, _SFR_IO_ADDR(ADCL)
+    sts   MQ135_PAYLOAD + 1, TMP_REG1
+    in    TMP_REG1, _SFR_IO_ADDR(ADCH)
+    sts   MQ135_PAYLOAD + 0, TMP_REG1
 
-    pop  TMP_REG1
-    out  _SFR_IO_ADDR(SREG), TMP_REG1
-    pop  TMP_REG1
+    pop   TMP_REG1
+    out   _SFR_IO_ADDR(SREG), TMP_REG1
+    pop   TMP_REG1
     reti
 /* }}} */

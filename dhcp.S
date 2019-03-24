@@ -11,40 +11,6 @@
 .global DHCP_DISCOVER
 .global DHCP_HANDLE_PKT
 
-/* Defines {{{ */
-#define READ_NEXT_BYTE rcall SPI_MASTER_TRANSMIT
-
-#define UDP_DST_PORT INTERNET_SERVICE_BOOTPS_67_UDP
-#define UDP_SRC_PORT INTERNET_SERVICE_BOOTPC_68_UDP
-
-#define DHCP_DISCOVERY_UDP_PKT_SIZE  (     8 + /* UDP header */          \
-                                      11 * 4 + /* before BOOTP legacy */ \
-                                         192 + /* BOOTP legacy */        \
-                                           4 + /* magic cookie */        \
-                                           3 + /* DHCP discover */       \
-                                           1   /* endmark */             \
-                                   )
-
-#define DHCP_REQUEST_EXTRA_OPS_LEN (6 + /* Address Request */ \
-                                    6 + /* Server IP address */ \
-                                    6   /* Hostname */ \
-                                    )
-
-#define DHCP_REQUEST_UDP_PKT_SIZE    (DHCP_DISCOVERY_UDP_PKT_SIZE + \
-                                      DHCP_REQUEST_EXTRA_OPS_LEN)
-#define DHCP_DISCOVERY_PKT_SIZE      (DHCP_DISCOVERY_UDP_PKT_SIZE + 20)
-#define DHCP_REQUEST_PKT_SIZE        (DHCP_DISCOVERY_PKT_SIZE + \
-                                      DHCP_REQUEST_EXTRA_OPS_LEN)
-
-.macro SR reg
-    push  ARG_REG1
-    push  RETURN_VALUE
-    mov   ARG_REG1, \reg
-    rcall EEPROM_WRITE_N_INC
-    pop   RETURN_VALUE
-    pop   ARG_REG1
-.endm
-/* }}} */
 
 /*******************************************************************************
  * Discover and Request {{{
@@ -314,7 +280,7 @@ DHCP_HANDLE_PKT:
     push YH
 
     /* Check OP, HTYPE, HLEN, HOPS and XID */
-    READ_NEXT_BYTE
+    ETH_READ_NEXT_BYTE
     cpi   RETURN_VALUE, 0x02
     /* Avoid "relocation truncated to fit: R_AVR_7_PCREL against `no symbol'" by
      * jumping to an intermedium point */
@@ -326,14 +292,14 @@ DHCP_HANDLE_PKT:
 CHECK_DHCP_HEADER:
     rcall EEPROM_READ_N_INC
     mov   TMP_REG1, RETURN_VALUE
-    READ_NEXT_BYTE
+    ETH_READ_NEXT_BYTE
     cp    TMP_REG1, RETURN_VALUE
     brne  DHCP_HANDLE_EXIT_SUCCESS
     dec   COUNTER_REG
     brne  CHECK_DHCP_HEADER
 
     /* Check last byte of the XID */
-    READ_NEXT_BYTE
+    ETH_READ_NEXT_BYTE
     lds   TMP_REG1, DHCP_XID_LAST_BYTE
     cp    TMP_REG1, RETURN_VALUE
 RELOCATION_TRUNCATED_WORK_AROUND:
@@ -351,7 +317,7 @@ RELOCATION_TRUNCATED_WORK_AROUND:
     ldi   YL, lo8(EEPROM_IP_ADDR)
     ldi   YH, hi8(EEPROM_IP_ADDR)
 UPDATE_EEPROM_IP_ADDR:
-    READ_NEXT_BYTE
+    ETH_READ_NEXT_BYTE
     mov   ARG_REG1, RETURN_VALUE
     rcall EEPROM_WRITE_N_INC
     dec   COUNTER_REG
@@ -362,7 +328,7 @@ UPDATE_EEPROM_IP_ADDR:
     ldi   YH, hi8(DHCP_SERVER_IP_ADDR)
     ldi   COUNTER_REG, IPV4_SIZE_IN_BYTES
 STORE_DHCP_SERVER_IP_ADDR:
-    READ_NEXT_BYTE
+    ETH_READ_NEXT_BYTE
     st    Y+, RETURN_VALUE
     dec   COUNTER_REG
     brne  STORE_DHCP_SERVER_IP_ADDR
@@ -382,7 +348,7 @@ STORE_DHCP_SERVER_IP_ADDR:
 CHECK_MAGIC_COOKIE:
     rcall EEPROM_READ_N_INC
     mov   R1, RETURN_VALUE
-    READ_NEXT_BYTE
+    ETH_READ_NEXT_BYTE
     cp    R1, RETURN_VALUE
     brne  DHCP_HANDLE_EXIT_FAILURE
     dec   COUNTER_REG
@@ -391,7 +357,7 @@ CHECK_MAGIC_COOKIE:
     /* DHCP read options {{{ */
     clt /* Using T to know if DHCP REQUEST needs to be sent */
 KEEP_READING_OP:
-    READ_NEXT_BYTE
+    ETH_READ_NEXT_BYTE
     /* Check if end of options */
     cpi   RETURN_VALUE, DHCP_OPTION_END
     breq  NO_MORE_OPTIONS
@@ -399,8 +365,8 @@ KEEP_READING_OP:
     cpi   RETURN_VALUE, DHCP_OPTION_DHCP_MSG_TYPE
     brne  TRY_DHCP_OPTION_DHCP_SERVER_ID
     /* DHCP message, we care about dhcp offer */
-    READ_NEXT_BYTE /* read size of option, must be 1 */
-    READ_NEXT_BYTE
+    ETH_READ_NEXT_BYTE /* read size of option, must be 1 */
+    ETH_READ_NEXT_BYTE
     /* I guess offer is the only one that requires to give an answer */
     cpi   RETURN_VALUE, DHCP_OPTION_DHCP_MSG_TYPE_DHCP_OFFER
     brne  KEEP_READING_OP
@@ -409,21 +375,21 @@ KEEP_READING_OP:
 TRY_DHCP_OPTION_DHCP_SERVER_ID: /* {{{ */
     cpi   RETURN_VALUE, DHCP_OPTION_DHCP_SERVER_ID
     brne  IGNORE_DHCP_OP
-    READ_NEXT_BYTE /* must be 4 */
+    ETH_READ_NEXT_BYTE /* must be 4 */
     mov   COUNTER_REG, IPV4_SIZE_IN_BYTES
     ldi   YL, lo8(DHCP_SERVER_IP_ADDR)
     ldi   YH, hi8(DHCP_SERVER_IP_ADDR)
 STORE_DHCP_SERVER_IP_ADDR:
-    READ_NEXT_BYTE
+    ETH_READ_NEXT_BYTE
     st    Y+, RETURN_VALUE
     dec   COUNTER_REG
     brne  STORE_DHCP_SERVER_IP_ADDR
     /* }}} */
 IGNORE_DHCP_OP: /* {{{ */
-    READ_NEXT_BYTE /* read size of option */
+    ETH_READ_NEXT_BYTE /* read size of option */
     mov   COUNTER_REG, RETURN_VALUE
 DHCP_OP_READ_CONTENT:
-    READ_NEXT_BYTE
+    ETH_READ_NEXT_BYTE
     dec   COUNTER_REG
     brne  DHCP_OP_READ_CONTENT
     /* }}} */

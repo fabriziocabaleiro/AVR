@@ -4,7 +4,35 @@
 
 #include "services.h"
 
-/* DHCP header {{{
+/*******************************************************************************
+ * DHCP Packet sizes {{{
+ ******************************************************************************/
+#define UDP_DST_PORT INTERNET_SERVICE_BOOTPS_67_UDP
+#define UDP_SRC_PORT INTERNET_SERVICE_BOOTPC_68_UDP
+
+#define DHCP_DISCOVERY_UDP_PKT_SIZE  (     8 + /* UDP header */          \
+                                      11 * 4 + /* before BOOTP legacy */ \
+                                         192 + /* BOOTP legacy */        \
+                                           4 + /* magic cookie */        \
+                                           3 + /* DHCP discover */       \
+                                           1   /* endmark */             \
+                                   )
+
+#define DHCP_REQUEST_EXTRA_OPS_LEN (6 + /* Address Request */ \
+                                    6 + /* Server IP address */ \
+                                    6   /* Hostname */ \
+                                    )
+
+#define DHCP_REQUEST_UDP_PKT_SIZE    (DHCP_DISCOVERY_UDP_PKT_SIZE + \
+                                      DHCP_REQUEST_EXTRA_OPS_LEN)
+#define DHCP_DISCOVERY_PKT_SIZE      (DHCP_DISCOVERY_UDP_PKT_SIZE + 20)
+#define DHCP_REQUEST_PKT_SIZE        (DHCP_DISCOVERY_PKT_SIZE + \
+                                      DHCP_REQUEST_EXTRA_OPS_LEN)
+
+/* }}} */
+/*******************************************************************************
+ * DHCP header {{{
+ *******************************************************************************
     0                   1                   2                   3
     0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
@@ -65,7 +93,9 @@
    options     var  Optional parameters field.  See the options
                     documents for a list of defined options.
 }}} */
-/* DHCP Header data structure {{{ */
+/*******************************************************************************
+ * DHCP Header data structure {{{
+ ******************************************************************************/
 #define DHCP_OP         0 
 #define DHCP_HTYPE      1
 #define DHCP_HLEN       2
@@ -82,11 +112,15 @@
 #define DHCP_FILE     108 
 #define DHCP_OPTIONS  236 
 /* }}} */
-/* DHCP OPCODE VALUES {{{ */
+/*******************************************************************************
+ * DHCP OPCODE VALUES {{{
+ ******************************************************************************/
 #define DHCP_OP_BOOTREQUEST 1
 #define DHCP_OP_BOOTREPLY   2
 /* }}} */
-/* DHCP OPTIONS {{{ */
+/*******************************************************************************
+ * DHCP OPTIONS {{{
+ ******************************************************************************/
 /* Meaning None. [RFC2132] */
 #define DHCP_OPTION_PAD                                         0
 #define DHCP_OPTION_PAD_LEN                                     0
@@ -680,7 +714,9 @@
 #define DHCP_OPTION_END                                         255
 #define DHCP_OPTION_END_LEN                                     0
 /* }}} */
-/* DHCP Options and BOOTP Vendor Extensions {{{
+/*******************************************************************************
+ * DHCP Options and BOOTP Vendor Extensions {{{
+ *******************************************************************************
    [[1]Docs] [[2]txt|[3]pdf] [[4]draft-ietf-dhc-...] [[5]Tracker]
    [[6]Diff1] [[7]Diff2] [[8]Errata]
    Updated by: [9]3442, [10]3942, [11]4361, [12]4833, [13]5494 DRAFT
