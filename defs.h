@@ -48,7 +48,7 @@
 /*******************************************************************************
  * SRAM variables {{{
  ******************************************************************************/
-/* Receive packet header */
+/* Receive packet header, it is read continuously {{{ */
 #define RPKT_N_PKT_L            0x0060
 #define RPKT_N_PKT_H            0x0061
 #define RPKT_BYTE_COUNT_L       0x0062
@@ -56,6 +56,7 @@
 #define RPKT_STATUS2            0x0064
 #define RPKT_STATUS3            0x0065
 #define RPKT_STATUS_VECTOR_LEN       6
+/* }}} */
 
 /* Pending packages to process */
 #define RPKT_PENDING_CNT  0x0066

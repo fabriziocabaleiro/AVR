@@ -143,55 +143,6 @@ IPV4_HANDLE_END:
     pop   ZL
     pop   ZH
     ret
-
-UNSUPPORTED_PROTOCOL:
-    ldi   RETURN_VALUE, 1
-    rjmp  IPV4_HANDLE_END
-/* }}} */
-
-/*******************************************************************************
- * Read IPv4 Header {{{
- ******************************************************************************/
-#if 0
-IPV4_READ_HEADER:
-    ldi   ZL, lo8(IPV4_HEADER)
-    ldi   ZH, hi8(IPV4_HEADER)
-
-    rcall ETH_READ_BUFFER_START
-    /* Read the first byte, which contains the version and the header length,
-     * assign counter with the length and check that version is 4, if not,
-     * return 1 and exit */
-    READ_NEXT_BYTE
-    st    Z+, RETURN_VALUE
-    mov   COUNTER_REG, RETURN_VALUE
-    andi  COUNTER_REG, 0x0F
-    swap  RETURN_VALUE
-    andi  RETURN_VALUE, 0x0F
-    cpi   RETURN_VALUE, 0x04
-    brne  NOT_IPV4
-    /* Length is in 32bits words, as reading bytes, then IHL * 4, then subtract
-     * one as the first bytes was already read */
-    lsl   COUNTER_REG
-    lsl   COUNTER_REG
-    /* Taking the chance to store the Internet Header Length in bytes */
-    sts   IPV4_IHL_IN_BYTES, COUNTER_REG
-    subi  COUNTER_REG, 1
-
-READ_HEADER:
-    READ_NEXT_BYTE
-    st    Z+, RETURN_VALUE
-    dec   COUNTER_REG
-    brne  READ_HEADER
-
-    ldi   RETURN_VALUE, 0
-IPV4_READ_HEADER_FINISH:
-    ETH_READ_BUFFER_END
-    ret
-
-NOT_IPV4:
-    ldi   RETURN_VALUE, 1
-    rjmp  IPV4_READ_HEADER_FINISH
-#endif
 /* }}} */
 /*******************************************************************************
  * Internet Checksum RFC 1071 {{{
@@ -227,7 +178,7 @@ IPV4_PING_CHECKSUM_LOOP:
     brcc  IPV4_PING_CHECKSUM_END
     /* If the last addition generated a Carry, then add zero with carry, which
      * could also generate a Carry into YH, so, add zero with carry as well */
-    ldi   DATA, 0
+    clr   DATA
 IPV4_PING_CHECKSUM_REMAINING_CARRY:
     adc   YH, DATA
     adc   YL, DATA
@@ -243,7 +194,6 @@ IPV4_PING_CHECKSUM_END:
     pop   ZL
     ret
 /* }}} */
-
 /*******************************************************************************
  * Prepare IPv4 header {{{
  * This routine returns the size of the header

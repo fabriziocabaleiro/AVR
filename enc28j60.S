@@ -410,25 +410,22 @@ ETH_READ_BUFFER_START:
 ETH_READ_RECEIVE_HEADER:
     push  ZL
     push  ZH
-    push  TMP_REG2
 
     SPI_SELECT_ETH
     ldi   ARG_REG1, ETH_SPI_CMD_RBM
     rcall SPI_MASTER_TRANSMIT
 
     /* Read the whole receive status vector */
-    ldi   TMP_REG2, RPKT_STATUS_VECTOR_LEN
+    ldi   COUNTER_REG, RPKT_STATUS_VECTOR_LEN
     ldi   ZH, hi8(RPKT_N_PKT_L)
     ldi   ZL, lo8(RPKT_N_PKT_L)
 ETH_READ_RECEIVE_HEADER_LOOP:
     rcall SPI_MASTER_TRANSMIT
     st    Z+, RETURN_VALUE
-    dec   TMP_REG2
+    dec   COUNTER_REG
     brne  ETH_READ_RECEIVE_HEADER_LOOP
     
     SPI_END_ETH
-ETH_READ_RECEIVE_HEADER_END:
-    pop   TMP_REG2
     pop   ZH
     pop   ZL
     ret
@@ -436,63 +433,22 @@ ETH_READ_RECEIVE_HEADER_END:
 
 /*******************************************************************************
  * Check receive status vector {{{
- * TODO: I think this function could be much improved
+ * Returns Zero if packet is good to be processed, else, != 0
  ******************************************************************************/
 ETH_CHECK_RECEIVE_STATUS_VECTOR:
-    lds  TMP_REG2, RPKT_STATUS3
-
-    /* Drop away anything that is not only broadcast or multicast */
-    andi TMP_REG2, ~((1 << RPKT_STATUS3_RECEIVE_BROADCAST_PACKET) | (1 << RPKT_STATUS3_RECEIVE_MULTICAST_PACKET))
-    tst  TMP_REG2
-    brne ETH_CHECK_RECEIVE_STATUS_VECTOR_FAILURE
-
-    lds  TMP_REG2, RPKT_STATUS2
-
-    sbrs TMP_REG2, RPKT_STATUS2_RECEIVED_OK
-    rjmp ETH_CHECK_RECEIVE_STATUS_VECTOR_FAILURE
-
-    sbrc TMP_REG2, RPKT_STATUS2_LENGTH_CHECK_ERROR
-    rjmp ETH_CHECK_RECEIVE_STATUS_VECTOR_FAILURE
-
-    sbrc TMP_REG2, RPKT_STATUS2_CRC_ERROR
-    rjmp ETH_CHECK_RECEIVE_STATUS_VECTOR_FAILURE
-
-    ldi  RETURN_VALUE, 0
-    ret
-    /* In case of failure, turn on error led, save the status vector into eeprom
-     * to be read, go to sleep */
-ETH_CHECK_RECEIVE_STATUS_VECTOR_FAILURE:
-    //ERR_ETH_SET_ERROR
-    push  ZH
-    push  ZL
-    push  ARG_REG1
-
-    rcall ETH_WRITE_BUFFER_PACKET_HEADER
-
-    lds   TMP_REG2, TYPE_LEN_H
-    push  TMP_REG2
-    lds   TMP_REG2, TYPE_LEN_L
-    push  TMP_REG2
-    ldi   TMP_REG2, hi8(MESSAGE_TYPE_LEN)
-    sts   TYPE_LEN_H, TMP_REG2
-    ldi   TMP_REG2, lo8(MESSAGE_TYPE_LEN)
-    sts   TYPE_LEN_L, TMP_REG2
-
-    ldi   ZH, hi8(RPKT_N_PKT_L)
-    ldi   ZL, lo8(RPKT_N_PKT_L)
-    ldi   ARG_REG1, 6
-    rcall ETH_WRITE_Z_TO_TRANSMIT_BUFFER
-    rcall ETH_WRITE_BUFFER_PACKET_PAYLOAD_FINISH
-
-    pop   TMP_REG2
-    sts   TYPE_LEN_H, TMP_REG2
-    pop   TMP_REG2
-    sts   TYPE_LEN_L, TMP_REG2
-
-    pop   ARG_REG1
-    pop   ZL
-    pop   ZH
-    ldi   RETURN_VALUE, 1
+    /* Check Received packet status 3 {{{ */
+    lds  RETURN_VALUE, RPKT_STATUS3
+    /* Discard VLAN, Unknown Opcode, Pause Control Frame, Control Frame */
+    andi RETURN_VALUE, ~((1 << RPKT_STATUS3_RECEIVE_BROADCAST_PACKET) | \
+                         (1 << RPKT_STATUS3_RECEIVE_MULTICAST_PACKET) | \
+                         (1 << RPKT_STATUS3_DRIBBLE_NIBBLE))
+    /* }}} */
+    /* Check Received packet status 2 {{{ */
+    lds  TMP_REG1, RPKT_STATUS2
+    /* If OK bit is not set, then, set MSB bit on RETURN_VALUE */
+    sbrs TMP_REG1, RPKT_STATUS2_RECEIVED_OK
+    sbr  RETURN_VALUE, 0x80
+    /* }}} */
     ret
 /* }}} */
 

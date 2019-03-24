@@ -209,7 +209,8 @@ INT0_vect:
 HANDLE_PACKET:
     ERR_ARP_CLR_ERROR
 
-    /* enc28j60 interrupt could be trigger by different sources, therefore check
+    /* Check Packet Counter {{{
+     * enc28j60 interrupt could be trigger by different sources, therefore check
      * if we have pending packets after receiving the interrupt.
      * Set Bank 1, read packet counter */
     ldi   ARG_REG1, ENC_COMMON_ECON1
@@ -226,9 +227,8 @@ HANDLE_PACKET:
     tst   RETURN_VALUE
     brne  PROCESS_PACKET
     ret
-
-PROCESS_PACKET:
-    /* Next Read Pointer */
+    /* }}} */
+PROCESS_PACKET: /* {{{ */
     rcall ETH_READ_RECEIVE_HEADER
     rcall ETH_CHECK_RECEIVE_STATUS_VECTOR
     cpi   RETURN_VALUE, 0
@@ -264,7 +264,7 @@ CHK_RPKT_STATUS2:
 TYPE_LEN_TYPE: /* {{{ */
     lds   ZH, TYPE_LEN_H
     lds   ZL, TYPE_LEN_L
-TYPE_LEN_IPV4:
+TYPE_LEN_IPV4: /* {{{ */
     /* Check Type/Len is IPv4 or jump to next type/len */
     cpi   ZH, hi8(ETHER_TYPE_IPV4)
     brne  TYPE_LEN_ARP
@@ -275,7 +275,7 @@ TYPE_LEN_IPV4:
     cpi   RETURN_VALUE, 0
     brne  ERROR
     rjmp  PACKET_END
-/* }}} */
+    /* }}} */
 TYPE_LEN_ARP: /* {{{ */
     /* Check Type/Len is ARP or jump to next type/len */
     cpi   ZH, hi8(ETHER_TYPE_ARP)
@@ -287,12 +287,12 @@ TYPE_LEN_ARP: /* {{{ */
     cpi   RETURN_VALUE, 0
     brne  ERROR
     rjmp  PACKET_END
-/* }}} */
-TYPE_LEN_UNKNOWN:
-PACKET_END:
+    /* }}} */
+TYPE_LEN_UNKNOWN: /* }}} */
+PACKET_END: /* }}} */
 SKIP_ETH_PKT:
     rcall ETH_PKT_PROCESSED
-#if 1 // {{{
+#if 0 // {{{
     inc   DEBUG_REG_COUNT
     cpi   DEBUG_REG_COUNT, 40
     brne  SKIP_MESSAGE
