@@ -41,12 +41,7 @@ ${OBJDIR}/%.o: %.S | eeprom_data.h ${DEPDIR} ${OBJDIR}
 	avr-gcc ${DEPOPTS} ${GCCOPT} -c -o $@ $<
 
 install:
-	@# TODO, -D by itself doesn't work: /usr/bin/avrdude -D -c usbasp -p m8 -U flash:w:main.hex
 	/usr/bin/avrdude -c usbasp -p m8 -U flash:w:main.hex
-	/usr/bin/avrdude -c usbasp -p m8 -U eeprom:w:eeprom_data.hex
-
-# EEPROM install
-einstall:
 	/usr/bin/avrdude -c usbasp -p m8 -U eeprom:w:eeprom_data.hex
 
 read:

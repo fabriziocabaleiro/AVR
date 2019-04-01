@@ -18,7 +18,6 @@
 .global ETH_SOFTWARE_RESET
 .global ETH_BUFFER_INIT
 .global ETH_MAC_INIT
-.global ETH_MISC_INIT
 .global ETH_PHY_INIT
 .global ETH_READ_BUFFER_START
 .global ETH_READ_RECEIVE_HEADER
@@ -139,11 +138,19 @@ ETH_SET_BANK:
 #endif
 /* }}} */
 /*******************************************************************************
- * Enable interrupts, TODO: add more info {{{
+ * Enable interrupts {{{
+ * The INT Interrupt Enable bit (INTIE) is a global enable bit which allows the
+ * following interrupts to drive the INT pin:
+ * - Receive Error Interrupt (RXERIF)
+ * - Transmit Error Interrupt (TXERIF)
+ * - Transmit Interrupt (TXIF)
+ * - Link Change Interrupt (LINKIF)
+ * - DMA Interrupt (DMAIF)
+ * - Receive Packet Pending Interrupt (PKTIF)
  ******************************************************************************/
 ETH_ENABLE_RECEIVE_INTERRUPT:
     ldi   ARG_REG1, ENC_COMMON_EIE
-    ldi   ARG_REG2, ENC_COMMON_EIE_INTIE | ENC_COMMON_EIE_PKTIE
+    ldi   ARG_REG2, (1 << ENC_COMMON_EIE_INTIE) | (1 << ENC_COMMON_EIE_PKTIE)
     rcall ETH_BIT_FIELD_SET
     ret
 /* }}} */
@@ -358,22 +365,10 @@ ETH_MAC_INIT_SET_MAC_LOOP_END:
     ret
 /* }}} */
 /*******************************************************************************
- * Miscellaneous initialization {{{
- ******************************************************************************/
-ETH_MISC_INIT:
-    /* AUTOINC should be set by default */
-#if 0
-    ldi   ARG_REG1, ENC_COMMON_ECON2
-    ldi   ARG_REG2, ENC_COMMON_ECON2_AUTOINC
-    rcall ETH_BIT_FIELD_SET
-#endif
-    ret
-/* }}} */
-/*******************************************************************************
  * PHY initialization {{{
  ******************************************************************************/
-ETH_PHY_INIT: /* ONLY ONCE */
 #if 0
+ETH_PHY_INIT: /* ONLY ONCE */
     /* For proper duplex operation, the PHCON1.PDPXMD bit must also match the
      * value of the ENC_BANK2_MACON3.FULDPX bit.
      */
@@ -439,13 +434,14 @@ ETH_CHECK_RECEIVE_STATUS_VECTOR:
 /*******************************************************************************
  * Read Ethernet header (Mac addresses and Type/Len {{{
  * Update the Dst Mac Address ptr and the type/len ptr when reading the header
- ******************************************************************************/
-/* TYPE/LENGTH
+ *
+ * TYPE/LENGTH
  * The type/length field is a 2-byte field which defines which protocol the
  * following packet data belongs to.  Alternately, if the field is filled with
  * the contents of 05DCh (1500) or any smaller number, the field is considered a
  * length field and it specifies the amount of non-padding data which follows in
- * the data field. */
+ * the data field.
+ ******************************************************************************/
 ETH_READ_MAC_ADDRS_N_LEN_TYPE:
     ldi   ARG_REG1, ETH_SPI_CMD_RBM
     SPI_SELECT_ETH
@@ -456,25 +452,26 @@ ETH_READ_MAC_ADDRS_N_LEN_TYPE:
     push  ZH
 
     /* Mac address SRC/DST and Type/len is all continuous in memory */
-    ldi   TMP_REG2, 14
+    ldi   TMP_REG1, (MAC_SIZE_IN_BYTES + MAC_SIZE_IN_BYTES + 2)
     ldi   ZH, hi8(ETH_HEADER)
     ldi   ZL, lo8(ETH_HEADER)
 ETH_READ_MAC_ADDRS_N_LEN_TYPE_KEEP_READING:
     rcall SPI_MASTER_TRANSMIT
     st    Z+, RETURN_VALUE
-    dec   TMP_REG2
+    dec   TMP_REG1
     brne  ETH_READ_MAC_ADDRS_N_LEN_TYPE_KEEP_READING
 
     /* Update Mac Addr Dst & Type/Len ptr */
-    ldi   TMP_REG2, hi8(MAC_ADDR_OTHER)
-    sts   ENC_MAC_DST_PTR + 0, TMP_REG2
-    ldi   TMP_REG2, lo8(MAC_ADDR_OTHER)
-    sts   ENC_MAC_DST_PTR + 1, TMP_REG2
+    /* TODO: Could be done in other way */
+    ldi   TMP_REG1, hi8(MAC_ADDR_OTHER)
+    sts   ENC_MAC_DST_PTR + 0, TMP_REG1
+    ldi   TMP_REG1, lo8(MAC_ADDR_OTHER)
+    sts   ENC_MAC_DST_PTR + 1, TMP_REG1
 
-    ldi   TMP_REG2, hi8(TYPE_LEN_H)
-    sts   ENC_TYPE_LEN_PTR + 0, TMP_REG2
-    ldi   TMP_REG2, lo8(TYPE_LEN_H)
-    sts   ENC_TYPE_LEN_PTR + 1, TMP_REG2
+    ldi   TMP_REG1, hi8(TYPE_LEN_H)
+    sts   ENC_TYPE_LEN_PTR + 0, TMP_REG1
+    ldi   TMP_REG1, lo8(TYPE_LEN_H)
+    sts   ENC_TYPE_LEN_PTR + 1, TMP_REG1
 
     pop   ZH
     pop   ZL
@@ -731,13 +728,12 @@ ETH_WRITE_BUFFER_PACKET_PAYLOAD_FINISH:
      *   to enable an interrupt when done (if desired).
      *   Start the transmission process by setting
      */
-
     ldi   ARG_REG1, ENC_COMMON_EIR
-    ldi   ARG_REG2, ENC_COMMON_EIR_TXIF
+    ldi   ARG_REG2, (1 << ENC_COMMON_EIR_TXIF)
     rcall ETH_BIT_FIELD_CLEAR
 
     ldi   ARG_REG1, ENC_COMMON_EIE
-    ldi   ARG_REG2, ENC_COMMON_EIE_TXIE | ENC_COMMON_EIE_INTIE
+    ldi   ARG_REG2, (1 << ENC_COMMON_EIE_TXIE) | (1 << ENC_COMMON_EIE_INTIE)
     rcall ETH_BIT_FIELD_SET
 
     /* Set bits to send packet */
@@ -759,7 +755,7 @@ ETH_WRITE_BUFFER_PACKET_PAYLOAD_FINISH_WAIT:
 #endif
 
     ldi   ARG_REG1, ENC_COMMON_EIR
-    ldi   ARG_REG2, ENC_COMMON_EIR_TXIF
+    ldi   ARG_REG2, (1 << ENC_COMMON_EIR_TXIF)
     rcall ETH_BIT_FIELD_CLEAR
 
     ret

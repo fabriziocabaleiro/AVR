@@ -5,25 +5,25 @@
 /* Common set of registers {{{ */
 /* INTIE PKTIE DMAIE LINKIE TXIE r TXERIE RXERIE 0000 0000 */
 #define ENC_COMMON_EIE         0x1B
-#define ENC_COMMON_EIE_INTIE   0x80
-#define ENC_COMMON_EIE_PKTIE   0x40
-#define ENC_COMMON_EIE_DMAIE   0x20
-#define ENC_COMMON_EIE_LINKIE  0x10
-#define ENC_COMMON_EIE_TXIE    0x08
-/* #define EIE_r       0x04 */
-#define ENC_COMMON_EIE_TXERIE  0x02
-#define ENC_COMMON_EIE_RXERIE  0x01
+#define ENC_COMMON_EIE_INTIE      7
+#define ENC_COMMON_EIE_PKTIE      6
+#define ENC_COMMON_EIE_DMAIE      5
+#define ENC_COMMON_EIE_LINKIE     4
+#define ENC_COMMON_EIE_TXIE       3
+/* #define EIE_r          2 */
+#define ENC_COMMON_EIE_TXERIE     1
+#define ENC_COMMON_EIE_RXERIE     0
 
 /* — PKTIF DMAIF LINKIF TXIF r TXERIF RXERIF -000 0000 */
 #define ENC_COMMON_EIR         0x1C
-//#define -        0x80
-#define ENC_COMMON_EIR_PKTIF  0x40
-#define ENC_COMMON_EIR_DMAIF  0x20
-#define ENC_COMMON_EIR_LINKIF 0x10
-#define ENC_COMMON_EIR_TXIF   0x08
-#define ENC_COMMON_EIR_r      0x04
-#define ENC_COMMON_EIR_TXERIF 0x02
-#define ENC_COMMON_EIR_RXERIF 0x01
+//#define -           7
+#define ENC_COMMON_EIR_PKTIF      6
+#define ENC_COMMON_EIR_DMAIF      5
+#define ENC_COMMON_EIR_LINKIF     4
+#define ENC_COMMON_EIR_TXIF       3
+#define ENC_COMMON_EIR_r          2
+#define ENC_COMMON_EIR_TXERIF     1
+#define ENC_COMMON_EIR_RXERIF     0
 
 /* INT BUFER r LATECOL — RXBUSY TXABRT CLKRDY(1) 0000 -000 */
 #define ENC_COMMON_ESTAT       0x1D

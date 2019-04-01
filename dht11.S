@@ -6,7 +6,7 @@
 
 .global DHT11_SETUP
 .global DHT11_READ
-.global INT1_vect
+.global DHT11_INT1_vect
 
 /* Tested At 1MHz */
 
@@ -117,12 +117,22 @@ DHT11_READ_WAIT_START_SIGNAL:
      * and disable later */
     sei
 
+    /* INT1 routine does more than just DHT11, using this bit field to deliver
+     * to the correct routine */
+    lds   TMP_REG1, BIT_FIELD_1
+    sbr   TMP_REG1, (1 << BIT_FIELD_1_INT1_DHT11)
+    sts   BIT_FIELD_1, TMP_REG1
+
     /* 40 cycles, one for each bit, plus 2 falling edges at the beginning */
     ldi   TMP_REG1, 42
 DHT11_TRANSMISSION_LOOP:
     sleep
     dec   TMP_REG1
     brne  DHT11_TRANSMISSION_LOOP
+
+    lds   TMP_REG1, BIT_FIELD_1
+    cbr   TMP_REG1, (1 << BIT_FIELD_1_INT1_DHT11)
+    sts   BIT_FIELD_1, TMP_REG1
 
     /* FIXME: MOVE TO ITS OWN PLACE */
     /* ADC for MQ135 { */
@@ -156,7 +166,7 @@ DHT11_TRANSMISSION_LOOP:
  * Use X to hold 5/8 of the first cycle, which is 160uS
  * Use Z as pointer to the memory
  ******************************************************************************/
-INT1_vect:
+DHT11_INT1_vect:
     /* Read counter and reset it */
     in    YL, _SFR_IO_ADDR(TCNT1L)
     in    YH, _SFR_IO_ADDR(TCNT1H)

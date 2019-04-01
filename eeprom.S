@@ -6,8 +6,7 @@
 
 .global EEPROM_READ_N_INC
 .global EEPROM_WRITE_N_INC
-.global EEPROM_DEBUG_INIT
-.global EEPROM_DEBUG_WRITE
+.global EEPROM_COREDUMP
 
 /*******************************************************************************
  * Read bytes pointed by Y and return them on RETURN_VALUE {{{
@@ -47,220 +46,91 @@ EEPROM_WRITE_N_INC:
     ret
 /* }}} */
 /*******************************************************************************
- * EEPROM debug init {{{
+ * {{{
  ******************************************************************************/
-EEPROM_DEBUG_INIT:
-    /* Clear all the debug register bit fields */
-    ldi   TMP_REG1, 0
-    sts   EEPROM_DEBUG_R0_7,   TMP_REG1
-    sts   EEPROM_DEBUG_R8_15,  TMP_REG1
-    ldi   TMP_REG1, 7
-    sts   EEPROM_DEBUG_R16_23, TMP_REG1
-    sts   EEPROM_DEBUG_R24_31, TMP_REG1
-
-    /* Set Y debug pointer to the beginning of the debug space */
-    ldi   TMP_REG1, hi8(EEPROM_DEBUG)
-    sts   EEPROM_DEBUG_YH, TMP_REG1
-    ldi   TMP_REG1, lo8(EEPROM_DEBUG)
-    sts   EEPROM_DEBUG_YL, TMP_REG1
-    
-    ret
-/* }}} */
-/*******************************************************************************
- * Write ARG_REG1 to EEPROM pointer by Y {{{
- * Y gets incremented after every call
- ******************************************************************************/
-EEPROM_DEBUG_WRITE:
-    push  YL
-    push  YH
-    push  ARG_REG1
+EEPROM_COREDUMP:
+    push  R29
+    push  R30
     push  R31
-    push  ARG_REG1
 
-    lds   YL, EEPROM_DEBUG_YL
-    lds   YH, EEPROM_DEBUG_YH
+    /* The value of this registers are going to be loaded from the stack */
+    push  R31
+    push  R30
+    push  R29
 
-    ldi   ARG_REG1, 0xFF
-    rcall EEPROM_WRITE_N_INC
+    /* Get Program Counter into Stack */
+    lds   ZL, SPL
+    lds   ZH, SPH
+    adiw  ZL, (1 + /* Pointing to first element of stack */ \
+               6 + /* Push during EEPROM_COREDUMP */        \
+               2 + /* Return address of EEPROM_COREDUMP */  \
+               2   /* Push during INT1_vect */              \
+              )
+               
+    ld    R29, Z+
+    sts   EEPROM_PCH, R29
+    ld    R29, Z+
+    sts   EEPROM_PCL, R29
 
-    lds   R31, EEPROM_DEBUG_R0_7
+    /* Setup */
+    set
+    clr   ZL
+    clr   ZH
+    /* Wait for previous write to finish */
+WAIT_PREVIOUS_WRITE:
+    sbic  _SFR_IO_ADDR(EECR), EEWE
+    rjmp  WAIT_PREVIOUS_WRITE
+    /* Set address */
+    /* Here a loop could be inserted to be able to write multiple core dumps */
+    ldi   R29, lo8(EEPROM_DEBUG)
+    add   ZL, R29
+    ldi   R29, hi8(EEPROM_DEBUG)
+    adc   ZH, R29
+    out   _SFR_IO_ADDR(EEARH), ZH
+    out   _SFR_IO_ADDR(EEARL), ZL
+    ldi   R29, hi8(EEPROM_DEBUG)
+    sub   ZH, R29
+    ldi   R29, lo8(EEPROM_DEBUG)
+    sbc   ZL, R29
+    /* Set data
+     * For R29, R30 and R31, read from stack previous saved value */
+    cpi    ZL, 29
+    breq   READ_FROM_STACK
+    cpi    ZL, 30
+    breq   READ_FROM_STACK
+    cpi    ZL, 31
+    breq   READ_FROM_STACK
+    /* Write SREG and Program Counter 15:0 */
+    cpi    ZL, 0x5F
+    brsh   READ_FROM_SRAM_WITH_DISPLACEMENT
+READ_FROM_SRAM:
+    ld     R29, Z+
+    rjmp   WRITE_TO_EEPROM
+READ_FROM_SRAM_WITH_DISPLACEMENT:
+    ldd    R29, Z + (EEPROM_COREDUMP_DISPLACEMENT - 0x5F)
+    ERR_ETH_SET_ERROR
+    adiw   ZL, 1
+    rjmp   WRITE_TO_EEPROM
+READ_FROM_STACK:
+    pop    R29
+    adiw   ZL, 1
 
-    sbrs  R31, 0
-    rjmp  R31_1
-    mov   ARG_REG1, R0
-    rcall EEPROM_WRITE_N_INC
-R31_1:
-    sbrs  R31, 1
-    rjmp  R31_2
-    mov   ARG_REG1, R1
-    rcall EEPROM_WRITE_N_INC
-R31_2:
-    sbrs  R31, 2
-    rjmp  R31_3
-    mov   ARG_REG1, R2
-    rcall EEPROM_WRITE_N_INC
-R31_3:
-    sbrs  R31, 3
-    rjmp  R31_4
-    mov   ARG_REG1, R3
-    rcall EEPROM_WRITE_N_INC
-R31_4:
-    sbrs  R31, 4
-    rjmp  R31_5
-    mov   ARG_REG1, R4
-    rcall EEPROM_WRITE_N_INC
-R31_5:
-    sbrs  R31, 5
-    rjmp  R31_6
-    mov   ARG_REG1, R5
-    rcall EEPROM_WRITE_N_INC
-R31_6:
-    sbrs  R31, 6
-    rjmp  R31_7
-    mov   ARG_REG1, R6
-    rcall EEPROM_WRITE_N_INC
-R31_7:
-    sbrs  R31, 7
-    rjmp  R31_8
-    mov   ARG_REG1, R7
-    rcall EEPROM_WRITE_N_INC
-R31_8:
+    /* Write to EEPROM */
+WRITE_TO_EEPROM:
+    out    _SFR_IO_ADDR(EEDR), R29
+    /* Set master write enable and write enable */
+    sbi   _SFR_IO_ADDR(EECR), EEMWE
+    sbi   _SFR_IO_ADDR(EECR), EEWE
 
-    lds   R31, EEPROM_DEBUG_R8_15
+    cpi   ZL, 0x62
+    brne  WAIT_PREVIOUS_WRITE
 
-    sbrs  R31, 0
-    rjmp  R31_9
-    mov   ARG_REG1, R8
-    rcall EEPROM_WRITE_N_INC
-R31_9:
-    sbrs  R31, 1
-    rjmp  R31_10
-    mov   ARG_REG1, R9
-    rcall EEPROM_WRITE_N_INC
-R31_10:
-    sbrs  R31, 2
-    rjmp  R31_11
-    mov   ARG_REG1, R10
-    rcall EEPROM_WRITE_N_INC
-R31_11:
-    sbrs  R31, 3
-    rjmp  R31_12
-    mov   ARG_REG1, R11
-    rcall EEPROM_WRITE_N_INC
-R31_12:
-    sbrs  R31, 4
-    rjmp  R31_13
-    mov   ARG_REG1, R12
-    rcall EEPROM_WRITE_N_INC
-R31_13:
-    sbrs  R31, 5
-    rjmp  R31_14
-    mov   ARG_REG1, R13
-    rcall EEPROM_WRITE_N_INC
-R31_14:
-    sbrs  R31, 6
-    rjmp  R31_15
-    mov   ARG_REG1, R14
-    rcall EEPROM_WRITE_N_INC
-R31_15:
-    sbrs  R31, 7
-    rjmp  R31_16
-    mov   ARG_REG1, R15
-    rcall EEPROM_WRITE_N_INC
-R31_16:
-
-    lds   R31, EEPROM_DEBUG_R16_23
-
-    sbrs  R31, 0
-    rjmp  R31_17
-    mov   ARG_REG1, TMP_REG1 // R16
-    rcall EEPROM_WRITE_N_INC
-R31_17:
-    sbrs  R31, 1
-    rjmp  R31_18
-    mov   ARG_REG1, TMP_REG2 // R17
-    rcall EEPROM_WRITE_N_INC
-R31_18:
-    sbrs  R31, 2
-    rjmp  R31_19
-    mov   ARG_REG1, TMP_REG3 // R18
-    rcall EEPROM_WRITE_N_INC
-R31_19:
-    sbrs  R31, 3
-    rjmp  R31_20
-    // mov   ARG_REG1, R19
-    pop   ARG_REG1
-    rcall EEPROM_WRITE_N_INC
-R31_20:
-    sbrs  R31, 4
-    rjmp  R31_21
-    mov   ARG_REG1, ARG_REG2 // R20
-    rcall EEPROM_WRITE_N_INC
-R31_21:
-    sbrs  R31, 5
-    rjmp  R31_22
-    mov   ARG_REG1, RETURN_VALUE // R21
-    rcall EEPROM_WRITE_N_INC
-R31_22:
-    sbrs  R31, 6
-    rjmp  R31_23
-    mov   ARG_REG1, COUNTER_REG // R22
-    rcall EEPROM_WRITE_N_INC
-R31_23:
-    sbrs  R31, 7
-    rjmp  R31_24
-    mov   ARG_REG1, R23
-    rcall EEPROM_WRITE_N_INC
-R31_24:
-
-    lds   R31, EEPROM_DEBUG_R24_31
-
-    sbrs  R31, 0
-    rjmp  R31_25
-    mov   ARG_REG1, R24
-    rcall EEPROM_WRITE_N_INC
-R31_25:
-    sbrs  R31, 1
-    rjmp  R31_26
-    mov   ARG_REG1, R25
-    rcall EEPROM_WRITE_N_INC
-R31_26:
-    sbrs  R31, 2
-    rjmp  R31_27
-    mov   ARG_REG1, R26
-    rcall EEPROM_WRITE_N_INC
-R31_27:
-    sbrs  R31, 3
-    rjmp  R31_28
-    mov   ARG_REG1, R27
-    rcall EEPROM_WRITE_N_INC
-R31_28:
-    sbrs  R31, 4
-    rjmp  R31_29
-    mov   ARG_REG1, R28
-    rcall EEPROM_WRITE_N_INC
-R31_29:
-    sbrs  R31, 5
-    rjmp  R31_30
-    mov   ARG_REG1, R29
-    rcall EEPROM_WRITE_N_INC
-R31_30:
-    sbrs  R31, 6
-    rjmp  R31_31
-    mov   ARG_REG1, R30
-    rcall EEPROM_WRITE_N_INC
-R31_31:
-    sbrs  R31, 7
-    rjmp  R31_32
-    // mov   ARG_REG1, R31
     pop   R31
-    rcall EEPROM_WRITE_N_INC
-R31_32:
-
-    sts   EEPROM_DEBUG_YL, YL
-    sts   EEPROM_DEBUG_YH, YH
-
-    pop   ARG_REG1
-    pop   YH
-    pop   YL
+    pop   R30
+    pop   R29
+    /* Maybe not a good idea, but, I want the system to stop doing everything
+     * after core dump */
+    //ERR_ETH_SET_ERROR
+    sleep
     ret
+

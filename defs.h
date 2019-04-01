@@ -48,15 +48,15 @@
 /*******************************************************************************
  * SRAM variables {{{
  ******************************************************************************/
-/* Receive packet header, it is read continuously {{{ */
-#define RPKT_N_PKT_L            0x0060
-#define RPKT_N_PKT_H            0x0061
-#define RPKT_BYTE_COUNT_L       0x0062
-#define RPKT_BYTE_COUNT_H       0x0063
-#define RPKT_STATUS2            0x0064
-#define RPKT_STATUS3            0x0065
-#define RPKT_STATUS_VECTOR_LEN       6
-/* }}} */
+/*************
+ * DEBUGGING *
+ *************/
+#define EEPROM_COREDUMP_DISPLACEMENT    0x0060
+/* Save TMP_REG1 during INT1_vect */
+#define EEPROM_SREG                     EEPROM_COREDUMP_DISPLACEMENT
+#define EEPROM_PCH                      0x0061
+#define EEPROM_PCL                      0x0062
+#define EEPROM_TMP_REG1_SAVE            0x0063
 
 /* Pending packages to process */
 #define RPKT_PENDING_CNT  0x0066
@@ -131,15 +131,22 @@
 #define DHCP_SERVER_IP_ADDR             0x01E0 /* 4 bytes */
 #define DHCP_XID_LAST_BYTE              0x01E4 /* 1 byte  */
 
-/*************
- * DEBUGGING *
- *************/
-#define EEPROM_DEBUG_R0_7    0x01E5
-#define EEPROM_DEBUG_R8_15   0x01E6
-#define EEPROM_DEBUG_R16_23  0x01E7
-#define EEPROM_DEBUG_R24_31  0x01E8
-#define EEPROM_DEBUG_YL      0x01E9
-#define EEPROM_DEBUG_YH      0x01EA
+/************************
+ * BIT FIELDS VARIABLES *
+ ***********************/
+#define BIT_FIELD_1               0x01EB
+#define BIT_FIELD_1_INT1_DHT11         7
+
+/* Receive packet header, it is read continuously {{{ */
+#define RPKT_N_PKT_L              0x01EC
+#define RPKT_N_PKT_H              0x01ED
+#define RPKT_BYTE_COUNT_L         0x01EE
+#define RPKT_BYTE_COUNT_H         0x01EF
+#define RPKT_STATUS2              0x01F0
+#define RPKT_STATUS3              0x01F1
+#define RPKT_STATUS_VECTOR_LEN         6
+/* }}} */
+
 /* }}} */
 /*******************************************************************************
  * Miscellaneous {{{

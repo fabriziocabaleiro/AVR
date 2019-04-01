@@ -12,6 +12,7 @@
 .section .text
 .global main
 .global INT0_vect
+.global INT1_vect
 
 /*******************************************************************************
  * TODO: remove {{{
@@ -118,7 +119,7 @@ main:
     out   _SFR_IO_ADDR(MCUCR), TMP_REG2
 
     in    TMP_REG2, _SFR_IO_ADDR(GICR)
-    ori   TMP_REG2, (1 << INT0)
+    ori   TMP_REG2, (1 << INT1)|(1 << INT0)
     out   _SFR_IO_ADDR(GICR), TMP_REG2
 
     cbi   _SFR_IO_ADDR(DDRD), PD2
@@ -141,10 +142,8 @@ MAIN_DELAY:
     rcall ETH_SOFTWARE_RESET
     rcall ETH_BUFFER_INIT
     rcall ETH_MAC_INIT
-    rcall ETH_MISC_INIT
     rcall ETH_ENABLE_RECEIVE
     rcall ETH_ENABLE_RECEIVE_INTERRUPT
-    rcall EEPROM_DEBUG_INIT
     /* Set LED errors */
     ERR_ARP_SET_DDR
 
@@ -163,20 +162,37 @@ LOOP:
     rjmp LOOP
 /* }}} */
 /*******************************************************************************
- * Received packet interrupt routine {{{
+ * INT0 handle. Received packet interrupt routine {{{
  ******************************************************************************/
 INT0_vect:
     push  TMP_REG2
     in    TMP_REG2, _SFR_IO_ADDR(SREG)
     push  TMP_REG2
-    rcall HANDLE_PACKET
-    ERR_ARP_CLR_ERROR
+
+    /* Read Global interrupt register from ENC28J60 and execute routines
+     * accordingly */
+    set
+READ_ETHERNET_INTERRUPT_REQUEST:
     ldi   ARG_REG1, ENC_COMMON_EIR
-    ldi   ARG_REG2, ENC_COMMON_EIR_PKTIF
-    rcall ETH_BIT_FIELD_CLEAR
+    rcall ETH_READ_CONTROL_REGISTER
+
+    brts here
+    ERR_ETH_SET_ERROR
+here:
+    clt
+    /* NOT WORKING... SEEMS TO BE WRONG SOMEHOW */
+    sbrc  RETURN_VALUE, ENC_COMMON_EIR_PKTIF
+    rcall HANDLE_PACKET
+
+    /* TODO: handle other sources of interrupt */
+
+    sbis  _SFR_IO_ADDR(PIND), PD2
+    rjmp  READ_ETHERNET_INTERRUPT_REQUEST
+
     pop   TMP_REG2
     out   _SFR_IO_ADDR(SREG), TMP_REG2
     pop   TMP_REG2
+    ERR_ARP_CLR_ERROR
     reti
 /* }}} */
 /*******************************************************************************
@@ -184,28 +200,7 @@ INT0_vect:
  * enc28j60 will trigger an interrupt whenever a packet is received.
  ******************************************************************************/
 HANDLE_PACKET:
-    ERR_ARP_CLR_ERROR
-
-    /* Check Packet Counter {{{
-     * enc28j60 interrupt could be trigger by different sources, therefore check
-     * if we have pending packets after receiving the interrupt.
-     * Set Bank 1, read packet counter */
-    ldi   ARG_REG1, ENC_COMMON_ECON1
-    ldi   ARG_REG2, ENC_COMMON_ECON1_BSEL0
-    rcall ETH_BIT_FIELD_SET
-    ldi   ARG_REG1, ENC_COMMON_ECON1
-    ldi   ARG_REG2, ENC_COMMON_ECON1_BSEL1
-    rcall ETH_BIT_FIELD_CLEAR
-    ldi   ARG_REG1, ENC_BANK1_EPKTCNT
-    rcall ETH_READ_CONTROL_REGISTER
-    sts   RPKT_PENDING_CNT, RETURN_VALUE
-
-    /* Start loop again if not pending packet */
-    tst   RETURN_VALUE
-    brne  PROCESS_PACKET
-    ret
-    /* }}} */
-PROCESS_PACKET: /* {{{ */
+    /* Packet and Ethernet headers {{{ */
     rcall ETH_READ_RECEIVE_HEADER
     rcall ETH_CHECK_RECEIVE_STATUS_VECTOR
     cpi   RETURN_VALUE, 0
@@ -237,7 +232,7 @@ CHK_RPKT_STATUS2:
     sbrc  TMP_REG2, RPKT_STATUS2_LENGTH_OUT_OF_RANGE
     rjmp  TYPE_LEN_TYPE
     rjmp  SKIP_ETH_PKT /* no support for type/length = length packets */
-
+    /* }}} */
 TYPE_LEN_TYPE: /* {{{ */
     lds   ZH, TYPE_LEN_H
     lds   ZL, TYPE_LEN_L
@@ -248,6 +243,7 @@ TYPE_LEN_IPV4: /* {{{ */
     cpi   ZL, lo8(ETHER_TYPE_IPV4)
     brne  TYPE_LEN_ARP
 
+    ERR_ETH_SET_ERROR
     rcall IPV4_HANDLE_PKT
     cpi   RETURN_VALUE, 0
     brne  ERROR
@@ -266,7 +262,7 @@ TYPE_LEN_ARP: /* {{{ */
     rjmp  PACKET_END
     /* }}} */
 TYPE_LEN_UNKNOWN: /* }}} */
-PACKET_END: /* }}} */
+PACKET_END:
 SKIP_ETH_PKT:
     rcall ETH_PKT_PROCESSED
 #if 0 // {{{
@@ -284,6 +280,31 @@ SKIP_MESSAGE:
     ret
 
 ERROR:
-    ERR_ETH_SET_ERROR
+    //ERR_ETH_SET_ERROR
     rjmp  SKIP_ETH_PKT
+/* }}} */
+/*******************************************************************************
+ * INT1 handle {{{
+ ******************************************************************************/
+INT1_vect:
+    /* Save and restore TMP_REG1 for EEPROM_COREDUMP */
+    sts   EEPROM_TMP_REG1_SAVE, TMP_REG1
+    push  TMP_REG1
+    in    TMP_REG1, _SFR_IO_ADDR(SREG)
+    sts   EEPROM_SREG, TMP_REG1
+    push  TMP_REG1
+    lds   TMP_REG1, EEPROM_TMP_REG1_SAVE
+
+    lds   TMP_REG1, BIT_FIELD_1
+    sbrc  TMP_REG1, BIT_FIELD_1_INT1_DHT11
+    rcall DHT11_INT1_vect
+
+    lds   TMP_REG1, BIT_FIELD_1
+    sbrs  TMP_REG1, BIT_FIELD_1_INT1_DHT11
+    rcall EEPROM_COREDUMP
+
+    pop   TMP_REG1
+    out   _SFR_IO_ADDR(SREG), TMP_REG1
+    pop   TMP_REG1
+    reti
 /* }}} */
