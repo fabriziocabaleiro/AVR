@@ -112,28 +112,33 @@ rcall MAIN_WRITE_TO_LCD_AS_HEX
  ******************************************************************************/
 main:
     /* Set interrupt on INT0 falling edge */
-    in    TMP_REG2, _SFR_IO_ADDR(MCUCR)
+    in    TMP_REG1, _SFR_IO_ADDR(MCUCR)
     // TODO: Decide which one to use
-    ori   TMP_REG2, (1 << ISC01)
-    andi  TMP_REG2, ~((1 << ISC00)|(1 << ISC01))
-    out   _SFR_IO_ADDR(MCUCR), TMP_REG2
+    ori   TMP_REG1, (1 << ISC01)
+    andi  TMP_REG1, ~((1 << ISC00)|(1 << ISC01))
+    out   _SFR_IO_ADDR(MCUCR), TMP_REG1
 
-    in    TMP_REG2, _SFR_IO_ADDR(GICR)
-    ori   TMP_REG2, (1 << INT1)|(1 << INT0)
-    out   _SFR_IO_ADDR(GICR), TMP_REG2
+    in    TMP_REG1, _SFR_IO_ADDR(GICR)
+    ori   TMP_REG1, (1 << INT1)|(1 << INT0)
+    out   _SFR_IO_ADDR(GICR), TMP_REG1
 
     cbi   _SFR_IO_ADDR(DDRD), PD2
 
     /* Set global interrupt enable, sleep mode and sleep enable */
-    in   TMP_REG2, _SFR_IO_ADDR(MCUCR)
-    sbr  TMP_REG2, (1 << SE)
-    out  _SFR_IO_ADDR(MCUCR), TMP_REG2
+    in    TMP_REG1, _SFR_IO_ADDR(MCUCR)
+    sbr   TMP_REG1, (1 << SE)
+    out   _SFR_IO_ADDR(MCUCR), TMP_REG1
+
+    /* INT1 will receive interrupt while reading DHT11, but, also will receive
+     * interrupt if we want to generate a COREDUMP, so, using upper nibble of
+     * port D to know what to do when INT1 triggered */
+    cbi   _SFR_IO_ADDR(DDRD), PD4
 
     ldi   TMP_REG1, 255
 MAIN_DELAY:
     rcall DELAY_TMP
-    dec TMP_REG1
-    brne MAIN_DELAY
+    dec   TMP_REG1
+    brne  MAIN_DELAY
 
 #ifdef USE_DHT11
     rcall DHT11_SETUP
@@ -145,9 +150,9 @@ MAIN_DELAY:
     rcall ETH_ENABLE_RECEIVE
     rcall ETH_ENABLE_RECEIVE_INTERRUPT
     /* Set LED errors */
-    ERR_ARP_SET_DDR
+    ERR_SET_DDR
 
-    ldi DEBUG_REG_COUNT, 0
+    ldi   DEBUG_REG_COUNT, 0
     /* Get IP from DHCP */
     sts   DHCP_XID_LAST_BYTE, DEBUG_REG_COUNT
     rcall DHCP_DISCOVER
@@ -165,34 +170,43 @@ LOOP:
  * INT0 handle. Received packet interrupt routine {{{
  ******************************************************************************/
 INT0_vect:
+#if 0
+    ERR_SET
+    rcall  DELAY_TMP
+    ERR_CLR
+#endif
     push  TMP_REG2
     in    TMP_REG2, _SFR_IO_ADDR(SREG)
     push  TMP_REG2
 
     /* Read Global interrupt register from ENC28J60 and execute routines
      * accordingly */
-    set
 READ_ETHERNET_INTERRUPT_REQUEST:
     ldi   ARG_REG1, ENC_COMMON_EIR
     rcall ETH_READ_CONTROL_REGISTER
+    mov   ETH_INT_RQST, RETURN_VALUE
 
-    brts here
-    ERR_ETH_SET_ERROR
-here:
-    clt
-    /* NOT WORKING... SEEMS TO BE WRONG SOMEHOW */
-    sbrc  RETURN_VALUE, ENC_COMMON_EIR_PKTIF
+    sbrc  ETH_INT_RQST, ENC_COMMON_EIR_PKTIF
     rcall HANDLE_PACKET
+    sbrc  ETH_INT_RQST, ENC_COMMON_EIE_DMAIE
+    rcall COREDUMP_N_SLEEP
+    sbrc  ETH_INT_RQST, ENC_COMMON_EIE_LINKIE
+    rcall COREDUMP_N_SLEEP
+    sbrc  ETH_INT_RQST, ENC_COMMON_EIE_TXIE
+    rcall COREDUMP_N_SLEEP
+    sbrc  ETH_INT_RQST, ENC_COMMON_EIE_TXERIE
+    rcall COREDUMP_N_SLEEP
+    sbrc  ETH_INT_RQST, ENC_COMMON_EIE_RXERIE
+    rcall COREDUMP_N_SLEEP
 
-    /* TODO: handle other sources of interrupt */
-
+    /* Check if still pending interrupts */
     sbis  _SFR_IO_ADDR(PIND), PD2
     rjmp  READ_ETHERNET_INTERRUPT_REQUEST
 
     pop   TMP_REG2
     out   _SFR_IO_ADDR(SREG), TMP_REG2
     pop   TMP_REG2
-    ERR_ARP_CLR_ERROR
+    ERR_CLR
     reti
 /* }}} */
 /*******************************************************************************
@@ -243,7 +257,6 @@ TYPE_LEN_IPV4: /* {{{ */
     cpi   ZL, lo8(ETHER_TYPE_IPV4)
     brne  TYPE_LEN_ARP
 
-    ERR_ETH_SET_ERROR
     rcall IPV4_HANDLE_PKT
     cpi   RETURN_VALUE, 0
     brne  ERROR
@@ -280,7 +293,6 @@ SKIP_MESSAGE:
     ret
 
 ERROR:
-    //ERR_ETH_SET_ERROR
     rjmp  SKIP_ETH_PKT
 /* }}} */
 /*******************************************************************************
@@ -295,16 +307,28 @@ INT1_vect:
     push  TMP_REG1
     lds   TMP_REG1, EEPROM_TMP_REG1_SAVE
 
-    lds   TMP_REG1, BIT_FIELD_1
-    sbrc  TMP_REG1, BIT_FIELD_1_INT1_DHT11
+    /* Deliver interrupt to corresponding routine */
+    sbic  _SFR_IO_ADDR(PIND), PD4
+    rjmp  COREDUMP
+
     rcall DHT11_INT1_vect
-
-    lds   TMP_REG1, BIT_FIELD_1
-    sbrs  TMP_REG1, BIT_FIELD_1_INT1_DHT11
-    rcall EEPROM_COREDUMP
-
+INT1_vect_EXIT:
     pop   TMP_REG1
     out   _SFR_IO_ADDR(SREG), TMP_REG1
     pop   TMP_REG1
     reti
+
+COREDUMP:
+    rcall EEPROM_COREDUMP
+    ERR_SET
+    sleep
+    rjmp  INT1_vect_EXIT
+/* }}} */
+/*******************************************************************************
+ * Testing at the moment other interrupts {{{
+ ******************************************************************************/
+COREDUMP_N_SLEEP:
+    rcall EEPROM_COREDUMP
+    ERR_SET
+    sleep
 /* }}} */

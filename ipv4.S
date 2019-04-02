@@ -96,7 +96,7 @@ NOT_BROADCAST:
     ldi   YH, hi8(EEPROM_DEBUG)
     mov   ARG_REG1, TMP_REG2
     rcall EEPROM_WRITE_N_INC
-    ERR_ETH_SET_ERROR
+    ERR_SET
 #endif
 
     /* }}} */

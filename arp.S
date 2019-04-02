@@ -75,7 +75,7 @@ ARP_PROCESS_CHECK_MY_IP_LOOP:
     rcall EEPROM_READ_N_INC
     /* Comparing both IPs */
     cp    DATA1, RETURN_VALUE
-    brne  ARP_PROCESS_EXIT_SUCCESS /* Not for me, just return */
+    brne  ARP_NOT_FOR_ME /* Not for me, just return */
     /* Loop counter */
     dec   COUNTER_REG
     brne  ARP_PROCESS_CHECK_MY_IP_LOOP
@@ -133,4 +133,7 @@ ARP_PROCESS_EXIT_SUCCESS:
     pop   ZL
     pop   ZH
     ret
+ARP_NOT_FOR_ME:
+    ERR_SET
+    rjmp  ARP_PROCESS_EXIT_SUCCESS
 /* }}} */

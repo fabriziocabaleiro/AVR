@@ -117,22 +117,13 @@ DHT11_READ_WAIT_START_SIGNAL:
      * and disable later */
     sei
 
-    /* INT1 routine does more than just DHT11, using this bit field to deliver
-     * to the correct routine */
-    lds   TMP_REG1, BIT_FIELD_1
-    sbr   TMP_REG1, (1 << BIT_FIELD_1_INT1_DHT11)
-    sts   BIT_FIELD_1, TMP_REG1
-
     /* 40 cycles, one for each bit, plus 2 falling edges at the beginning */
+    /* TODO: add way to wakeup in case data doesn't arrive */
     ldi   TMP_REG1, 42
 DHT11_TRANSMISSION_LOOP:
     sleep
     dec   TMP_REG1
     brne  DHT11_TRANSMISSION_LOOP
-
-    lds   TMP_REG1, BIT_FIELD_1
-    cbr   TMP_REG1, (1 << BIT_FIELD_1_INT1_DHT11)
-    sts   BIT_FIELD_1, TMP_REG1
 
     /* FIXME: MOVE TO ITS OWN PLACE */
     /* ADC for MQ135 { */

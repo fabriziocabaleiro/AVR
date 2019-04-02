@@ -409,7 +409,7 @@ DHCP_HANDLE_EXIT:
     ret
 DHCP_HANDLE_EXIT_FAILURE:
     /* TODO: do something better */
-    ERR_ETH_SET_ERROR
+    ERR_SET
     rjmp DHCP_HANDLE_EXIT
 /* }}} */
 

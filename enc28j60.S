@@ -150,7 +150,13 @@ ETH_SET_BANK:
  ******************************************************************************/
 ETH_ENABLE_RECEIVE_INTERRUPT:
     ldi   ARG_REG1, ENC_COMMON_EIE
-    ldi   ARG_REG2, (1 << ENC_COMMON_EIE_INTIE) | (1 << ENC_COMMON_EIE_PKTIE)
+    ldi   ARG_REG2, (1 << ENC_COMMON_EIE_INTIE)  | \
+                    (1 << ENC_COMMON_EIE_PKTIE)  | \
+                    (1 << ENC_COMMON_EIE_DMAIE)  | \
+                    (1 << ENC_COMMON_EIE_LINKIE) | \
+                    (1 << ENC_COMMON_EIE_TXIE)   | \
+                    (1 << ENC_COMMON_EIE_TXERIE) | \
+                    (1 << ENC_COMMON_EIE_RXERIE)
     rcall ETH_BIT_FIELD_SET
     ret
 /* }}} */

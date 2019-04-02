@@ -13,6 +13,7 @@
 /*******************************************************************************
  * Registers {{{
  ******************************************************************************/
+#define ETH_INT_RQST     R15
 /* Register used for temporary values, they may be change after any rcall */
 #define TMP_REG1         R16
 #define TMP_REG2         R17
@@ -27,6 +28,7 @@
 /* TODO: Could be done without private register */
 #define DEBUG_REG_COUNT  R25
 
+#pragma GCC poison R15
 #pragma GCC poison R16
 #pragma GCC poison R17
 #pragma GCC poison R18
@@ -134,8 +136,8 @@
 /************************
  * BIT FIELDS VARIABLES *
  ***********************/
-#define BIT_FIELD_1               0x01EB
-#define BIT_FIELD_1_INT1_DHT11         7
+// #define BIT_FIELD_1               0x01EB
+// #define BIT_FIELD_1_INT1_DHT11         7
 
 /* Receive packet header, it is read continuously {{{ */
 #define RPKT_N_PKT_L              0x01EC
@@ -158,11 +160,10 @@
 #define ETHER_TYPE_WAKE_ON_LAN 0x0842
 #define ETHER_TYPE_IPV6        0x86DD
 /* Error macros */
-#define ERR_ARP_ERR_BIT   PB0
-#define ERR_ARP_SET_DDR   sbi _SFR_IO_ADDR(DDRB),  ERR_ARP_ERR_BIT
-#define ERR_ARP_SET_ERROR sbi _SFR_IO_ADDR(PORTB), ERR_ARP_ERR_BIT
-#define ERR_ETH_SET_ERROR sbi _SFR_IO_ADDR(PORTB), ERR_ARP_ERR_BIT
-#define ERR_ARP_CLR_ERROR cbi _SFR_IO_ADDR(PORTB), ERR_ARP_ERR_BIT
+#define ERR_BIT                                PB0
+#define ERR_SET_DDR   sbi _SFR_IO_ADDR(DDRB),  ERR_BIT
+#define ERR_SET       sbi _SFR_IO_ADDR(PORTB), ERR_BIT
+#define ERR_CLR       cbi _SFR_IO_ADDR(PORTB), ERR_BIT
 /* IP address sizes */
 #define MAC_SIZE_IN_BYTES  6
 #define IPV4_SIZE_IN_BYTES 4

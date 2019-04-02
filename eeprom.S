@@ -73,7 +73,6 @@ EEPROM_COREDUMP:
     sts   EEPROM_PCL, R29
 
     /* Setup */
-    set
     clr   ZL
     clr   ZH
     /* Wait for previous write to finish */
@@ -108,7 +107,6 @@ READ_FROM_SRAM:
     rjmp   WRITE_TO_EEPROM
 READ_FROM_SRAM_WITH_DISPLACEMENT:
     ldd    R29, Z + (EEPROM_COREDUMP_DISPLACEMENT - 0x5F)
-    ERR_ETH_SET_ERROR
     adiw   ZL, 1
     rjmp   WRITE_TO_EEPROM
 READ_FROM_STACK:
@@ -128,9 +126,5 @@ WRITE_TO_EEPROM:
     pop   R31
     pop   R30
     pop   R29
-    /* Maybe not a good idea, but, I want the system to stop doing everything
-     * after core dump */
-    //ERR_ETH_SET_ERROR
-    sleep
     ret
 
