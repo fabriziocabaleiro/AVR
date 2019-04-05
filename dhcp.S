@@ -294,7 +294,7 @@ CHECK_DHCP_HEADER:
     mov   TMP_REG1, RETURN_VALUE
     ETH_READ_NEXT_BYTE
     cp    TMP_REG1, RETURN_VALUE
-    brne  DHCP_HANDLE_EXIT_SUCCESS
+    brne  RELOCATION_TRUNCATED_WORK_AROUND
     dec   COUNTER_REG
     brne  CHECK_DHCP_HEADER
 
@@ -323,17 +323,6 @@ UPDATE_EEPROM_IP_ADDR:
     dec   COUNTER_REG
     brne  UPDATE_EEPROM_IP_ADDR
     
-#if 0
-    ldi   YL, lo8(DHCP_SERVER_IP_ADDR)
-    ldi   YH, hi8(DHCP_SERVER_IP_ADDR)
-    ldi   COUNTER_REG, IPV4_SIZE_IN_BYTES
-STORE_DHCP_SERVER_IP_ADDR:
-    ETH_READ_NEXT_BYTE
-    st    Y+, RETURN_VALUE
-    dec   COUNTER_REG
-    brne  STORE_DHCP_SERVER_IP_ADDR
-#endif
-
     /* Jump from siaddr ip addr to magic cookie */
     ETH_READ_BUFFER_END
     ldi   ARG_REG1, 0
@@ -371,12 +360,13 @@ KEEP_READING_OP:
     cpi   RETURN_VALUE, DHCP_OPTION_DHCP_MSG_TYPE_DHCP_OFFER
     brne  KEEP_READING_OP
     set   /* Setting T, then sending Request depending on T */
+    brne  KEEP_READING_OP
     /* }}} */
 TRY_DHCP_OPTION_DHCP_SERVER_ID: /* {{{ */
     cpi   RETURN_VALUE, DHCP_OPTION_DHCP_SERVER_ID
     brne  IGNORE_DHCP_OP
     ETH_READ_NEXT_BYTE /* must be 4 */
-    mov   COUNTER_REG, IPV4_SIZE_IN_BYTES
+    ldi   COUNTER_REG, IPV4_SIZE_IN_BYTES
     ldi   YL, lo8(DHCP_SERVER_IP_ADDR)
     ldi   YH, hi8(DHCP_SERVER_IP_ADDR)
 STORE_DHCP_SERVER_IP_ADDR:
@@ -384,6 +374,7 @@ STORE_DHCP_SERVER_IP_ADDR:
     st    Y+, RETURN_VALUE
     dec   COUNTER_REG
     brne  STORE_DHCP_SERVER_IP_ADDR
+    brne  KEEP_READING_OP
     /* }}} */
 IGNORE_DHCP_OP: /* {{{ */
     ETH_READ_NEXT_BYTE /* read size of option */
@@ -392,6 +383,7 @@ DHCP_OP_READ_CONTENT:
     ETH_READ_NEXT_BYTE
     dec   COUNTER_REG
     brne  DHCP_OP_READ_CONTENT
+    brne  KEEP_READING_OP
     /* }}} */
 NO_MORE_OPTIONS:
     /* }}} */
@@ -409,7 +401,7 @@ DHCP_HANDLE_EXIT:
     ret
 DHCP_HANDLE_EXIT_FAILURE:
     /* TODO: do something better */
-    ERR_SET
+    // SET_LED1
     rjmp DHCP_HANDLE_EXIT
 /* }}} */
 

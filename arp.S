@@ -39,7 +39,7 @@ ARP_PROCESS_READ_PAYLOAD:
     ETH_READ_BUFFER_END
     /* }}} */
     /* TODO: find another way to get IP address of other device  {{{ */
-#if 1 /* FIXME */
+#if 0 /* FIXME */
     push  ZL
     push  ZH
     push  YL
@@ -75,7 +75,7 @@ ARP_PROCESS_CHECK_MY_IP_LOOP:
     rcall EEPROM_READ_N_INC
     /* Comparing both IPs */
     cp    DATA1, RETURN_VALUE
-    brne  ARP_NOT_FOR_ME /* Not for me, just return */
+    brne  ARP_PROCESS_EXIT_SUCCESS /* Not for me, just return */
     /* Loop counter */
     dec   COUNTER_REG
     brne  ARP_PROCESS_CHECK_MY_IP_LOOP
@@ -121,6 +121,7 @@ ARP_PROCESS_WRITE_IP_BYTE:
     ldi   ZH, hi8(ARP_PAYLOAD)
     ldi   ZL, lo8(ARP_PAYLOAD)
     ldi   ARG_REG1, ARP_PAYLOAD_LEN
+ERR_SET
     rcall ETH_WRITE_Z_TO_TRANSMIT_BUFFER
     rcall ETH_WRITE_BUFFER_PACKET_PAYLOAD_FINISH
     /* }}} */
@@ -133,7 +134,4 @@ ARP_PROCESS_EXIT_SUCCESS:
     pop   ZL
     pop   ZH
     ret
-ARP_NOT_FOR_ME:
-    ERR_SET
-    rjmp  ARP_PROCESS_EXIT_SUCCESS
 /* }}} */

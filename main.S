@@ -114,8 +114,11 @@ main:
     /* Set interrupt on INT0 falling edge */
     in    TMP_REG1, _SFR_IO_ADDR(MCUCR)
     // TODO: Decide which one to use
-    ori   TMP_REG1, (1 << ISC01)
-    andi  TMP_REG1, ~((1 << ISC00)|(1 << ISC01))
+    cbr   TMP_REG1, ((1 << ISC11) | \
+                     (1 << ISC10) | \
+                     (1 << ISC01) | \
+                     (1 << ISC00))
+    sbr   TMP_REG1, ((1 << ISC11))
     out   _SFR_IO_ADDR(MCUCR), TMP_REG1
 
     in    TMP_REG1, _SFR_IO_ADDR(GICR)
@@ -149,8 +152,13 @@ MAIN_DELAY:
     rcall ETH_MAC_INIT
     rcall ETH_ENABLE_RECEIVE
     rcall ETH_ENABLE_RECEIVE_INTERRUPT
+
     /* Set LED errors */
+    CLR_LED0
+    CLR_LED1
     ERR_SET_DDR
+    DDR_LED0
+    DDR_LED1
 
     ldi   DEBUG_REG_COUNT, 0
     /* Get IP from DHCP */
@@ -170,11 +178,6 @@ LOOP:
  * INT0 handle. Received packet interrupt routine {{{
  ******************************************************************************/
 INT0_vect:
-#if 0
-    ERR_SET
-    rcall  DELAY_TMP
-    ERR_CLR
-#endif
     push  TMP_REG2
     in    TMP_REG2, _SFR_IO_ADDR(SREG)
     push  TMP_REG2
@@ -189,15 +192,15 @@ READ_ETHERNET_INTERRUPT_REQUEST:
     sbrc  ETH_INT_RQST, ENC_COMMON_EIR_PKTIF
     rcall HANDLE_PACKET
     sbrc  ETH_INT_RQST, ENC_COMMON_EIE_DMAIE
-    rcall COREDUMP_N_SLEEP
+    rcall COREDUMP_N_CONTINUE
     sbrc  ETH_INT_RQST, ENC_COMMON_EIE_LINKIE
-    rcall COREDUMP_N_SLEEP
+    rcall COREDUMP_N_CONTINUE
     sbrc  ETH_INT_RQST, ENC_COMMON_EIE_TXIE
-    rcall COREDUMP_N_SLEEP
+    rcall COREDUMP_N_CONTINUE
     sbrc  ETH_INT_RQST, ENC_COMMON_EIE_TXERIE
-    rcall COREDUMP_N_SLEEP
+    rcall COREDUMP_N_CONTINUE
     sbrc  ETH_INT_RQST, ENC_COMMON_EIE_RXERIE
-    rcall COREDUMP_N_SLEEP
+    rcall HANDLE_RECEIVE_ERROR
 
     /* Check if still pending interrupts */
     sbis  _SFR_IO_ADDR(PIND), PD2
@@ -206,7 +209,10 @@ READ_ETHERNET_INTERRUPT_REQUEST:
     pop   TMP_REG2
     out   _SFR_IO_ADDR(SREG), TMP_REG2
     pop   TMP_REG2
+
     ERR_CLR
+    CLR_LED0
+    CLR_LED1
     reti
 /* }}} */
 /*******************************************************************************
@@ -311,7 +317,12 @@ INT1_vect:
     sbic  _SFR_IO_ADDR(PIND), PD4
     rjmp  COREDUMP
 
+    sbic  _SFR_IO_ADDR(PIND), PD5
+    rjmp  SEND_DHCP_DISCOVER
+
+#ifdef USE_DHT11
     rcall DHT11_INT1_vect
+#endif
 INT1_vect_EXIT:
     pop   TMP_REG1
     out   _SFR_IO_ADDR(SREG), TMP_REG1
@@ -320,15 +331,26 @@ INT1_vect_EXIT:
 
 COREDUMP:
     rcall EEPROM_COREDUMP
-    ERR_SET
-    sleep
+    //ERR_SET
+    rjmp  INT1_vect_EXIT
+
+SEND_DHCP_DISCOVER:
+    rcall DHCP_DISCOVER
     rjmp  INT1_vect_EXIT
 /* }}} */
 /*******************************************************************************
  * Testing at the moment other interrupts {{{
  ******************************************************************************/
-COREDUMP_N_SLEEP:
-    rcall EEPROM_COREDUMP
-    ERR_SET
-    sleep
+COREDUMP_N_CONTINUE:
+    //rcall EEPROM_COREDUMP
+    //ERR_SET
+    ret
 /* }}} */
+
+HANDLE_RECEIVE_ERROR:
+    //ERR_SET
+    ldi   ARG_REG1, ENC_COMMON_EIR
+    ldi   ARG_REG2, (1 << ENC_COMMON_EIR_RXERIF)
+    rcall ETH_BIT_FIELD_CLEAR
+    ret
+

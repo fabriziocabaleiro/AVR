@@ -131,7 +131,6 @@ TRY_PROTOCOL_TCP:
     rcall TCP_HANDLE_PKT
     rjmp  IPV4_HANDLE_EXIT_SUCCESS
 #endif
-
     /* }}} */
 
 IPV4_HANDLE_EXIT_SUCCESS:

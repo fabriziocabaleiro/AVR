@@ -8,7 +8,7 @@
  * Global configuration {{{
  ******************************************************************************/
 #define F_CPU 1000000 /* Default value of internal RC oscillator */
-#define USE_DHT11
+//#define USE_DHT11
 /* }}} */
 /*******************************************************************************
  * Registers {{{
@@ -164,6 +164,16 @@
 #define ERR_SET_DDR   sbi _SFR_IO_ADDR(DDRB),  ERR_BIT
 #define ERR_SET       sbi _SFR_IO_ADDR(PORTB), ERR_BIT
 #define ERR_CLR       cbi _SFR_IO_ADDR(PORTB), ERR_BIT
+
+#define PIN_LED0      PD0
+#define DDR_LED0      sbi _SFR_IO_ADDR(DDRD),  PIN_LED0
+#define SET_LED0      cbi _SFR_IO_ADDR(PORTD), PIN_LED0
+#define CLR_LED0      sbi _SFR_IO_ADDR(PORTD), PIN_LED0
+
+#define PIN_LED1      PD1
+#define DDR_LED1      sbi _SFR_IO_ADDR(DDRD),  PIN_LED1
+#define SET_LED1      cbi _SFR_IO_ADDR(PORTD), PIN_LED1
+#define CLR_LED1      sbi _SFR_IO_ADDR(PORTD), PIN_LED1
 /* IP address sizes */
 #define MAC_SIZE_IN_BYTES  6
 #define IPV4_SIZE_IN_BYTES 4
