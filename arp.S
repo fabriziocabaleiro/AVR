@@ -3,7 +3,6 @@
 #include <avr/io.h>
 #include "defs.h"
 #include "enc28j60.h"
-#include "defs.h"
 #include "arp.h"
 .LIST
 

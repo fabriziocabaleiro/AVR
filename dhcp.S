@@ -143,13 +143,15 @@ DHCP_REQUEST_IP_SET_HEADER_LOOP_2:
     brne  DHCP_REQUEST_IP_SET_HEADER_LOOP_2
     /* }}} */
     /* SIADDR to zero or value depending on T {{{ */
+    /* TODO: SIADDR is always 0 from the client, used only from the server to
+     * tell what IP to use for following BOOTP REQUESTS */
     ldi   YL, lo8(DHCP_SERVER_IP_ADDR)
     ldi   YH, hi8(DHCP_SERVER_IP_ADDR)
     ldi   COUNTER_REG, IPV4_SIZE_IN_BYTES
 DHCP_REQUEST_IP_SET_HEADER_LOOP_2_1:
-    brtc  SKIP_REAADING_SERVER_IP
+    brtc  SKIP_READING_SERVER_IP
     ld    ARG_REG1, Y+
-SKIP_REAADING_SERVER_IP:
+SKIP_READING_SERVER_IP:
     rcall SPI_MASTER_TRANSMIT
     dec   COUNTER_REG
     brne  DHCP_REQUEST_IP_SET_HEADER_LOOP_2_1
@@ -350,6 +352,9 @@ KEEP_READING_OP:
     /* Check if end of options */
     cpi   RETURN_VALUE, DHCP_OPTION_END
     breq  NO_MORE_OPTIONS
+    /* Check if padding, which doesn't have length. Go to read next byte */
+    cpi   RETURN_VALUE, DHCP_OPTION_PAD
+    breq  KEEP_READING_OP
     /* DHCP message {{{ */
     cpi   RETURN_VALUE, DHCP_OPTION_DHCP_MSG_TYPE
     brne  TRY_DHCP_OPTION_DHCP_SERVER_ID
