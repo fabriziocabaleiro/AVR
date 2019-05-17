@@ -8,7 +8,7 @@
  * Global configuration {{{
  ******************************************************************************/
 #define F_CPU 1000000 /* Default value of internal RC oscillator */
-//#define USE_DHT11
+#define USE_DHT11
 /* }}} */
 /*******************************************************************************
  * Registers {{{
@@ -136,8 +136,8 @@
 /************************
  * BIT FIELDS VARIABLES *
  ***********************/
-// #define BIT_FIELD_1               0x01EB
-// #define BIT_FIELD_1_INT1_DHT11         7
+#define BIT_FIELD_1                     0x01E5
+#define BIT_FIELD_1_INT1_DHT11               7
 
 /* Receive packet header, it is read continuously {{{ */
 #define RPKT_N_PKT_L              0x01EC

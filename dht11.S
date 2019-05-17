@@ -7,6 +7,7 @@
 .global DHT11_SETUP
 .global DHT11_READ
 .global DHT11_INT1_vect
+.global TIMER2_OVF_vect
 
 /* Tested At 1MHz */
 
@@ -19,11 +20,6 @@
 #define DHT11_RESPONSE_INIT                  6
 #define DHT11_RESPONSE_SAVE_160uS            7
 #define DHT11_RESPONSE_DATA_COMING           9
-#define DHT11_RESPONSE_SAVE_BYTE_0          16 /* last 3 bits are 0 */
-#define DHT11_RESPONSE_SAVE_BYTE_1          24 /* last 3 bits are 0 */
-#define DHT11_RESPONSE_SAVE_BYTE_2          32 /* last 3 bits are 0 */
-#define DHT11_RESPONSE_SAVE_BYTE_3          40 /* last 3 bits are 0 */
-#define DHT11_RESPONSE_SAVE_BYTE_4          48 /* last 3 bits are 0 */
 
 /* Reusing RETURN_VALUE as this routine doesn't return anything */
 #define DHT11_COUNTER                      RETURN_VALUE
@@ -71,6 +67,11 @@ DHT11_READ:
     sbr   TMP_REG2, (1 << CS12)|(1 << CS10)
     out   _SFR_IO_ADDR(TCCR1B), TMP_REG2
 
+    /* Disable INT1, so communication start doesn't trigger and interrupt */
+    in    TMP_REG1, _SFR_IO_ADDR(GICR)
+    cbr   TMP_REG1, (1 << INT1)
+    out   _SFR_IO_ADDR(GICR), TMP_REG1
+
     /* Start communication by pulling down */
     sbi   _SFR_IO_ADDR(DDRD),  PD3
 
@@ -93,52 +94,50 @@ DHT11_READ_WAIT_START_SIGNAL:
     cbr   TMP_REG2, (1 << CS12)
     out   _SFR_IO_ADDR(TCCR1B), TMP_REG2
 
-    /* Now the DHT11 will take control of the data line, enable signal and wait
-     * to change down */
-    /* Set Interrupt in INT1, disable INT0 */
-    in    TMP_REG2, _SFR_IO_ADDR(GICR)
-    sbr   TMP_REG2, (1 << INT1)
-    cbr   TMP_REG2, (1 << INT0)
-    out   _SFR_IO_ADDR(GICR), TMP_REG2
-
-    /* Set port as input, then with the pull-up, the line will go high */
-    cbi   _SFR_IO_ADDR(DDRD), PD3
-
-    /* Clear interrupt flag for INT1 before enabling interrupt, interrupt was
-     * getting trigger before reaching sleep, don't know why FIXME? */
+    /* Clear interrupt flag for INT1 before enabling interrupt, when we send the
+     * start of communication, we trigger an interrupt (falling edge) */
     in    TMP_REG2, _SFR_IO_ADDR(GIFR)
     sbr   TMP_REG2, (1 << INTF1)
     out   _SFR_IO_ADDR(GIFR), TMP_REG2
 
+    /* Set Interrupt in INT1 */
+    in    TMP_REG2, _SFR_IO_ADDR(GICR)
+    sbr   TMP_REG2, (1 << INT1)
+    out   _SFR_IO_ADDR(GICR), TMP_REG2
+
     ldi   ZH, hi8(DHT11_PAYLOAD)
     ldi   ZL, lo8(DHT11_PAYLOAD)
 
-    /* Designed to work under nested interrupt, therefore, enable interrupt here
-     * and disable later */
-    sei
+    /* Set bitfield to call DHT11 handle on interrupt */
+    lds   TMP_REG1, BIT_FIELD_1
+    sbr   TMP_REG1, BIT_FIELD_1_INT1_DHT11
+    sts   BIT_FIELD_1, TMP_REG1
+
+    /* Now the DHT11 will take control of the data line, enable signal and wait
+     * to change down */
+    /* Set port as input, then with the pull-up, the line will go high */
+    cbi   _SFR_IO_ADDR(DDRD), PD3
 
     /* 40 cycles, one for each bit, plus 2 falling edges at the beginning */
     /* TODO: add way to wakeup in case data doesn't arrive */
     ldi   TMP_REG1, 42
 DHT11_TRANSMISSION_LOOP:
     sleep
+    CLR_LED1
     dec   TMP_REG1
     brne  DHT11_TRANSMISSION_LOOP
 
+    /* Unset bitfield to call DHT11 handle on interrupt */
+    lds   TMP_REG1, BIT_FIELD_1
+    cbr   TMP_REG1, BIT_FIELD_1_INT1_DHT11
+    sts   BIT_FIELD_1, TMP_REG1
+
     /* FIXME: MOVE TO ITS OWN PLACE */
     /* ADC for MQ135 { */
-    rcall ADC_ENABLE_N_START
-    sleep
-    rcall ADC_DISABLE
+    // rcall ADC_ENABLE_N_START
+    // sleep
+    // rcall ADC_DISABLE
     /* ADC for MQ135 } */
-
-    cli
-
-    /* Set interrupts back */
-    in    TMP_REG2, _SFR_IO_ADDR(GICR)
-    cbr   TMP_REG2, (1 << INT1)
-    sbr   TMP_REG2, (1 << INT0)
-    out   _SFR_IO_ADDR(GICR), TMP_REG2
 
     pop   DHT11_COUNTER
     pop   XH
@@ -197,17 +196,9 @@ DATA_IS_COMING:
     ld    TMP_REG2, Z
     lsl   TMP_REG2
 
-    /* TODO: can I do a sub of the Lower byte followed by a sbc on the higher
-     * byte and check whether is possitive, zero or negative ?
-     * I guess that should produce less code */
-    cp    XH, YH
-    breq  DHT11_CP_L
-    brlo  DHT11_SENT_1
-    rjmp  DHT11_SENT_0
-DHT11_CP_L:
-    cp    XL, YL
-    brlo  DHT11_SENT_1
-    rjmp  DHT11_SENT_0
+    sub   YL, XL
+    sbc   YH, XH
+    brcs  DHT11_SENT_0
 
 DHT11_SENT_1:
     sbr   TMP_REG2, 0x01

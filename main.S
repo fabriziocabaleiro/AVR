@@ -111,18 +111,17 @@ rcall MAIN_WRITE_TO_LCD_AS_HEX
  * main, initialize everything {{{
  ******************************************************************************/
 main:
-    /* Set interrupt on INT0 falling edge */
-    in    TMP_REG1, _SFR_IO_ADDR(MCUCR)
-    // TODO: Decide which one to use
-    cbr   TMP_REG1, ((1 << ISC11) | \
-                     (1 << ISC10) | \
-                     (1 << ISC01) | \
-                     (1 << ISC00))
-    sbr   TMP_REG1, ((1 << ISC11))
-    out   _SFR_IO_ADDR(MCUCR), TMP_REG1
+    /* Interrupt on INT0: low level, which is the default
+     * ISC00 = ISC01 = 0
+     */
 
+    /* Clear bitfields in SRAM */
+    clr   TMP_REG1
+    sts   BIT_FIELD_1, TMP_REG1
+
+    /* Enable external interrupt 0 and 1 */
     in    TMP_REG1, _SFR_IO_ADDR(GICR)
-    ori   TMP_REG1, (1 << INT1)|(1 << INT0)
+    sbr   TMP_REG1, (1 << INT1)|(1 << INT0)
     out   _SFR_IO_ADDR(GICR), TMP_REG1
 
     cbi   _SFR_IO_ADDR(DDRD), PD2
@@ -162,8 +161,8 @@ MAIN_DELAY:
 
     ldi   DEBUG_REG_COUNT, 0
     /* Get IP from DHCP */
-    sts   DHCP_XID_LAST_BYTE, DEBUG_REG_COUNT
-    rcall DHCP_DISCOVER
+//    sts   DHCP_XID_LAST_BYTE, DEBUG_REG_COUNT
+//    rcall DHCP_DISCOVER
     sei
 
 /* }}} */
@@ -176,11 +175,20 @@ LOOP:
 /* }}} */
 /*******************************************************************************
  * INT0 handle. Received packet interrupt routine {{{
+ * Within INT0 handle, INT0 is disable, interrupts are re-enabled
  ******************************************************************************/
 INT0_vect:
-    push  TMP_REG2
-    in    TMP_REG2, _SFR_IO_ADDR(SREG)
-    push  TMP_REG2
+    push  TMP_REG1
+    in    TMP_REG1, _SFR_IO_ADDR(SREG)
+    push  TMP_REG1
+
+    /* Disable INT0 */
+    in    TMP_REG1, _SFR_IO_ADDR(GICR)
+    cbr   TMP_REG1, (1 << INT0)
+    out   _SFR_IO_ADDR(GICR), TMP_REG1
+
+    /* Re-enable interrupt within interrupt */
+    sei
 
     /* Read Global interrupt register from ENC28J60 and execute routines
      * accordingly */
@@ -206,13 +214,24 @@ READ_ETHERNET_INTERRUPT_REQUEST:
     sbis  _SFR_IO_ADDR(PIND), PD2
     rjmp  READ_ETHERNET_INTERRUPT_REQUEST
 
-    pop   TMP_REG2
-    out   _SFR_IO_ADDR(SREG), TMP_REG2
-    pop   TMP_REG2
+#if 1
+    in    TMP_REG2, _SFR_IO_ADDR(GIFR)
+    sbr   TMP_REG2, (1 << INTF0)
+    out   _SFR_IO_ADDR(GIFR), TMP_REG2
+#endif
+
+    pop   TMP_REG1
+    out   _SFR_IO_ADDR(SREG), TMP_REG1
+    pop   TMP_REG1
 
     ERR_CLR
     CLR_LED0
     CLR_LED1
+
+    /* Enable INT0 */
+    in    TMP_REG1, _SFR_IO_ADDR(GICR)
+    sbr   TMP_REG1, (1 << INT0)
+    out   _SFR_IO_ADDR(GICR), TMP_REG1
     reti
 /* }}} */
 /*******************************************************************************
@@ -284,16 +303,16 @@ TYPE_LEN_UNKNOWN: /* }}} */
 PACKET_END:
 SKIP_ETH_PKT:
     rcall ETH_PKT_PROCESSED
-#if 0 // {{{
+#if 1 // {{{
     inc   DEBUG_REG_COUNT
-    cpi   DEBUG_REG_COUNT, 40
+    cpi   DEBUG_REG_COUNT, 20
     brne  SKIP_MESSAGE
 #ifdef USE_DHT11
-    //rcall DHT11_READ
+    rcall DHT11_READ
 #endif
-    //rcall SEND_PACKET
+    rcall SEND_PACKET
     ldi   DEBUG_REG_COUNT, 0
-    rcall DHCP_DISCOVER
+    //rcall DHCP_DISCOVER
 SKIP_MESSAGE:
 #endif // }}} 
     ret
@@ -313,14 +332,17 @@ INT1_vect:
     push  TMP_REG1
     lds   TMP_REG1, EEPROM_TMP_REG1_SAVE
 
-    /* Deliver interrupt to corresponding routine */
-    sbic  _SFR_IO_ADDR(PIND), PD4
-    rjmp  COREDUMP
-
-    sbic  _SFR_IO_ADDR(PIND), PD5
-    rjmp  SEND_DHCP_DISCOVER
+/* TODO: Fix connections in breadboard */
+//    /* Deliver interrupt to corresponding routine */
+//    sbic  _SFR_IO_ADDR(PIND), PD4
+//    rjmp  COREDUMP
+//
+//    sbic  _SFR_IO_ADDR(PIND), PD5
+//    rjmp  SEND_DHCP_DISCOVER
 
 #ifdef USE_DHT11
+    //lds   TMP_REG1, BIT_FIELD_1
+    //sbrc  TMP_REG1, BIT_FIELD_1_INT1_DHT11
     rcall DHT11_INT1_vect
 #endif
 INT1_vect_EXIT:

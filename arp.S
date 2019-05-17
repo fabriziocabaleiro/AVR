@@ -38,7 +38,7 @@ ARP_PROCESS_READ_PAYLOAD:
     ETH_READ_BUFFER_END
     /* }}} */
     /* TODO: find another way to get IP address of other device  {{{ */
-#if 0 /* FIXME */
+#if 1 /* FIXME */
     push  ZL
     push  ZH
     push  YL
