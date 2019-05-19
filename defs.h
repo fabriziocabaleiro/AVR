@@ -147,6 +147,11 @@
 #define RPKT_STATUS2              0x01F0
 #define RPKT_STATUS3              0x01F1
 #define RPKT_STATUS_VECTOR_LEN         6
+
+/* Timer counter for seconds, minutes, hours */
+#define TIMER1_SECONDS            0x01F2
+#define TIMER1_MINUTES            0x01F3
+#define TIMER1_HOURS              0x01F4
 /* }}} */
 
 /* }}} */

@@ -41,7 +41,7 @@
 #   error "CPU frequency not specified, cannot calculate ADC prescaler"
 #endif
 
-#if F_CPU == 1000000
+#if   F_CPU == 1000000
 #   define ADC_PRESCALER (1 << ADPS1)|(1 << ADPS0)
 #elif F_CPU == 2000000
 #   define ADC_PRESCALER (1 << ADPS2)

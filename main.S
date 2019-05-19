@@ -13,6 +13,7 @@
 .global main
 .global INT0_vect
 .global INT1_vect
+.global TIMER0_OVF_vect
 
 /*******************************************************************************
  * TODO: remove {{{
@@ -136,11 +137,11 @@ main:
      * port D to know what to do when INT1 triggered */
     cbi   _SFR_IO_ADDR(DDRD), PD4
 
-    ldi   TMP_REG1, 255
-MAIN_DELAY:
-    rcall DELAY_TMP
-    dec   TMP_REG1
-    brne  MAIN_DELAY
+    /* Enable timer and have initial delay */
+    rcall TIMER_INIT
+    sei
+    sleep
+    cli
 
 #ifdef USE_DHT11
     rcall DHT11_SETUP
@@ -171,7 +172,11 @@ MAIN_DELAY:
  ******************************************************************************/
 LOOP:
     sleep
-    rjmp LOOP
+    lds   TMP_REG1, TIMER1_SECONDS
+    CLR_LED0
+    sbrs  TMP_REG1, 0
+    SET_LED0
+    rjmp  LOOP
 /* }}} */
 /*******************************************************************************
  * INT0 handle. Received packet interrupt routine {{{
@@ -224,9 +229,9 @@ READ_ETHERNET_INTERRUPT_REQUEST:
     out   _SFR_IO_ADDR(SREG), TMP_REG1
     pop   TMP_REG1
 
-    ERR_CLR
-    CLR_LED0
-    CLR_LED1
+    // ERR_CLR
+    // CLR_LED0
+    // CLR_LED1
 
     /* Enable INT0 */
     in    TMP_REG1, _SFR_IO_ADDR(GICR)
@@ -368,11 +373,19 @@ COREDUMP_N_CONTINUE:
     //ERR_SET
     ret
 /* }}} */
-
+/*******************************************************************************
+ * Error handling {{{
+ ******************************************************************************/
 HANDLE_RECEIVE_ERROR:
     //ERR_SET
     ldi   ARG_REG1, ENC_COMMON_EIR
     ldi   ARG_REG2, (1 << ENC_COMMON_EIR_RXERIF)
     rcall ETH_BIT_FIELD_CLEAR
     ret
-
+/* }}} */
+/*******************************************************************************
+ * Error handling {{{
+ ******************************************************************************/
+ TIMER0_OVF_vect:
+    reti
+ /* }}} */

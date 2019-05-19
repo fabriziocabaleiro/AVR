@@ -3,17 +3,18 @@
 ################################################################################
 OBJS = main.o         \
        spi.o          \
+       adc.o          \
+       timer.o        \
+       eeprom.o       \
+       dht11.o        \
        enc28j60.o     \
        arp.o          \
        ipv4.o         \
-       dht11.o        \
-       eeprom.o       \
        udp.o          \
-       comm.o         \
-       adc.o          \
        dhcp.o         \
        tcp.o          \
-       icmp.o
+       icmp.o         \
+       comm.o
 
 DEPDIR = Deps
 OBJDIR = Objs
