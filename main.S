@@ -16,99 +16,6 @@
 .global TIMER0_OVF_vect
 
 /*******************************************************************************
- * TODO: remove {{{
- ******************************************************************************/
-#if 1
-.global DELAY_TMP
-DELAY_TMP:
-    push TMP_REG2
-    push TMP_REG1
-    ldi  TMP_REG1, 4
-DELAY_TMP_W2:
-    ldi  TMP_REG2, 250
-DELAY_TMP_W1:
-    dec  TMP_REG2
-    nop
-    nop
-    nop
-    nop
-    nop
-    nop
-    nop
-    brne DELAY_TMP_W1
-    dec  TMP_REG1
-    brne DELAY_TMP_W2
-    pop  TMP_REG1
-    pop  TMP_REG2
-    ret
-
-.global MAIN_WRITE_TO_LCD_AS_HEX
-MAIN_WRITE_TO_LCD_AS_HEX:
-    push TMP_REG2
-    push ARG_REG1
-    push RETURN_VALUE
-    set /* control the twice "loop", set T */
-lcd_write_reg_as_hex_twice:
-    swap ARG_REG1 /* higher part first */
-    mov  TMP_REG2, ARG_REG1
-    andi TMP_REG2, 0x0F
-    cpi  TMP_REG2, 0x0A
-    brge lcd_write_reg_as_hex_over_9
-    ori  TMP_REG2, 0x30
-    rjmp lcd_write_reg_as_hex_write
-lcd_write_reg_as_hex_over_9:
-    ori  TMP_REG2, 0x40
-    subi TMP_REG2, 0x09
-lcd_write_reg_as_hex_write:
-    push ARG_REG1
-    mov  ARG_REG1, TMP_REG2
-    SPI_SELECT_LCD
-    rcall SPI_MASTER_TRANSMIT
-    pop  ARG_REG1
-    brtc  lcd_write_reg_as_hex_end /* end if T == 0 */
-    clt   /* clear T */
-    rjmp  lcd_write_reg_as_hex_twice
-lcd_write_reg_as_hex_end:
-    SPI_END_LCD
-    pop  RETURN_VALUE
-    pop  ARG_REG1
-    pop  TMP_REG2
-    ret
-
-.macro  PRINT_REG bsel1 bsel0 reg
-ldi   ARG_REG1, 0x1F
-ldi   ARG_REG2, 0x3
-rcall ETH_BIT_FIELD_CLEAR
-ldi   ARG_REG1, 0x1F
-ldi   ARG_REG2, \bsel1 | \bsel0
-rcall ETH_BIT_FIELD_SET
-ldi   ARG_REG1, \reg
-rcall ETH_READ_CONTROL_REGISTER
-mov   ARG_REG1, RETURN_VALUE
-rcall MAIN_WRITE_TO_LCD_AS_HEX
-.endm
-
-.macro PRINT val
-    push  ARG_REG1
-    push  RETURN_VALUE
-    ldi   ARG_REG1, \val
-    SPI_SELECT_LCD
-    rcall SPI_MASTER_TRANSMIT
-    SPI_END_LCD
-    pop   RETURN_VALUE
-    pop   ARG_REG1
-.endm
-
-.macro PRINTR reg
-    push  ARG_REG1
-    push  RETURN_VALUE
-    mov   ARG_REG1, \reg
-    rcall MAIN_WRITE_TO_LCD_AS_HEX
-    pop   RETURN_VALUE
-    pop   ARG_REG1
-.endm
-#endif /* }}} */
-/*******************************************************************************
  * main, initialize everything {{{
  ******************************************************************************/
 main:
@@ -116,16 +23,16 @@ main:
      * ISC00 = ISC01 = 0
      */
 
+    /* Set LED errors */
+    CLR_LED0
+    CLR_LED1
+    ERR_SET_DDR
+    DDR_LED0
+    DDR_LED1
+
     /* Clear bitfields in SRAM */
     clr   TMP_REG1
     sts   BIT_FIELD_1, TMP_REG1
-
-    /* Enable external interrupt 0 and 1 */
-    in    TMP_REG1, _SFR_IO_ADDR(GICR)
-    sbr   TMP_REG1, (1 << INT1)|(1 << INT0)
-    out   _SFR_IO_ADDR(GICR), TMP_REG1
-
-    cbi   _SFR_IO_ADDR(DDRD), PD2
 
     /* Set global interrupt enable, sleep mode and sleep enable */
     in    TMP_REG1, _SFR_IO_ADDR(MCUCR)
@@ -141,11 +48,16 @@ main:
     rcall TIMER_INIT
     sei
     sleep
-    cli
+    SET_LED0
+    /* Enable interrupt */
+    in    TMP_REG1, _SFR_IO_ADDR(TIMSK)
+    cbr   TMP_REG1, (1 << OCIE1A)
+    out   _SFR_IO_ADDR(TIMSK), TMP_REG1
 
 #ifdef USE_DHT11
     rcall DHT11_SETUP
 #endif
+    //rcall DHCP_INIT
     rcall SPI_MASTER_INIT
     rcall ETH_SOFTWARE_RESET
     rcall ETH_BUFFER_INIT
@@ -153,29 +65,34 @@ main:
     rcall ETH_ENABLE_RECEIVE
     rcall ETH_ENABLE_RECEIVE_INTERRUPT
 
-    /* Set LED errors */
-    CLR_LED0
-    CLR_LED1
-    ERR_SET_DDR
-    DDR_LED0
-    DDR_LED1
-
     ldi   DEBUG_REG_COUNT, 0
-    /* Get IP from DHCP */
-//    sts   DHCP_XID_LAST_BYTE, DEBUG_REG_COUNT
-//    rcall DHCP_DISCOVER
-    sei
 
+//    lds   TMP_REG1, BIT_FIELD_1
+//    sbr   TMP_REG1, (1 << BIT_FIELD_1_TIMER1_RCALLS)
+//    sts   BIT_FIELD_1, TMP_REG1
+
+#if 0
+    in    TMP_REG1, _SFR_IO_ADDR(TCCR1B)
+    cbr   TMP_REG1, (1 << CS12)|(1 << CS10)
+    out   _SFR_IO_ADDR(TCCR1B), TMP_REG1
+#endif
+
+    /* Enable external interrupt 0 and 1 */
+    in    TMP_REG1, _SFR_IO_ADDR(GICR)
+    sbr   TMP_REG1, (1 << INT1)|(1 << INT0)
+    out   _SFR_IO_ADDR(GICR), TMP_REG1
+    sei
+    SET_LED1
 /* }}} */
 /*******************************************************************************
  * LOOP {{{
  ******************************************************************************/
 LOOP:
     sleep
-    lds   TMP_REG1, TIMER1_SECONDS
-    CLR_LED0
-    sbrs  TMP_REG1, 0
-    SET_LED0
+//    lds   TMP_REG1, TIMER1_SECONDS
+//    CLR_LED1
+//    sbrs  TMP_REG1, 0
+//    SET_LED1
     rjmp  LOOP
 /* }}} */
 /*******************************************************************************
@@ -192,6 +109,7 @@ INT0_vect:
     cbr   TMP_REG1, (1 << INT0)
     out   _SFR_IO_ADDR(GICR), TMP_REG1
 
+    CLR_LED0
     /* Re-enable interrupt within interrupt */
     sei
 
@@ -229,9 +147,11 @@ READ_ETHERNET_INTERRUPT_REQUEST:
     out   _SFR_IO_ADDR(SREG), TMP_REG1
     pop   TMP_REG1
 
-    // ERR_CLR
-    // CLR_LED0
-    // CLR_LED1
+#if 1
+    ERR_CLR
+    CLR_LED0
+    CLR_LED1
+#endif
 
     /* Enable INT0 */
     in    TMP_REG1, _SFR_IO_ADDR(GICR)
@@ -308,7 +228,7 @@ TYPE_LEN_UNKNOWN: /* }}} */
 PACKET_END:
 SKIP_ETH_PKT:
     rcall ETH_PKT_PROCESSED
-#if 1 // {{{
+#if 0 // {{{
     inc   DEBUG_REG_COUNT
     cpi   DEBUG_REG_COUNT, 20
     brne  SKIP_MESSAGE

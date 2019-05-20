@@ -11,10 +11,17 @@ EEPROM_MAC_ADDR: /* {{{ */
 EEPROM_MAC_ADDR_END: /* }}} */
 EEPROM_IP_ADDR: /* {{{ */
     /* Initial IP address, this one gets overwritten by DHCP */
+#if 1
     .byte 192
     .byte 168
     .byte   2
     .byte   4
+#else
+    .byte   0
+    .byte   0
+    .byte   0
+    .byte   0
+#endif
 EEPROM_IP_ADDR_END: /* }}} */
 EEPROM_MAC_DEBUG: /* {{{ */
     .byte 0xF0

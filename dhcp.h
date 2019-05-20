@@ -5,6 +5,18 @@
 #include "services.h"
 
 /*******************************************************************************
+ * DHCP states {{{
+ ******************************************************************************/
+#define DHCP_STATE_INIT         0
+#define DHCP_STATE_SELECTING    1
+#define DHCP_STATE_REQUESTING   2
+#define DHCP_STATE_BOUND        3
+#define DHCP_STATE_RENEWING     4
+#define DHCP_STATE_REBIDING     5
+#define DHCP_STATE_INIT_REBOOT  6
+#define DHCP_STATE_REBOOTING    7
+/* }}} */
+/*******************************************************************************
  * DHCP Packet sizes {{{
  ******************************************************************************/
 #define UDP_DST_PORT INTERNET_SERVICE_BOOTPS_67_UDP

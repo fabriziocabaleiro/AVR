@@ -10,8 +10,113 @@
 
 .global DHCP_DISCOVER
 .global DHCP_HANDLE_PKT
+.global DHCP_INIT
+.global DHCP
 
 
+/*******************************************************************************
+ * DHCP, this routine is called periodically {{{
+ *
+ * This routine checks the current DHCP state, then sends the required packages
+ * in order to have a valid IP address.
+ ******************************************************************************/
+DHCP:
+    lds   TMP_REG1, DHCP_STATE
+    sbrc  TMP_REG1, DHCP_STATE_INIT
+    rjmp  DHCP_IN_INIT_STATE
+    sbrc  TMP_REG1, DHCP_STATE_SELECTING
+    rjmp  DHCP_IN_SELECTING_STATE
+    sbrc  TMP_REG1, DHCP_STATE_REQUESTING
+    rjmp  DHCP_IN_REQUESTING_STATE
+    sbrc  TMP_REG1, DHCP_STATE_BOUND
+    rjmp  DHCP_IN_BOUND_STATE
+    sbrc  TMP_REG1, DHCP_STATE_RENEWING
+    rjmp  DHCP_IN_RENEWING_STATE
+    sbrc  TMP_REG1, DHCP_STATE_REBIDING
+    rjmp  DHCP_IN_REBIDING_STATE
+    sbrc  TMP_REG1, DHCP_STATE_INIT_REBOOT
+    rjmp  DHCP_IN_INIT_REBOOT_STATE
+    sbrc  TMP_REG1, DHCP_STATE_REBOOTING
+    rjmp  DHCP_IN_REBOOTING_STATE
+DHCP_IN_INIT_STATE: /* {{{ */
+    /* In this state we send a discover and jump directly to selecting state.
+     * Also we store the local time in which we sent the discover packet */
+    lsl   TMP_REG1
+    sts   DHCP_STATE, TMP_REG1
+    rcall DHCP_DISCOVER
+    /* record time */
+    lds   TMP_REG1, TIMER1_SECONDS
+    sts   DHCP_SECOND, TMP_REG1
+    lds   TMP_REG1, TIMER1_MINUTES
+    sts   DHCP_MINUTE, TMP_REG1
+    lds   TMP_REG1, TIMER1_HOURS
+    sts   DHCP_HOUR, TMP_REG1
+    ret   /* }}} */
+DHCP_IN_SELECTING_STATE: /* {{{ */
+    /* In selecting state we wait to receive an offer, when the server sends the
+     * offer, the dhcp handler will jump to requesting state.
+     * If an offer doesn't arrive in some time, then, go back to init state */
+    lds   TMP_REG1, TIMER1_MINUTES
+    lds   TMP_REG2, DHCP_MINUTE
+    cp    TMP_REG1, TMP_REG2
+    breq  SAME_MINUTE
+    ldi   TMP_REG1, 60
+    rjmp  CHECK_SECONDS
+SAME_MINUTE:
+    clr   TMP_REG1
+CHECK_SECONDS:
+    lds   TMP_REG2, TIMER1_SECONDS
+    add   TMP_REG1, TMP_REG2
+    lds   TMP_REG2, DHCP_SECOND
+    sub   TMP_REG1, TMP_REG2
+    cpi   TMP_REG1, 3
+    brmi  KEEP_WAITING_OFFER
+    ldi   TMP_REG1, (1 << DHCP_STATE_INIT)
+    sts   DHCP_STATE, TMP_REG1
+KEEP_WAITING_OFFER:
+    ret /* }}} */
+DHCP_IN_REQUESTING_STATE:
+    rcall DHCP_REQUEST
+    ret
+DHCP_IN_BOUND_STATE:
+    ret
+DHCP_IN_RENEWING_STATE:
+    ret
+DHCP_IN_REBIDING_STATE:
+    ret
+DHCP_IN_INIT_REBOOT_STATE:
+    ret
+DHCP_IN_REBOOTING_STATE:
+    ret
+/* }}} */
+/*******************************************************************************
+ * DHCP_INIT, this routine initialize DHCP {{{
+ ******************************************************************************/
+DHCP_INIT:
+    ret
+#if 0    /* Should I initialize to ZERO ? */
+    clr   TMP_REG1
+    sts   DHCP_XID_LAST_BYTE, TMP_REG1
+#endif
+    /* Check if our current IP in the EEPROM was set */
+    ldi   YL, lo8(EEPROM_IP_ADDR)
+    ldi   YH, hi8(EEPROM_IP_ADDR)
+    ldi   COUNTER_REG, IPV4_SIZE_IN_BYTES
+CHECK_IF_VALID_IP:
+    rcall EEPROM_READ_N_INC
+    cpi   RETURN_VALUE, 0
+    brne  VALID_IP
+    dec   COUNTER_REG
+    brne  CHECK_IF_VALID_IP
+    /* IP address is 0.0.0.0 (invalid IP) */
+    ldi   TMP_REG1, (1 << DHCP_STATE_INIT)
+    rjmp  STORE_STATE
+VALID_IP:
+    ldi   TMP_REG1, (1 << DHCP_STATE_INIT_REBOOT)
+STORE_STATE:
+    sts   DHCP_STATE, TMP_REG1
+    ret
+/* }}} */
 /*******************************************************************************
  * Discover and Request {{{
  * Request and Discover are two separated messages in the process, but, they are
@@ -305,7 +410,7 @@ CHECK_DHCP_HEADER:
     lds   TMP_REG1, DHCP_XID_LAST_BYTE
     cp    TMP_REG1, RETURN_VALUE
 RELOCATION_TRUNCATED_WORK_AROUND:
-    brne  DHCP_HANDLE_EXIT_SUCCESS
+    brne  RELOCATION_TRUNCATED_WORK_AROUND2
 
     /* Jump to YIADDR */
     ETH_READ_BUFFER_END
@@ -345,8 +450,13 @@ CHECK_MAGIC_COOKIE:
     dec   COUNTER_REG
     brne  CHECK_MAGIC_COOKIE
 
+    /* FIXME: workaround for relocation truncated  {{{ */
+    rjmp  KEEP_READING_OP
+RELOCATION_TRUNCATED_WORK_AROUND2:
+    rjmp  DHCP_HANDLE_EXIT_SUCCESS
+    /* }}} */
+
     /* DHCP read options {{{ */
-    clt /* Using T to know if DHCP REQUEST needs to be sent */
 KEEP_READING_OP:
     ETH_READ_NEXT_BYTE
     /* Check if end of options */
@@ -363,9 +473,16 @@ KEEP_READING_OP:
     ETH_READ_NEXT_BYTE
     /* I guess offer is the only one that requires to give an answer */
     cpi   RETURN_VALUE, DHCP_OPTION_DHCP_MSG_TYPE_DHCP_OFFER
+    brne  TRY_DHCP_ACK
+    ldi   TMP_REG1, (1 << DHCP_STATE_REQUESTING)
+    sts   DHCP_STATE, TMP_REG1
+    rjmp  KEEP_READING_OP
+TRY_DHCP_ACK:
+    cpi   RETURN_VALUE, DHCP_OPTION_DHCP_MSG_TYPE_DHCP_ACK
     brne  KEEP_READING_OP
-    set   /* Setting T, then sending Request depending on T */
-    brne  KEEP_READING_OP
+    ldi   TMP_REG1, (1 << DHCP_STATE_BOUND)
+    sts   DHCP_STATE, TMP_REG1
+    rjmp  KEEP_READING_OP
     /* }}} */
 TRY_DHCP_OPTION_DHCP_SERVER_ID: /* {{{ */
     cpi   RETURN_VALUE, DHCP_OPTION_DHCP_SERVER_ID
@@ -392,10 +509,6 @@ DHCP_OP_READ_CONTENT:
     /* }}} */
 NO_MORE_OPTIONS:
     /* }}} */
-
-    /* T was set if DHCP message was offer, so now send the request */
-    brtc  DHCP_HANDLE_EXIT_SUCCESS
-    rcall DHCP_REQUEST
 
 DHCP_HANDLE_EXIT_SUCCESS:
     ldi  RETURN_VALUE, 0

@@ -14,10 +14,8 @@
 //#define SPI_SLOW
 #ifdef  SPI_SLOW
 #   define SPI_SCK ((1 << SPR1)|(1 << SPR0))
-#   define SPI_SLOW_DELAY rcall DELAY_TMP
 #else
 #   define SPI_SCK (1 << SPR0)
-#   define SPI_SLOW_DELAY
 #endif /* }}} */
 /*******************************************************************************
  * Init SPI {{{
@@ -65,8 +63,6 @@ SPI_WAIT_TRANSMIT:
     /* TODO: remove this part */
     ; Clear SS for both slaves
     SPI_END_LCD
-
-    SPI_SLOW_DELAY
 
     /* Get received message */
     in RETURN_VALUE, _SFR_IO_ADDR(SPDR)

@@ -44,10 +44,10 @@ TIMER_INIT:
     sbr   TMP_REG1, (1 << OCIE1A)
     out   _SFR_IO_ADDR(TIMSK), TMP_REG1
 
-    clr   TMP_REG1
-    sts   TIMER1_SECONDS, TMP_REG1
-    sts   TIMER1_MINUTES, TMP_REG1
-    sts   TIMER1_HOURS,   TMP_REG1
+//    clr   TMP_REG1
+//    sts   TIMER1_SECONDS, TMP_REG1
+//    sts   TIMER1_MINUTES, TMP_REG1
+//    sts   TIMER1_HOURS,   TMP_REG1
 
     ret
 /* }}} */
@@ -58,6 +58,7 @@ TIMER_INIT:
  * 8 seconds for a clock of 1Mhz
  ******************************************************************************/
 TIMER1_COMPA_vect:
+    reti
     push  TMP_REG1
     in    TMP_REG1, _SFR_IO_ADDR(SREG)
     push  TMP_REG1
@@ -67,7 +68,7 @@ TIMER1_COMPA_vect:
     breq  INC_MINUTE
     inc   TMP_REG1
     sts   TIMER1_SECONDS, TMP_REG1
-    rjmp  TIMER1_COMPA_vect_EXIT
+    rjmp  TIMER1_RCALLS
 
 INC_MINUTE:
     clr   TMP_REG1
@@ -77,7 +78,7 @@ INC_MINUTE:
     breq  INC_HOUR
     inc   TMP_REG1
     sts   TIMER1_MINUTES, TMP_REG1
-    rjmp  TIMER1_COMPA_vect_EXIT
+    rjmp  TIMER1_RCALLS
     
 INC_HOUR:
     clr   TMP_REG1
@@ -89,8 +90,16 @@ INC_HOUR:
     clr   TMP_REG1
 WITHIN_DAY:
     sts   TIMER1_HOURS, TMP_REG1
-    
+
+TIMER1_RCALLS:
+
+    lds   TMP_REG1, BIT_FIELD_1
+    sbrs  TMP_REG1, BIT_FIELD_1_TIMER1_RCALLS
+    rjmp  TIMER1_COMPA_vect_EXIT
+    rcall DHCP
+
 TIMER1_COMPA_vect_EXIT:
+
     pop   TMP_REG1
     out   _SFR_IO_ADDR(SREG), TMP_REG1
     pop   TMP_REG1

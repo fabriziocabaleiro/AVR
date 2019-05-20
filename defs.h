@@ -8,7 +8,7 @@
  * Global configuration {{{
  ******************************************************************************/
 #define F_CPU 1000000 /* Default value of internal RC oscillator */
-#define USE_DHT11
+//#define USE_DHT11
 /* }}} */
 /*******************************************************************************
  * Registers {{{
@@ -132,26 +132,31 @@
  **************************/
 #define DHCP_SERVER_IP_ADDR             0x01E0 /* 4 bytes */
 #define DHCP_XID_LAST_BYTE              0x01E4 /* 1 byte  */
+#define DHCP_STATE                      0x01E5
+#define DHCP_SECOND                     0x01E6
+#define DHCP_MINUTE                     0x01E7
+#define DHCP_HOUR                       0x01E8
 
 /************************
  * BIT FIELDS VARIABLES *
  ***********************/
-#define BIT_FIELD_1                     0x01E5
+#define BIT_FIELD_1                     0x01E9
 #define BIT_FIELD_1_INT1_DHT11               7
+#define BIT_FIELD_1_TIMER1_RCALLS            6
 
 /* Receive packet header, it is read continuously {{{ */
-#define RPKT_N_PKT_L              0x01EC
-#define RPKT_N_PKT_H              0x01ED
-#define RPKT_BYTE_COUNT_L         0x01EE
-#define RPKT_BYTE_COUNT_H         0x01EF
-#define RPKT_STATUS2              0x01F0
-#define RPKT_STATUS3              0x01F1
+#define RPKT_N_PKT_L              0x01EA
+#define RPKT_N_PKT_H              0x01EB
+#define RPKT_BYTE_COUNT_L         0x01EC
+#define RPKT_BYTE_COUNT_H         0x01ED
+#define RPKT_STATUS2              0x01EE
+#define RPKT_STATUS3              0x01EF
 #define RPKT_STATUS_VECTOR_LEN         6
 
 /* Timer counter for seconds, minutes, hours */
-#define TIMER1_SECONDS            0x01F2
-#define TIMER1_MINUTES            0x01F3
-#define TIMER1_HOURS              0x01F4
+#define TIMER1_SECONDS            0x01F0
+#define TIMER1_MINUTES            0x01F1
+#define TIMER1_HOURS              0x01F2
 /* }}} */
 
 /* }}} */
