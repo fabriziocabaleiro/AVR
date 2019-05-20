@@ -44,10 +44,10 @@ TIMER_INIT:
     sbr   TMP_REG1, (1 << OCIE1A)
     out   _SFR_IO_ADDR(TIMSK), TMP_REG1
 
-//    clr   TMP_REG1
-//    sts   TIMER1_SECONDS, TMP_REG1
-//    sts   TIMER1_MINUTES, TMP_REG1
-//    sts   TIMER1_HOURS,   TMP_REG1
+    clr   TMP_REG1
+    sts   TIMER1_SECONDS, TMP_REG1
+    sts   TIMER1_MINUTES, TMP_REG1
+    sts   TIMER1_HOURS,   TMP_REG1
 
     ret
 /* }}} */

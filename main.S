@@ -49,7 +49,7 @@ main:
     sei
     sleep
     SET_LED0
-    /* Enable interrupt */
+    /* disable interrupt */
     in    TMP_REG1, _SFR_IO_ADDR(TIMSK)
     cbr   TMP_REG1, (1 << OCIE1A)
     out   _SFR_IO_ADDR(TIMSK), TMP_REG1
@@ -89,10 +89,6 @@ main:
  ******************************************************************************/
 LOOP:
     sleep
-//    lds   TMP_REG1, TIMER1_SECONDS
-//    CLR_LED1
-//    sbrs  TMP_REG1, 0
-//    SET_LED1
     rjmp  LOOP
 /* }}} */
 /*******************************************************************************
@@ -109,7 +105,6 @@ INT0_vect:
     cbr   TMP_REG1, (1 << INT0)
     out   _SFR_IO_ADDR(GICR), TMP_REG1
 
-    CLR_LED0
     /* Re-enable interrupt within interrupt */
     sei
 
