@@ -43,13 +43,13 @@ SWAP_IP_ADDR:
     brne  SWAP_IP_ADDR
 
     /* Read IPv4 payload */
+    /* Calculate IPv4 payload length */
+    lds   COUNTER_REG, (IPV4_HEADER + IPV4_TOTAL_LENGTH + 1)
+    lds   TMP_REG1, IPV4_IHL_IN_BYTES
+    sub   COUNTER_REG, TMP_REG1
     /* Plus 1 as we already read ICMP MSG TYPE */
     ldi   ZL, lo8(IPV4_PAYLOAD + 1)
     ldi   ZH, hi8(IPV4_PAYLOAD + 1)
-    /* Calculate IPv4 payload length */
-    ldd   COUNTER_REG, Z + IPV4_TOTAL_LENGTH + 1
-    lds   TMP_REG1, IPV4_IHL_IN_BYTES
-    sub   COUNTER_REG, TMP_REG1
 READ_PAYLOAD:
     ETH_READ_NEXT_BYTE
     st    Z+, RETURN_VALUE

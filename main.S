@@ -48,16 +48,11 @@ main:
     rcall TIMER_INIT
     sei
     sleep
-    SET_LED0
-    /* disable interrupt */
-    in    TMP_REG1, _SFR_IO_ADDR(TIMSK)
-    cbr   TMP_REG1, (1 << OCIE1A)
-    out   _SFR_IO_ADDR(TIMSK), TMP_REG1
 
 #ifdef USE_DHT11
     rcall DHT11_SETUP
 #endif
-    //rcall DHCP_INIT
+    rcall DHCP_INIT
     rcall SPI_MASTER_INIT
     rcall ETH_SOFTWARE_RESET
     rcall ETH_BUFFER_INIT
@@ -67,22 +62,14 @@ main:
 
     ldi   DEBUG_REG_COUNT, 0
 
-//    lds   TMP_REG1, BIT_FIELD_1
-//    sbr   TMP_REG1, (1 << BIT_FIELD_1_TIMER1_RCALLS)
-//    sts   BIT_FIELD_1, TMP_REG1
-
-#if 0
-    in    TMP_REG1, _SFR_IO_ADDR(TCCR1B)
-    cbr   TMP_REG1, (1 << CS12)|(1 << CS10)
-    out   _SFR_IO_ADDR(TCCR1B), TMP_REG1
-#endif
+    lds   TMP_REG1, BIT_FIELD_1
+    sbr   TMP_REG1, (1 << BIT_FIELD_1_TIMER1_RCALLS)
+    sts   BIT_FIELD_1, TMP_REG1
 
     /* Enable external interrupt 0 and 1 */
     in    TMP_REG1, _SFR_IO_ADDR(GICR)
     sbr   TMP_REG1, (1 << INT1)|(1 << INT0)
     out   _SFR_IO_ADDR(GICR), TMP_REG1
-    sei
-    SET_LED1
 /* }}} */
 /*******************************************************************************
  * LOOP {{{
@@ -223,12 +210,14 @@ TYPE_LEN_UNKNOWN: /* }}} */
 PACKET_END:
 SKIP_ETH_PKT:
     rcall ETH_PKT_PROCESSED
-#if 0 // {{{
+#if 1 // {{{
+    // IF THIS BLOCK IS COMMENT, THEN PING DOESN'T WORK, REPLY HAS RUBBISH AT
+    // THE END 
     inc   DEBUG_REG_COUNT
     cpi   DEBUG_REG_COUNT, 20
     brne  SKIP_MESSAGE
 #ifdef USE_DHT11
-    rcall DHT11_READ
+    //rcall DHT11_READ
 #endif
     rcall SEND_PACKET
     ldi   DEBUG_REG_COUNT, 0

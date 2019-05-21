@@ -51,14 +51,12 @@ TIMER_INIT:
 
     ret
 /* }}} */
-
 /*******************************************************************************
  *  {{{
  * With a prescaler of 1024 and a OCR1A of 7812, then we will have a match every
  * 8 seconds for a clock of 1Mhz
  ******************************************************************************/
 TIMER1_COMPA_vect:
-    reti
     push  TMP_REG1
     in    TMP_REG1, _SFR_IO_ADDR(SREG)
     push  TMP_REG1

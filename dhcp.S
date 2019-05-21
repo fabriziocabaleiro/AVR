@@ -93,7 +93,6 @@ DHCP_IN_REBOOTING_STATE:
  * DHCP_INIT, this routine initialize DHCP {{{
  ******************************************************************************/
 DHCP_INIT:
-    ret
 #if 0    /* Should I initialize to ZERO ? */
     clr   TMP_REG1
     sts   DHCP_XID_LAST_BYTE, TMP_REG1

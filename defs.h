@@ -8,7 +8,7 @@
  * Global configuration {{{
  ******************************************************************************/
 #define F_CPU 1000000 /* Default value of internal RC oscillator */
-//#define USE_DHT11
+#define USE_DHT11
 /* }}} */
 /*******************************************************************************
  * Registers {{{
