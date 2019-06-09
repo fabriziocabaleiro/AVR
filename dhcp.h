@@ -4,6 +4,11 @@
 
 #include "services.h"
 
+/* During rebooting state, we send a request packet, then we wait up to
+ * REBOOTING_WAIT_SECONDS_FOR_ACK seconds for an ACK, or go to the initial state
+ */
+#define REBOOTING_WAIT_SECONDS_FOR_ACK 10
+
 /*******************************************************************************
  * DHCP states {{{
  ******************************************************************************/

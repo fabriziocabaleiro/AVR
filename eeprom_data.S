@@ -99,12 +99,6 @@ EEPROM_DHCP_REQUEST_OPS: /* {{{ */
     .byte DHCP_OPTION_ADDRESS_REQUEST
     .byte DHCP_OPTION_ADDRESS_REQUEST_LEN
 EEPROM_DHCP_REQUEST_OPS_END: /* }}} */
-EEPROM_DHCP_SERVER_IP_ADDR: /* {{{ */
-    .byte   0
-    .byte   0
-    .byte   0
-    .byte   0
-EEPROM_DHCP_SERVER_IP_ADDR_END: /* }}} */
 EEPROM_DEBUG_PREFIX: /* {{{ */
     .byte 0xAB
     .byte 0xAB

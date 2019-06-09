@@ -30,6 +30,10 @@ main:
     DDR_LED0
     DDR_LED1
 
+    /* Zero out SRAM */
+    rcall SRAM_TO_ZERO
+    SET_LED0
+
     /* Clear bitfields in SRAM */
     clr   TMP_REG1
     sts   BIT_FIELD_1, TMP_REG1
@@ -302,6 +306,21 @@ HANDLE_RECEIVE_ERROR:
 /*******************************************************************************
  * Error handling {{{
  ******************************************************************************/
- TIMER0_OVF_vect:
-    reti
+TIMER0_OVF_vect:
+   reti
+ /* }}} */
+/*******************************************************************************
+ * Zero out SRAM {{{
+ ******************************************************************************/
+SRAM_TO_ZERO:
+    ldi   ZL, lo8(RAMSTART)
+    ldi   ZH, hi8(RAMSTART)
+    clr   TMP_REG1
+SRAM_TO_ZERO_LOOP:
+    st    Z+, TMP_REG1
+    cpi   ZL, lo8(RAMEND - 2)
+    brne  SRAM_TO_ZERO_LOOP
+    cpi   ZH, hi8(RAMEND - 2)
+    brne  SRAM_TO_ZERO_LOOP
+    ret
  /* }}} */
