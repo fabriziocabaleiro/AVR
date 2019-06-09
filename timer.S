@@ -45,14 +45,15 @@ TIMER_INIT:
     out   _SFR_IO_ADDR(TIMSK), TMP_REG1
 
     clr   TMP_REG1
-    sts   TIMER1_SECONDS, TMP_REG1
-    sts   TIMER1_MINUTES, TMP_REG1
-    sts   TIMER1_HOURS,   TMP_REG1
+    sts   TIMER1_SECONDS + 0, TMP_REG1
+    sts   TIMER1_SECONDS + 1, TMP_REG1
+    sts   TIMER1_SECONDS + 2, TMP_REG1
+    sts   TIMER1_SECONDS + 3, TMP_REG1
 
     ret
 /* }}} */
 /*******************************************************************************
- *  {{{
+ * TIMER1_COMPA_vect {{{
  * With a prescaler of 1024 and a OCR1A of 7812, then we will have a match every
  * 8 seconds for a clock of 1Mhz
  ******************************************************************************/
@@ -60,44 +61,32 @@ TIMER1_COMPA_vect:
     push  TMP_REG1
     in    TMP_REG1, _SFR_IO_ADDR(SREG)
     push  TMP_REG1
+    push  TMP_REG2
+    push  YL
+    push  YH
 
-    lds   TMP_REG1, TIMER1_SECONDS
-    cpi   TMP_REG1, 59
-    breq  INC_MINUTE
+    ldi   YL, lo8(TIMER1_SECONDS)
+    ldi   YH, hi8(TIMER1_SECONDS)
+    ldi   TMP_REG2, TIMER1_SECONDS_LEN
+INC_SECONDS:
+    ld    TMP_REG1, Y+
     inc   TMP_REG1
     sts   TIMER1_SECONDS, TMP_REG1
-    rjmp  TIMER1_RCALLS
+    brne  TIMER1_SET_EVENTS
+    /* if overflow, then increment next byte */
+    dec   TMP_REG2
+    breq  TIMER1_SET_EVENTS
+    rjmp  INC_SECONDS
 
-INC_MINUTE:
-    clr   TMP_REG1
-    sts   TIMER1_SECONDS, TMP_REG1
-    lds   TMP_REG1, TIMER1_MINUTES
-    cpi   TMP_REG1, 59
-    breq  INC_HOUR
-    inc   TMP_REG1
-    sts   TIMER1_MINUTES, TMP_REG1
-    rjmp  TIMER1_RCALLS
-    
-INC_HOUR:
-    clr   TMP_REG1
-    sts   TIMER1_MINUTES, TMP_REG1
-    lds   TMP_REG1, TIMER1_HOURS
-    inc   TMP_REG1
-    cpi   TMP_REG1, 24
-    brne  WITHIN_DAY
-    clr   TMP_REG1
-WITHIN_DAY:
-    sts   TIMER1_HOURS, TMP_REG1
+TIMER1_SET_EVENTS:
 
-TIMER1_RCALLS:
+    lds   TMP_REG1, TIMER1_EVENTS
+    sbr   TMP_REG1, (1 << TIMER1_EVENTS_SECOND)
+    sts   TIMER1_EVENTS, TMP_REG1
 
-    lds   TMP_REG1, BIT_FIELD_1
-    sbrs  TMP_REG1, BIT_FIELD_1_TIMER1_RCALLS
-    rjmp  TIMER1_COMPA_vect_EXIT
-    rcall DHCP
-
-TIMER1_COMPA_vect_EXIT:
-
+    pop   YH
+    pop   YL
+    pop   TMP_REG2
     pop   TMP_REG1
     out   _SFR_IO_ADDR(SREG), TMP_REG1
     pop   TMP_REG1

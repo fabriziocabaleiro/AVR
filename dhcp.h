@@ -22,25 +22,43 @@
 #define UDP_DST_PORT INTERNET_SERVICE_BOOTPS_67_UDP
 #define UDP_SRC_PORT INTERNET_SERVICE_BOOTPC_68_UDP
 
-#define DHCP_DISCOVERY_UDP_PKT_SIZE  (     8 + /* UDP header */          \
-                                      11 * 4 + /* before BOOTP legacy */ \
-                                         192 + /* BOOTP legacy */        \
-                                           4 + /* magic cookie */        \
-                                           3 + /* DHCP discover */       \
-                                           1   /* endmark */             \
-                                   )
+#define DHCP_IP_HEADER_SIZE     20
+#define DHCP_UDP_BASE_PKT_SIZE  (     8 + /* UDP header */          \
+                                 11 * 4 + /* before BOOTP legacy */ \
+                                    192 + /* BOOTP legacy */        \
+                                      4 + /* magic cookie */        \
+                                      3 + /* DHCP message */        \
+                                      1   /* endmark */             \
+                                )
 
-#define DHCP_REQUEST_EXTRA_OPS_LEN (6 + /* Address Request */ \
-                                    6 + /* Server IP address */ \
-                                    6   /* Hostname */ \
+#define DHCP_DISCOVERY_EXTRA_OPS_SIZE 0
+
+#define DHCP_REQUEST_EXTRA_OPS_SIZE (6 + /* Address Request */ \
+                                     6 + /* Server IP address */ \
+                                     6   /* Hostname */ \
                                     )
 
-#define DHCP_REQUEST_UDP_PKT_SIZE    (DHCP_DISCOVERY_UDP_PKT_SIZE + \
-                                      DHCP_REQUEST_EXTRA_OPS_LEN)
-#define DHCP_DISCOVERY_PKT_SIZE      (DHCP_DISCOVERY_UDP_PKT_SIZE + 20)
-#define DHCP_REQUEST_PKT_SIZE        (DHCP_DISCOVERY_PKT_SIZE + \
-                                      DHCP_REQUEST_EXTRA_OPS_LEN)
+#define DHCP_RENEWING_EXTRA_OPS_SIZE 0
 
+
+#define DHCP_UDP_COMMON_PKT_SIZE      (DHCP_UDP_BASE_PKT_SIZE)
+#define DHCP_IP_COMMON_PKT_SIZE       (DHCP_UDP_COMMON_PKT_SIZE + \
+                                       DHCP_IP_HEADER_SIZE)
+
+#define DHCP_UDP_DISCOVERY_PKT_SIZE   (DHCP_UDP_BASE_PKT_SIZE + \
+                                       DHCP_DISCOVERY_EXTRA_OPS_SIZE)
+#define DHCP_IP_DISCOVERY_PKT_SIZE    (DHCP_UDP_DISCOVERY_PKT_SIZE + \
+                                       DHCP_IP_HEADER_SIZE)
+
+#define DHCP_UDP_REQUEST_PKT_SIZE     (DHCP_UDP_BASE_PKT_SIZE + \
+                                       DHCP_REQUEST_EXTRA_OPS_SIZE)
+#define DHCP_IP_REQUEST_PKT_SIZE      (DHCP_UDP_REQUEST_PKT_SIZE + \
+                                       DHCP_IP_HEADER_SIZE)
+
+#define DHCP_UDP_RENEWING_PKT_SIZE    (DHCP_UDP_BASE_PKT_SIZE + \
+                                       DHCP_RENEWING_EXTRA_OPS_SIZE)
+#define DHCP_IP_RENEWING_PKT_SIZE     (DHCP_UDP_RENEWING_PKT_SIZE + \
+                                       DHCP_IP_HEADER_SIZE)
 /* }}} */
 /*******************************************************************************
  * DHCP header {{{

@@ -62,7 +62,7 @@ SPI_WAIT_TRANSMIT:
 
     /* TODO: remove this part */
     ; Clear SS for both slaves
-    SPI_END_LCD
+    //SPI_END_LCD
 
     /* Get received message */
     in RETURN_VALUE, _SFR_IO_ADDR(SPDR)

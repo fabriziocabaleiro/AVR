@@ -29,6 +29,7 @@
 .global ETH_WRITE_Z_TO_TRANSMIT_BUFFER
 .global ETH_WRITE_BUFFER_PACKET_PAYLOAD_FINISH
 .global ETH_MOVE_READ_POINTER
+.global ETH_GET_EWRPT_BANK0_TO_Z
 
 /*******************************************************************************
  * Read Control Register {{{
@@ -704,20 +705,10 @@ ETH_WRITE_BUFFER_PACKET_PAYLOAD_KEEP_WRITING:
  * Finish Write Payload {{{
  ******************************************************************************/
 ETH_WRITE_BUFFER_PACKET_PAYLOAD_FINISH:
-    /* Set BANK 0 */
-    ldi   ARG_REG1, ENC_COMMON_ECON1
-    ldi   ARG_REG2, ENC_COMMON_ECON1_BSEL0 | ENC_COMMON_ECON1_BSEL1
-    rcall ETH_BIT_FIELD_CLEAR
-
-    /* read EWRPT */
+    /* read EWRPT and set BANK0 */
     push  ZH
     push  ZL
-    ldi   ARG_REG1, ENC_BANK0_EWRPTL
-    rcall ETH_READ_CONTROL_REGISTER
-    mov   ZL, RETURN_VALUE
-    ldi   ARG_REG1, ENC_BANK0_EWRPTH
-    rcall ETH_READ_CONTROL_REGISTER
-    mov   ZH, RETURN_VALUE
+    rcall ETH_GET_EWRPT_BANK0_TO_Z
 
     sbiw  ZL, 1
 
@@ -757,6 +748,35 @@ ETH_WRITE_BUFFER_PACKET_PAYLOAD_FINISH_WAIT:
     ldi   ARG_REG2, (1 << ENC_COMMON_EIR_TXIF)
     rcall ETH_BIT_FIELD_CLEAR
 
+    ret
+/* }}} */
+/*******************************************************************************
+ * Get EWRPT into Z {{{
+ * BEWARE, THIS ROUTINE IS GOING TO MODIFY THE CURRENT BANK, setting BANK0
+ * Return [EWRPTH:EWRPTL] into [ZH:ZL]
+ ******************************************************************************/
+ETH_GET_EWRPT_BANK0_TO_Z:
+    push  ARG_REG1
+    push  ARG_REG2
+    push  RETURN_VALUE
+
+    /* Set BANK 0 */
+    ldi   ARG_REG1, ENC_COMMON_ECON1
+    ldi   ARG_REG2, ENC_COMMON_ECON1_BSEL0 | ENC_COMMON_ECON1_BSEL1
+    rcall ETH_BIT_FIELD_CLEAR
+
+    /* read EWRPT */
+    ldi   ARG_REG1, ENC_BANK0_EWRPTL
+    rcall ETH_READ_CONTROL_REGISTER
+    mov   ZL, RETURN_VALUE
+
+    ldi   ARG_REG1, ENC_BANK0_EWRPTH
+    rcall ETH_READ_CONTROL_REGISTER
+    mov   ZH, RETURN_VALUE
+
+    pop   RETURN_VALUE
+    pop   ARG_REG2
+    pop   ARG_REG1
     ret
 /* }}} */
 /*******************************************************************************

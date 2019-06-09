@@ -60,11 +60,7 @@ main:
     rcall ETH_ENABLE_RECEIVE
     rcall ETH_ENABLE_RECEIVE_INTERRUPT
 
-    ldi   DEBUG_REG_COUNT, 0
-
-    lds   TMP_REG1, BIT_FIELD_1
-    sbr   TMP_REG1, (1 << BIT_FIELD_1_TIMER1_RCALLS)
-    sts   BIT_FIELD_1, TMP_REG1
+    clr   DEBUG_REG_COUNT
 
     /* Enable external interrupt 0 and 1 */
     in    TMP_REG1, _SFR_IO_ADDR(GICR)
@@ -75,7 +71,23 @@ main:
  * LOOP {{{
  ******************************************************************************/
 LOOP:
+    /* Enable INT0, {{{ */
+    in    TMP_REG1, _SFR_IO_ADDR(GICR)
+    sbr   TMP_REG1, (1 << INT0)
+    out   _SFR_IO_ADDR(GICR), TMP_REG1
+    /* }}} */
     sleep
+    /* Disable INT0, because can interfere with code using ENC28J60 {{{ */
+    in    TMP_REG1, _SFR_IO_ADDR(GICR)
+    cbr   TMP_REG1, (1 << INT0)
+    out   _SFR_IO_ADDR(GICR), TMP_REG1
+    /* }}} */
+    lds   TMP_REG1, TIMER1_EVENTS
+    sbrs  TMP_REG1, TIMER1_EVENTS_SECOND
+    rjmp  LOOP
+    cbr   TMP_REG1, (1 << TIMER1_EVENTS_SECOND)
+    sts   TIMER1_EVENTS, TMP_REG1
+    rcall DHCP
     rjmp  LOOP
 /* }}} */
 /*******************************************************************************
@@ -125,11 +137,7 @@ READ_ETHERNET_INTERRUPT_REQUEST:
     out   _SFR_IO_ADDR(GIFR), TMP_REG2
 #endif
 
-    pop   TMP_REG1
-    out   _SFR_IO_ADDR(SREG), TMP_REG1
-    pop   TMP_REG1
-
-#if 1
+#if 0
     ERR_CLR
     CLR_LED0
     CLR_LED1
@@ -139,6 +147,10 @@ READ_ETHERNET_INTERRUPT_REQUEST:
     in    TMP_REG1, _SFR_IO_ADDR(GICR)
     sbr   TMP_REG1, (1 << INT0)
     out   _SFR_IO_ADDR(GICR), TMP_REG1
+
+    pop   TMP_REG1
+    out   _SFR_IO_ADDR(SREG), TMP_REG1
+    pop   TMP_REG1
     reti
 /* }}} */
 /*******************************************************************************
@@ -214,13 +226,13 @@ SKIP_ETH_PKT:
     // IF THIS BLOCK IS COMMENT, THEN PING DOESN'T WORK, REPLY HAS RUBBISH AT
     // THE END 
     inc   DEBUG_REG_COUNT
-    cpi   DEBUG_REG_COUNT, 20
-    brne  SKIP_MESSAGE
+    sbrc  DEBUG_REG_COUNT, 5
+    rjmp  SKIP_MESSAGE
 #ifdef USE_DHT11
     //rcall DHT11_READ
 #endif
-    rcall SEND_PACKET
-    ldi   DEBUG_REG_COUNT, 0
+    // rcall SEND_PACKET
+    clr   DEBUG_REG_COUNT
     //rcall DHCP_DISCOVER
 SKIP_MESSAGE:
 #endif // }}} 
@@ -266,7 +278,7 @@ COREDUMP:
     rjmp  INT1_vect_EXIT
 
 SEND_DHCP_DISCOVER:
-    rcall DHCP_DISCOVER
+    rcall DHCP
     rjmp  INT1_vect_EXIT
 /* }}} */
 /*******************************************************************************

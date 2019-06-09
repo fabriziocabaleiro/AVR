@@ -87,10 +87,6 @@ EEPROM_DHCP_MAGIC_COOKIE: /* {{{ */
     .byte 0x63
 EEPROM_DHCP_MAGIC_COOKIE_END: /* }}} */
 EEPROM_DHCP_REQUEST_OPS: /* {{{ */
-    /* Message Request */
-    .byte DHCP_OPTION_DHCP_MSG_TYPE
-    .byte DHCP_OPTION_DHCP_MSG_TYPE_LEN
-    .byte DHCP_OPTION_DHCP_MSG_TYPE_DHCP_REQUEST
     /* Name of the device */
     .byte DHCP_OPTION_HOSTNAME
     .byte 4
@@ -103,6 +99,12 @@ EEPROM_DHCP_REQUEST_OPS: /* {{{ */
     .byte DHCP_OPTION_ADDRESS_REQUEST
     .byte DHCP_OPTION_ADDRESS_REQUEST_LEN
 EEPROM_DHCP_REQUEST_OPS_END: /* }}} */
+EEPROM_DHCP_SERVER_IP_ADDR: /* {{{ */
+    .byte   0
+    .byte   0
+    .byte   0
+    .byte   0
+EEPROM_DHCP_SERVER_IP_ADDR_END: /* }}} */
 EEPROM_DEBUG_PREFIX: /* {{{ */
     .byte 0xAB
     .byte 0xAB

@@ -13,6 +13,9 @@
 /*******************************************************************************
  * Registers {{{
  ******************************************************************************/
+/* TODO: Could be done without private register */
+#define DEBUG_REG_COUNT  R3
+#define DHCP_STATE_R     R14
 #define ETH_INT_RQST     R15
 /* Register used for temporary values, they may be change after any rcall */
 #define TMP_REG1         R16
@@ -25,9 +28,9 @@
 #define RETURN_VALUE     R21
 /* Counter */
 #define COUNTER_REG      R22
-/* TODO: Could be done without private register */
-#define DEBUG_REG_COUNT  R25
 
+#pragma GCC poison R3
+#pragma GCC poison R14
 #pragma GCC poison R15
 #pragma GCC poison R16
 #pragma GCC poison R17
@@ -36,6 +39,13 @@
 #pragma GCC poison R20
 #pragma GCC poison R21
 #pragma GCC poison R22
+/* Poison X, Y and Z */
+// TODO
+// #pragma GCC poison R27
+// #pragma GCC poison R28
+// #pragma GCC poison R29
+// #pragma GCC poison R30
+// #pragma GCC poison R31
 /* }}} */
 /*******************************************************************************
  * SPI Slave selection {{{
@@ -133,30 +143,35 @@
 #define DHCP_SERVER_IP_ADDR             0x01E0 /* 4 bytes */
 #define DHCP_XID_LAST_BYTE              0x01E4 /* 1 byte  */
 #define DHCP_STATE                      0x01E5
-#define DHCP_SECOND                     0x01E6
-#define DHCP_MINUTE                     0x01E7
-#define DHCP_HOUR                       0x01E8
+#define DHCP_SECONDS                    0x01E6 /* 4 bytes */
+
+#define DHCP_ADDRESS_TIME               0x01EA /* 4 bytes */
+#define DHCP_SUBNET_MASK                0x01EE /* 4 bytes */
+#define DHCP_DOMAIN_SERVER              0x01F2 /* 8 bytes */
+#define DHCP_DOMAIN_SERVER_LEN               8
+
+#define DHCP_ADDRESS_TIME_SCHEME        0x01FA
 
 /************************
  * BIT FIELDS VARIABLES *
  ***********************/
-#define BIT_FIELD_1                     0x01E9
+#define BIT_FIELD_1                     0x01FB
 #define BIT_FIELD_1_INT1_DHT11               7
-#define BIT_FIELD_1_TIMER1_RCALLS            6
 
 /* Receive packet header, it is read continuously {{{ */
-#define RPKT_N_PKT_L              0x01EA
-#define RPKT_N_PKT_H              0x01EB
-#define RPKT_BYTE_COUNT_L         0x01EC
-#define RPKT_BYTE_COUNT_H         0x01ED
-#define RPKT_STATUS2              0x01EE
-#define RPKT_STATUS3              0x01EF
+#define RPKT_N_PKT_L              0x01FC
+#define RPKT_N_PKT_H              0x01FD
+#define RPKT_BYTE_COUNT_L         0x01FE
+#define RPKT_BYTE_COUNT_H         0x01FF
+#define RPKT_STATUS2              0x0200
+#define RPKT_STATUS3              0x0201
 #define RPKT_STATUS_VECTOR_LEN         6
 
 /* Timer counter for seconds, minutes, hours */
-#define TIMER1_SECONDS            0x01F0
-#define TIMER1_MINUTES            0x01F1
-#define TIMER1_HOURS              0x01F2
+#define TIMER1_SECONDS            0x0202 /* 4 bytes */
+#define TIMER1_SECONDS_LEN             4
+#define TIMER1_EVENTS             0x0206
+#define TIMER1_EVENTS_SECOND           0
 /* }}} */
 
 /* }}} */
