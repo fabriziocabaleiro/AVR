@@ -70,9 +70,7 @@ DHCP_IN_INIT_STATE: /* {{{ */
     /* }}} */
     /* In this state we send a discover and jump directly to selecting state.
      * Also we store the local time in which we sent the discover packet */
-    SET_LED0
     rcall DHCP_SEND
-    CLR_LED0
     ldi   TMP_REG1, (1 << DHCP_STATE_SELECTING)
     sts   DHCP_STATE, TMP_REG1
     /* record time {{{ */
@@ -131,18 +129,65 @@ DHCP_IN_REQUESTING_STATE: /* {{{ */
     rjmp  DHCP_EXIT_SUCCESS
     /* }}} */
 DHCP_IN_BOUND_STATE: /* {{{ */
-    lds   TMP_REG1, DHCP_ADDRESS_TIME_SCHEME
-    tst   TMP_REG1
-    brne  DECREASE_LEASE_TIME
-    /* Set time scheme {{{ */
-    /* Check address lease time and set an scheme */
-    ldi   TMP_REG1, 1
-    sts   DHCP_ADDRESS_TIME_SCHEME, TMP_REG1
-    /* }}} */
-DECREASE_LEASE_TIME:
-    /* FIXME: ignoring 3 most significative bytes of address time */
-    lds   TMP_REG1, DHCP_ADDRESS_TIME + 3
-    subi  TMP_REG1, 5
+    lds   TMP_REG1, DHCP_ADDRESS_TIME_STATE_N_DEC
+    sbrc  TMP_REG1, DHCP_ADDRESS_TIME_STATE_N_DEC_SET
+    rjmp  DHCP_IN_BOUND_STATE_SET_COUNTDOWN
+    rjmp  DHCP_IN_BOUND_STATE_COUNTDOWN
+DHCP_IN_BOUND_STATE_SET_COUNTDOWN:
+#if 0 /* {{{ */
+    ldi   ZL, lo8(DHCP_ADDRESS_TIME)
+    ldi   ZH, hi8(DHCP_ADDRESS_TIME)
+    ldi   TMP_REG1, 4
+    /* Dividing by 2 by rotating right through carry across all 4 bytes */
+    clc /* clean carry for first ror */
+DHCP_IN_BOUND_STATE_SET_COUNTDOWN_LOOP:
+    ld    TMP_REG2, Z+
+    ror   TMP_REG2
+    std   Z + (DHCP_SECONDS - DHCP_ADDRESS_TIME - 1), TMP_REG2
+    dec   TMP_REG1
+    brne  DHCP_IN_BOUND_STATE_SET_COUNTDOWN_LOOP
+#elif 0
+    ldi   YL, lo8(DHCP_ADDRESS_TIME)
+    ldi   YH, hi8(DHCP_ADDRESS_TIME)
+    ldi   ZL, lo8(DHCP_SECONDS)
+    ldi   ZH, hi8(DHCP_SECONDS)
+    ldi   ARG_REG1, 1
+    ldi   ARG_REG2, 4
+    rcall DIV_RIGHT_SHIFT
+    ldi   TMP_REG1, (1 << DHCP_ADDRESS_TIME_SCHEME_SET)
+    sts   DHCP_ADDRESS_TIME_STATE_N_DEC, TMP_REG1
+#else /* }}} */
+    cbr   TMP_REG1, (1 << DHCP_ADDRESS_TIME_STATE_N_DEC_SET)
+    sts   DHCP_ADDRESS_TIME_STATE_N_DEC, TMP_REG1
+    ldi   ZL, lo8(DHCP_ADDRESS_TIME)
+    ldi   ZH, hi8(DHCP_ADDRESS_TIME)
+    ldi   COUNTER_REG, 4
+DHCP_IN_BOUND_STATE_SET_COUNTDOWN_LOOP:
+    ld    TMP_REG2, Z+
+    std   Z + (DHCP_SECONDS - DHCP_ADDRESS_TIME - 1), TMP_REG2
+    dec   COUNTER_REG
+    brne  DHCP_IN_BOUND_STATE_SET_COUNTDOWN_LOOP
+#endif
+DHCP_IN_BOUND_STATE_COUNTDOWN:
+    /* Start from least significant byte.
+     * Subtract 1 from first byte, then subtract zero.
+     * All subtraction are with carry
+     */
+    /* Loading 1 address beyond because of ld with pre-decrement */
+    ldi   ZL, lo8(DHCP_SECONDS + 4)
+    ldi   ZH, hi8(DHCP_SECONDS + 4)
+    ldi   COUNTER_REG, 4
+    lds   TMP_REG2, DHCP_ADDRESS_TIME_STATE_N_DEC
+    clc
+DHCP_IN_BOUND_DEC:
+    ld    TMP_REG1, -Z
+    sbc   TMP_REG1, TMP_REG2
+    clr   TMP_REG2
+    st    Z, TMP_REG1
+    dec   COUNTER_REG
+    brne  DHCP_IN_BOUND_DEC
+    /* After subtract 0 from the 3 MSB, check the Carry, if set, then go to
+     * renewing state */
     brcc  KEEP_WAITING_ON_BOUND_STATE
     ldi   TMP_REG1, (1 << DHCP_STATE_RENEWING)
     sts   DHCP_STATE, TMP_REG1
@@ -156,9 +201,9 @@ DHCP_IN_RENEWING_STATE: /* {{{ */
     sts   DHCP_XID_LAST_BYTE, TMP_REG1
     /* }}} */
     /* read: DHCPREQUEST generated during RENEWING state (rfc2131) */
-    lds   TMP_REG1, TIMER1_SECONDS
-    andi  TMP_REG1, 0x07 /* FIXME, sending request every 8 seconds */
-    brne  DHCP_IN_RENEWING_STATE_EXIT
+//    lds   TMP_REG1, TIMER1_SECONDS
+//    andi  TMP_REG1, 0x07 /* FIXME, sending request every 8 seconds */
+//    brne  DHCP_IN_RENEWING_STATE_EXIT
     rcall DHCP_SEND
 DHCP_IN_RENEWING_STATE_EXIT:
     rjmp  DHCP_EXIT_SUCCESS
@@ -208,8 +253,8 @@ DHCP_EXIT_SUCCESS:
  * DHCP_INIT, this routine initialize DHCP {{{
  ******************************************************************************/
 DHCP_INIT:
-    clr   TMP_REG1
-    sts   DHCP_ADDRESS_TIME_SCHEME, TMP_REG1
+    ldi   TMP_REG1, (1 << DHCP_ADDRESS_TIME_SCHEME_INIT)
+    sts   DHCP_ADDRESS_TIME_STATE_N_DEC, TMP_REG1
     /* Should I initialize to ZERO ? */
     // sts   DHCP_XID_LAST_BYTE, TMP_REG1
     /* Check if our current IP in the EEPROM was set */
@@ -247,7 +292,7 @@ DHCP_SEND:
      * This header has src as 0.0.0.0, dst as 255.255.255.255, checksum and
      * total length have to be setup
      */
-    /* Read default IPv4 header from EEPROM */
+    /* Read default IPv4 header from EEPROM {{{ */
     ldi   YL, lo8(EEPROM_IP_HEADER)
     ldi   YH, hi8(EEPROM_IP_HEADER)
     ldi   COUNTER_REG, (EEPROM_IP_HEADER_END - EEPROM_IP_HEADER)
@@ -259,7 +304,8 @@ DHCP_WRITE_IP_HEADER_TO_SRAM:
     st    Z+, RETURN_VALUE
     dec   COUNTER_REG
     brne  DHCP_WRITE_IP_HEADER_TO_SRAM
-
+    /* }}} */
+    /* Set non default IPv4 header fields {{{ */
     ldi   ZL, lo8(IPV4_HEADER)
     ldi   ZH, hi8(IPV4_HEADER)
 
@@ -267,18 +313,46 @@ DHCP_WRITE_IP_HEADER_TO_SRAM:
     std   Z + (IPV4_TOTAL_LENGTH + 0), DHCP_PKT_SIZE_H
     std   Z + (IPV4_TOTAL_LENGTH + 1), DHCP_PKT_SIZE_L
     /* }}} */
-    ldi   ARG_REG1, (EEPROM_IP_HEADER_END - EEPROM_IP_HEADER)
+    /* Src and Dst IP addresses for RENEWING {{{ */
+    sbrs  DHCP_STATE_R, DHCP_STATE_RENEWING
+    rjmp  DEFAULT_SRC_DST_ADDRESSES
+    adiw  ZL, IPV4_SRC_ADDR
+    ldi   COUNTER_REG, IPV4_SIZE_IN_BYTES
+    ldi   YL, lo8(EEPROM_IP_ADDR)
+    ldi   YH, hi8(EEPROM_IP_ADDR)
+DHCP_IP_HEADER_SRC_IP_LOOP:
+    rcall EEPROM_READ_N_INC
+    st    Z+, RETURN_VALUE
+    dec   COUNTER_REG
+    brne  DHCP_IP_HEADER_SRC_IP_LOOP
 
+    ldi   COUNTER_REG, IPV4_SIZE_IN_BYTES
+    ldi   YL, lo8(DHCP_SERVER_IP_ADDR)
+    ldi   YH, hi8(DHCP_SERVER_IP_ADDR)
+DHCP_IP_HEADER_DST_IP_LOOP:
+    ld    TMP_REG1, Y+
+    st    Z+, TMP_REG1
+    dec   COUNTER_REG
+    brne  DHCP_IP_HEADER_DST_IP_LOOP
+DEFAULT_SRC_DST_ADDRESSES:
+    /* }}} */
+    /* Internet Checksum {{{ */
+    ldi   ZL, lo8(IPV4_HEADER)
+    ldi   ZH, hi8(IPV4_HEADER)
+    ldi   ARG_REG1, (EEPROM_IP_HEADER_END - EEPROM_IP_HEADER)
     rcall INTERNET_CHECKSUM_RFC1071
     std   Z + (IPV4_H_CHECKSUM + 0), YH
     std   Z + (IPV4_H_CHECKSUM + 1), YL
-
+    /* }}} */
+    /* }}} */
+    /* Transmit IPv4 Header {{{ */
     ldi   COUNTER_REG, (EEPROM_IP_HEADER_END - EEPROM_IP_HEADER)
 DHCP_WRITE_IP_HEADER:
     ld    ARG_REG1, Z+
     rcall SPI_MASTER_TRANSMIT
     dec   COUNTER_REG
     brne  DHCP_WRITE_IP_HEADER
+    /* }}} */
     /* }}} */
     /* UDP Header {{{ */
     /* SRC/DST port {{{ */
@@ -411,6 +485,8 @@ DHCP_REQUEST_IP_SET_HEADER_LOOP_5:
     sbrc  DHCP_STATE_R, DHCP_STATE_INIT
     rjmp  DHCP_END_OP
     sbrc  DHCP_STATE_R, DHCP_STATE_INIT_REBOOT
+    rjmp  DHCP_END_OP
+    sbrc  DHCP_STATE_R, DHCP_STATE_RENEWING
     rjmp  DHCP_END_OP
     /* }}} */
 DHCP_REQUEST_OPS: /* DHCP Request options {{{ */
@@ -565,8 +641,12 @@ KEEP_READING_DHCP_OPTIONS:
 TRY_DHCP_ACK:
     cpi   RETURN_VALUE, DHCP_OPTION_DHCP_MSG_TYPE_DHCP_ACK
     brne  KEEP_READING_DHCP_OPTIONS
+    /* Set states {{{ */
     ldi   TMP_REG1, (1 << DHCP_STATE_BOUND)
     sts   DHCP_STATE, TMP_REG1
+    ldi   TMP_REG1, (1 << DHCP_ADDRESS_TIME_SCHEME_INIT)
+    sts   DHCP_ADDRESS_TIME_STATE_N_DEC, TMP_REG1
+    /* }}} */
     rjmp  KEEP_READING_DHCP_OPTIONS
     /* }}} */
 TRY_DHCP_OPTION_DHCP_SERVER_ID: /* {{{ */
@@ -643,3 +723,5 @@ DHCP_OP_READ_CONTENT:
     /* }}} */
 /* }}} */
 
+DHCP_TIMERS:
+    ret

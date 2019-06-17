@@ -32,7 +32,6 @@ main:
 
     /* Zero out SRAM */
     rcall SRAM_TO_ZERO
-    SET_LED0
 
     /* Clear bitfields in SRAM */
     clr   TMP_REG1

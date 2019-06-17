@@ -14,6 +14,7 @@ OBJS = main.o         \
        dhcp.o         \
        tcp.o          \
        icmp.o         \
+       division.o     \
        comm.o
 
 DEPDIR = Deps

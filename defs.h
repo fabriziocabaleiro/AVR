@@ -143,14 +143,15 @@
 #define DHCP_SERVER_IP_ADDR             0x01E0 /* 4 bytes */
 #define DHCP_XID_LAST_BYTE              0x01E4 /* 1 byte  */
 #define DHCP_STATE                      0x01E5
-#define DHCP_SECONDS                    0x01E6 /* 4 bytes */
-
-#define DHCP_ADDRESS_TIME               0x01EA /* 4 bytes */
+#define DHCP_ADDRESS_TIME               0x01E6 /* 4 bytes */
+#define DHCP_SECONDS                    0x01EA /* 4 bytes */
 #define DHCP_SUBNET_MASK                0x01EE /* 4 bytes */
 #define DHCP_DOMAIN_SERVER              0x01F2 /* 8 bytes */
 #define DHCP_DOMAIN_SERVER_LEN               8
 
-#define DHCP_ADDRESS_TIME_SCHEME        0x01FA
+/* Define in which state are the T1 and T2 and is the value used to decrement
+ * the pending seconds */
+#define DHCP_ADDRESS_TIME_STATE_N_DEC   0x01FA
 
 /************************
  * BIT FIELDS VARIABLES *
