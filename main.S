@@ -57,11 +57,7 @@ main:
 #endif
     rcall DHCP_INIT
     rcall SPI_MASTER_INIT
-    rcall ETH_SOFTWARE_RESET
-    rcall ETH_BUFFER_INIT
-    rcall ETH_MAC_INIT
-    rcall ETH_ENABLE_RECEIVE
-    rcall ETH_ENABLE_RECEIVE_INTERRUPT
+    rcall ETH_INIT
 
     clr   DEBUG_REG_COUNT
 
@@ -80,6 +76,8 @@ LOOP:
     out   _SFR_IO_ADDR(GICR), TMP_REG1
     /* }}} */
     sleep
+    CLR_LED0
+    CLR_LED1
     /* Disable INT0, because can interfere with code using ENC28J60 {{{ */
     in    TMP_REG1, _SFR_IO_ADDR(GICR)
     cbr   TMP_REG1, (1 << INT0)
@@ -165,7 +163,8 @@ HANDLE_PACKET:
     rcall ETH_READ_RECEIVE_HEADER
     rcall ETH_CHECK_RECEIVE_STATUS_VECTOR
     cpi   RETURN_VALUE, 0
-    brne  SKIP_ETH_PKT
+    /* TODO: improve action upon this error */
+    brne  RESET_ETH
 
     rcall ETH_READ_MAC_ADDRS_N_LEN_TYPE
 
@@ -243,6 +242,9 @@ SKIP_MESSAGE:
 
 ERROR:
     rjmp  SKIP_ETH_PKT
+RESET_ETH:
+    rcall ETH_INIT
+    ret
 /* }}} */
 /*******************************************************************************
  * INT1 handle {{{
@@ -289,7 +291,7 @@ SEND_DHCP_DISCOVER:
  ******************************************************************************/
 COREDUMP_N_CONTINUE:
     //rcall EEPROM_COREDUMP
-    //ERR_SET
+    ERR_SET
     ret
 /* }}} */
 /*******************************************************************************

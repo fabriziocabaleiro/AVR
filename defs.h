@@ -151,7 +151,8 @@
 
 /* Define in which state are the T1 and T2 and is the value used to decrement
  * the pending seconds */
-#define DHCP_ADDRESS_TIME_STATE_N_DEC   0x01FA
+/* State and decrement */
+#define SRAM_DHCP_TIMER_SUBTRAHEND_PTR_L   0x01FA
 
 /************************
  * BIT FIELDS VARIABLES *

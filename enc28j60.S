@@ -7,17 +7,13 @@
 #include "enc28j60.h"
 .LIST
 
+.global ETH_INIT
 .global ETH_READ_CONTROL_REGISTER
 .global ETH_WRITE_CONTROL_REGISTER
 .global ETH_BIT_FIELD_SET
 .global ETH_BIT_FIELD_CLEAR
 .global ETH_WAIT_UNTIL_READY
-.global ETH_ENABLE_RECEIVE
 .global ETH_SET_BANK
-.global ETH_ENABLE_RECEIVE_INTERRUPT
-.global ETH_SOFTWARE_RESET
-.global ETH_BUFFER_INIT
-.global ETH_MAC_INIT
 .global ETH_PHY_INIT
 .global ETH_READ_BUFFER_START
 .global ETH_READ_RECEIVE_HEADER
@@ -31,6 +27,17 @@
 .global ETH_MOVE_READ_POINTER
 .global ETH_GET_EWRPT_BANK0_TO_Z
 
+/*******************************************************************************
+ * Initialize everything {{{
+ ******************************************************************************/
+ETH_INIT:
+    rcall ETH_SOFTWARE_RESET
+    rcall ETH_BUFFER_INIT
+    rcall ETH_MAC_INIT
+    rcall ETH_ENABLE_RECEIVE
+    rcall ETH_ENABLE_RECEIVE_INTERRUPT
+    ret
+/* }}} */
 /*******************************************************************************
  * Read Control Register {{{
  * To read a control register first we send the command "000" together with the

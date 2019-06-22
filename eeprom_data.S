@@ -99,6 +99,15 @@ EEPROM_DHCP_REQUEST_OPS: /* {{{ */
     .byte DHCP_OPTION_ADDRESS_REQUEST
     .byte DHCP_OPTION_ADDRESS_REQUEST_LEN
 EEPROM_DHCP_REQUEST_OPS_END: /* }}} */
+EEPROM_DHCP_TIMERS: /* {{{ */
+    .byte   2
+    .byte   4
+    .byte  16
+EEPROM_DHCP_TIMERS_T2:
+    .byte  20
+    .byte  24
+    .byte  28
+EEPROM_DHCP_TIMERS_END: /* }}} */
 EEPROM_DEBUG_PREFIX: /* {{{ */
     .byte 0xAB
     .byte 0xAB

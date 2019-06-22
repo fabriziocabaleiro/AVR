@@ -9,9 +9,7 @@
  */
 #define REBOOTING_WAIT_SECONDS_FOR_ACK 10
 
-#define DHCP_ADDRESS_TIME_SCHEME_INIT     0
-#define DHCP_ADDRESS_TIME_SCHEME_SET      1
-#define DHCP_ADDRESS_TIME_STATE_N_DEC_SET 7
+#define DHCP_TIMER_LAP  7
 
 /*******************************************************************************
  * DHCP states {{{

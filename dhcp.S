@@ -15,6 +15,11 @@
 #define DHCP_PKT_SIZE_L R24
 #define DHCP_PKT_SIZE_H R25
 
+/* Bit 7 used for counter underflow flag */
+#if (EEPROM_DHCP_TIMERS - 8) >= 127
+#   error "Optimization for EEPROM_DHCP_TIMERS won't work"
+#endif
+
 /*******************************************************************************
  * DHCP, this routine is called periodically {{{
  *
@@ -63,6 +68,15 @@ DHCP_IN_INIT_STATE: /* {{{ */
     DHCP_IP_HEADER_SIZE)
 #   error "DHCP init state assumes common packet size"
 #endif
+    /* Try to send a REQUEST every 16 seconds, {{{
+     * At this point, subtrahend_ptr is not used, then we can use it to hold a
+     * counter and send request every N seconds */
+    lds   TMP_REG1, SRAM_DHCP_TIMER_SUBTRAHEND_PTR_L
+    inc   TMP_REG1
+    sts   SRAM_DHCP_TIMER_SUBTRAHEND_PTR_L, TMP_REG1
+    andi  TMP_REG1, 0x0F
+    brne  DHCP_IN_INIT_STATE_EXIT
+    /* }}} */
     /* Increment XID on Discover {{{ */
     lds   TMP_REG1, DHCP_XID_LAST_BYTE
     inc   TMP_REG1
@@ -86,6 +100,7 @@ RECORD_INIT_TIME:
     dec   TMP_REG1
     brne  RECORD_INIT_TIME
     /* }}} */
+DHCP_IN_INIT_STATE_EXIT:
     rjmp  DHCP_EXIT_SUCCESS
     /* }}} */
 DHCP_IN_SELECTING_STATE: /* {{{ */
@@ -129,86 +144,46 @@ DHCP_IN_REQUESTING_STATE: /* {{{ */
     rjmp  DHCP_EXIT_SUCCESS
     /* }}} */
 DHCP_IN_BOUND_STATE: /* {{{ */
-    lds   TMP_REG1, DHCP_ADDRESS_TIME_STATE_N_DEC
-    sbrc  TMP_REG1, DHCP_ADDRESS_TIME_STATE_N_DEC_SET
-    rjmp  DHCP_IN_BOUND_STATE_SET_COUNTDOWN
-    rjmp  DHCP_IN_BOUND_STATE_COUNTDOWN
-DHCP_IN_BOUND_STATE_SET_COUNTDOWN:
-#if 0 /* {{{ */
-    ldi   ZL, lo8(DHCP_ADDRESS_TIME)
-    ldi   ZH, hi8(DHCP_ADDRESS_TIME)
-    ldi   TMP_REG1, 4
-    /* Dividing by 2 by rotating right through carry across all 4 bytes */
-    clc /* clean carry for first ror */
-DHCP_IN_BOUND_STATE_SET_COUNTDOWN_LOOP:
-    ld    TMP_REG2, Z+
-    ror   TMP_REG2
-    std   Z + (DHCP_SECONDS - DHCP_ADDRESS_TIME - 1), TMP_REG2
-    dec   TMP_REG1
-    brne  DHCP_IN_BOUND_STATE_SET_COUNTDOWN_LOOP
-#elif 0
-    ldi   YL, lo8(DHCP_ADDRESS_TIME)
-    ldi   YH, hi8(DHCP_ADDRESS_TIME)
-    ldi   ZL, lo8(DHCP_SECONDS)
-    ldi   ZH, hi8(DHCP_SECONDS)
-    ldi   ARG_REG1, 1
-    ldi   ARG_REG2, 4
-    rcall DIV_RIGHT_SHIFT
-    ldi   TMP_REG1, (1 << DHCP_ADDRESS_TIME_SCHEME_SET)
-    sts   DHCP_ADDRESS_TIME_STATE_N_DEC, TMP_REG1
-#else /* }}} */
-    cbr   TMP_REG1, (1 << DHCP_ADDRESS_TIME_STATE_N_DEC_SET)
-    sts   DHCP_ADDRESS_TIME_STATE_N_DEC, TMP_REG1
-    ldi   ZL, lo8(DHCP_ADDRESS_TIME)
-    ldi   ZH, hi8(DHCP_ADDRESS_TIME)
-    ldi   COUNTER_REG, 4
-DHCP_IN_BOUND_STATE_SET_COUNTDOWN_LOOP:
-    ld    TMP_REG2, Z+
-    std   Z + (DHCP_SECONDS - DHCP_ADDRESS_TIME - 1), TMP_REG2
-    dec   COUNTER_REG
-    brne  DHCP_IN_BOUND_STATE_SET_COUNTDOWN_LOOP
-#endif
-DHCP_IN_BOUND_STATE_COUNTDOWN:
-    /* Start from least significant byte.
-     * Subtract 1 from first byte, then subtract zero.
-     * All subtraction are with carry
-     */
-    /* Loading 1 address beyond because of ld with pre-decrement */
-    ldi   ZL, lo8(DHCP_SECONDS + 4)
-    ldi   ZH, hi8(DHCP_SECONDS + 4)
-    ldi   COUNTER_REG, 4
-    lds   TMP_REG2, DHCP_ADDRESS_TIME_STATE_N_DEC
-    clc
-DHCP_IN_BOUND_DEC:
-    ld    TMP_REG1, -Z
-    sbc   TMP_REG1, TMP_REG2
-    clr   TMP_REG2
-    st    Z, TMP_REG1
-    dec   COUNTER_REG
-    brne  DHCP_IN_BOUND_DEC
     /* After subtract 0 from the 3 MSB, check the Carry, if set, then go to
      * renewing state */
-    brcc  KEEP_WAITING_ON_BOUND_STATE
+    rcall DHCP_TIMERS
+    brcc  DHCP_IN_BOUND_STATE_EXIT
+    /* Change DHCP state */
     ldi   TMP_REG1, (1 << DHCP_STATE_RENEWING)
     sts   DHCP_STATE, TMP_REG1
-KEEP_WAITING_ON_BOUND_STATE:
+    mov   DHCP_STATE_R, TMP_REG1
+    rjmp  DHCP_TIMER_LAP_COMPLETED
+DHCP_IN_BOUND_STATE_EXIT:
     rjmp  DHCP_EXIT_SUCCESS
     /* }}} */
 DHCP_IN_RENEWING_STATE: /* {{{ */
+DHCP_IN_REBIDING_STATE:
+    /* read: DHCPREQUEST generated during RENEWING state (rfc2131) */
+    rcall DHCP_TIMERS
+    brcc  DHCP_IN_RENEWING_STATE_EXIT
+DHCP_TIMER_LAP_COMPLETED:
     /* Increase XID for renewing {{{ */
     lds   TMP_REG1, DHCP_XID_LAST_BYTE
     inc   TMP_REG1
     sts   DHCP_XID_LAST_BYTE, TMP_REG1
     /* }}} */
-    /* read: DHCPREQUEST generated during RENEWING state (rfc2131) */
-//    lds   TMP_REG1, TIMER1_SECONDS
-//    andi  TMP_REG1, 0x07 /* FIXME, sending request every 8 seconds */
-//    brne  DHCP_IN_RENEWING_STATE_EXIT
     rcall DHCP_SEND
-DHCP_IN_RENEWING_STATE_EXIT:
+    /* Check if Y still pointing to T1 */
+    lds   TMP_REG1, SRAM_DHCP_TIMER_SUBTRAHEND_PTR_L
+    cbr   TMP_REG1, (1 << DHCP_TIMER_LAP)
+    cpi   TMP_REG1, EEPROM_DHCP_TIMERS_T2
+    brlo  STILL_IN_T1
+    cpi   TMP_REG1, EEPROM_DHCP_TIMERS_END
+    brlo  STILL_IN_T2
+    /* Beyond T2, which means no more timers, go to DHCP init state */
+    ldi   TMP_REG1, (1 << DHCP_STATE_INIT)
+    sts   DHCP_STATE, TMP_REG1
     rjmp  DHCP_EXIT_SUCCESS
-    /* }}} */
-DHCP_IN_REBIDING_STATE: /* {{{ */
+STILL_IN_T2: /* change state */
+    ldi   TMP_REG1, (1 << DHCP_STATE_REBIDING)
+    sts   DHCP_STATE, TMP_REG1
+STILL_IN_T1: /* nothing to do */
+DHCP_IN_RENEWING_STATE_EXIT:
     rjmp  DHCP_EXIT_SUCCESS
     /* }}} */
 DHCP_IN_INIT_REBOOT_STATE: /* {{{ */
@@ -253,8 +228,6 @@ DHCP_EXIT_SUCCESS:
  * DHCP_INIT, this routine initialize DHCP {{{
  ******************************************************************************/
 DHCP_INIT:
-    ldi   TMP_REG1, (1 << DHCP_ADDRESS_TIME_SCHEME_INIT)
-    sts   DHCP_ADDRESS_TIME_STATE_N_DEC, TMP_REG1
     /* Should I initialize to ZERO ? */
     // sts   DHCP_XID_LAST_BYTE, TMP_REG1
     /* Check if our current IP in the EEPROM was set */
@@ -488,6 +461,8 @@ DHCP_REQUEST_IP_SET_HEADER_LOOP_5:
     rjmp  DHCP_END_OP
     sbrc  DHCP_STATE_R, DHCP_STATE_RENEWING
     rjmp  DHCP_END_OP
+    sbrc  DHCP_STATE_R, DHCP_STATE_REBIDING
+    rjmp  DHCP_END_OP
     /* }}} */
 DHCP_REQUEST_OPS: /* DHCP Request options {{{ */
     ldi   YL, lo8(EEPROM_DHCP_REQUEST_OPS)
@@ -644,8 +619,8 @@ TRY_DHCP_ACK:
     /* Set states {{{ */
     ldi   TMP_REG1, (1 << DHCP_STATE_BOUND)
     sts   DHCP_STATE, TMP_REG1
-    ldi   TMP_REG1, (1 << DHCP_ADDRESS_TIME_SCHEME_INIT)
-    sts   DHCP_ADDRESS_TIME_STATE_N_DEC, TMP_REG1
+    ldi   TMP_REG1, (1 << DHCP_TIMER_LAP) | EEPROM_DHCP_TIMERS
+    sts   SRAM_DHCP_TIMER_SUBTRAHEND_PTR_L, TMP_REG1
     /* }}} */
     rjmp  KEEP_READING_DHCP_OPTIONS
     /* }}} */
@@ -723,5 +698,57 @@ DHCP_OP_READ_CONTENT:
     /* }}} */
 /* }}} */
 
+/*******************************************************************************
+ * Timer handlers {{{
+ * Carry will be set when timer expires
+ ******************************************************************************/
 DHCP_TIMERS:
+    lds   YL, SRAM_DHCP_TIMER_SUBTRAHEND_PTR_L
+    sbrc  YL, DHCP_TIMER_LAP
+    rjmp  DHCP_SET_COUNTDOWN
+    rjmp  DHCP_COUNTDOWN
+DHCP_SET_COUNTDOWN:
+    /* Clear lap bit, increment pointer by 1 {{{ */
+    cbr   YL, (1 << DHCP_TIMER_LAP)
+    sts   SRAM_DHCP_TIMER_SUBTRAHEND_PTR_L, YL
+    /* }}} */
+    /* Copy lease time to dhcp seconds {{{ */
+    ldi   ZL, lo8(DHCP_ADDRESS_TIME)
+    ldi   ZH, hi8(DHCP_ADDRESS_TIME)
+    ldi   COUNTER_REG, 4
+DHCP_SET_COUNTDOWN_LOOP:
+    ld    TMP_REG2, Z+
+    std   Z + (DHCP_SECONDS - DHCP_ADDRESS_TIME - 1), TMP_REG2
+    dec   COUNTER_REG
+    brne  DHCP_SET_COUNTDOWN_LOOP
+    /* }}} */
+DHCP_COUNTDOWN:
+    /* Start from least significant byte.
+     * Subtract 1 from first byte, then subtract zero.
+     * All subtraction are with carry
+     */
+    /* Loading 1 address beyond because of ld with pre-decrement */
+    ldi   ZL, lo8(DHCP_SECONDS + 4)
+    ldi   ZH, hi8(DHCP_SECONDS + 4)
+    ldi   COUNTER_REG, 4
+    clr   YH
+    rcall EEPROM_READ_N_INC
+    clc
+DHCP_TIMERS_DEC:
+    ld    TMP_REG1, -Z
+    sbc   TMP_REG1, RETURN_VALUE
+    clr   RETURN_VALUE
+    st    Z, TMP_REG1
+    dec   COUNTER_REG
+    brne  DHCP_TIMERS_DEC
+    /* After subtraction, Check if underflow, if so, then set
+     * DHCP_TIMER_LAP so DHCP packet is sent and next time
+     * DHCP_TIMERS is called, then the timer is reset */
+    brcc  DHCP_TIMERS_EXIT
+    lds   TMP_REG1, SRAM_DHCP_TIMER_SUBTRAHEND_PTR_L
+    inc   YL
+    sbr   TMP_REG1, (1 << DHCP_TIMER_LAP)
+    sts   SRAM_DHCP_TIMER_SUBTRAHEND_PTR_L, TMP_REG1
+DHCP_TIMERS_EXIT:
     ret
+/* }}} */
