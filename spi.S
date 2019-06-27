@@ -30,11 +30,9 @@
  * - SPR1 set, clock rate fck/64
  ******************************************************************************/
 SPI_MASTER_INIT:
-    SPI_END_LCD
     SPI_END_ETH
     ldi TMP_REG2, ((1 << SPI_MOSI_BIT) | \
                    (1 << SPI_SCK_BIT)  | \
-                   (1 << SPI_SS_LCD)   | \
                    (1 << SPI_SS_ETH))
     out _SFR_IO_ADDR(SPI_MOSI_DDR), TMP_REG2
     ldi TMP_REG2, (1 << SPE)|(1 << MSTR)|SPI_SCK
@@ -45,11 +43,10 @@ SPI_MASTER_INIT:
  * Init SPI {{{
  * We need to:
  * - SS must be set previous to this routine
- * - Being lazy, setting both slave off after every transmission
  * - Set data in register SPSR
  * - Wait for transmission to finish
  * - ? handle interrupt ?
- * - Clear SS
+ * - SS should be clear on the caller
  ******************************************************************************/
 SPI_MASTER_TRANSMIT:
     /* Start transmission of data on (ARG_REG1) */
@@ -60,11 +57,9 @@ SPI_WAIT_TRANSMIT:
     sbis _SFR_IO_ADDR(SPSR), SPIF
     rjmp SPI_WAIT_TRANSMIT
 
-    /* TODO: remove this part */
-    ; Clear SS for both slaves
-    //SPI_END_LCD
-
     /* Get received message */
     in RETURN_VALUE, _SFR_IO_ADDR(SPDR)
     ret
 /* }}} */
+
+.end

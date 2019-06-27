@@ -2,6 +2,11 @@
 #ifndef _IPV4_H_
 #define _IPV4_H_
 
+#define IPV4_ADDR_LEN                        4
+#define IPV4_MAX_HEADER_LEN                 60
+#define IPV4_DEFAULT_HEADER_LEN             20
+#define IPV4_PAYLOAD_LEN                   200
+
 /* IPv4 header  {{{
     0               1               2               3
     1 2 3 4 5 6 7 8 1 2 3 4 5 6 7 8 1 2 3 4 5 6 7 8 1 2 3 4 5 6 7 8

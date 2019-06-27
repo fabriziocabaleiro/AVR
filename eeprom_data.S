@@ -1,6 +1,8 @@
 /* vim: set filetype=S foldmethod=marker: */
 #include "dhcp.h"
 
+.section .data
+
 EEPROM_MAC_ADDR: /* {{{ */
     .byte 0xFA
     .byte 0xB2
@@ -114,3 +116,5 @@ EEPROM_DEBUG_PREFIX: /* {{{ */
     .byte 0xAB
     .byte 0xAB
 EEPROM_DEBUG: /* }}} */
+
+.end

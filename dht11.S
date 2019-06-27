@@ -1,6 +1,7 @@
 /* vim: set filetype=S foldmethod=marker: */
 .NOLIST
 #include <avr/io.h>
+#include "dht11.h"
 #include "defs.h"
 .LIST
 
@@ -9,8 +10,14 @@
 .global DHT11_INT1_vect
 .global TIMER2_OVF_vect
 
-/* Tested At 1MHz */
+.global SRAM_DHT11_PAYLOAD
 
+.section .data
+SRAM_DHT11_PAYLOAD: .skip DHT11_PAYLOAD_LEN
+
+.section .text
+
+/* Tested At 1MHz */
 /*******************************************************************************
  * Macros {{{
  ******************************************************************************/
@@ -66,7 +73,7 @@ DHT11_SETUP:
 /* }}} */
 /*******************************************************************************
  * Read data from sensor {{{
- * Data is store in DHT11_PAYLOAD
+ * Data is store in SRAM_DHT11_PAYLOAD
  * Interrupt are used with falling edge
  * BEWARE: Idle is the only sleep mode that support edge interrupts
  ******************************************************************************/
@@ -119,8 +126,8 @@ DHT11_READ_WAIT_START_SIGNAL:
     sbr   TMP_REG2, (1 << INT1)
     out   _SFR_IO_ADDR(GICR), TMP_REG2
 
-    ldi   ZH, hi8(DHT11_PAYLOAD)
-    ldi   ZL, lo8(DHT11_PAYLOAD)
+    ldi   ZH, hi8(SRAM_DHT11_PAYLOAD)
+    ldi   ZL, lo8(SRAM_DHT11_PAYLOAD)
 
     /* Set bitfield to call DHT11 handle on interrupt */
     lds   TMP_REG1, BIT_FIELD_1
@@ -202,3 +209,5 @@ DHT11_INT1_vect_EXIT:
 /* }}} */
 
 #undef DHT11_COUNTER
+
+.end

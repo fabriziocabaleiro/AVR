@@ -10,10 +10,21 @@
 .global INTERNET_CHECKSUM_RFC1071
 .global IPV4_PREPARE_DEFAULT_HEADER_20_40_BYTES
 
-#define DATA    TMP_REG2
-#define IPV4_HEADER_BITFIELD_REG R1
-#pragma GCC poison R1
+.global SRAM_IPV4_IHL_IN_BYTES
+.global SRAM_IPV4_HEADER
+.global SRAM_IPV4_PAYLOAD
+.global SRAM_IP_ADDR_DST
 
+.section .data
+SRAM_IPV4_HEADER:       .skip   IPV4_MAX_HEADER_LEN
+SRAM_IPV4_PAYLOAD:      .skip   IPV4_PAYLOAD_LEN
+SRAM_IPV4_IHL_IN_BYTES: .skip   1
+/* This is the default IP address to send packages to,
+ * it should be set by password authentication or something else, but, for now,
+ * just assigning it through ping request */
+SRAM_IP_ADDR_DST:       .skip   IPV4_ADDR_LEN
+
+.section .text
 /*******************************************************************************
  * Handle IPv4 packet {{{
  * Check protocol (tcp, udp, etc) and port to deliver to corresponding routine
@@ -24,8 +35,8 @@ IPV4_HANDLE_PKT:
     push  ZL
 
     /* Read IPv4 Header {{{ */
-    ldi   ZL, lo8(IPV4_HEADER)
-    ldi   ZH, hi8(IPV4_HEADER)
+    ldi   ZL, lo8(SRAM_IPV4_HEADER)
+    ldi   ZH, hi8(SRAM_IPV4_HEADER)
     rcall ETH_READ_BUFFER_START
 
     /* Read the first byte, which contains the version and the header length,
@@ -46,7 +57,7 @@ PACKET_IS_IPV4:
     lsl   COUNTER_REG
     lsl   COUNTER_REG
     /* Taking the chance to store the Internet Header Length in bytes */
-    sts   IPV4_IHL_IN_BYTES, COUNTER_REG
+    sts   SRAM_IPV4_IHL_IN_BYTES, COUNTER_REG
     /* We already read one byte (version|IHL), so, subtract 1 */
     subi  COUNTER_REG, 1
     /* Read the rest of the IPv4 header */
@@ -70,8 +81,8 @@ READ_HEADER:
     clr   TMP_REG2 /* Using nibble to check My IP addr or Broadcast */
     ldi   YH, hi8(EEPROM_IP_ADDR)
     ldi   YL, lo8(EEPROM_IP_ADDR)
-    ldi   ZL, lo8(IPV4_HEADER)
-    ldi   ZH, hi8(IPV4_HEADER)
+    ldi   ZL, lo8(SRAM_IPV4_HEADER)
+    ldi   ZH, hi8(SRAM_IPV4_HEADER)
     ldi   COUNTER_REG, IPV4_SIZE_IN_BYTES
 CHECK_IP_ADDR:
     rcall EEPROM_READ_N_INC
@@ -155,7 +166,6 @@ INTERNET_CHECKSUM_RFC1071:
     push  ZL
     push  ZH
     push  ARG_REG1
-    push  DATA
 
     clr   YL
     clr   YH
@@ -164,27 +174,26 @@ INTERNET_CHECKSUM_RFC1071:
     clc   /* Clear any carry from before */
 
 IPV4_PING_CHECKSUM_LOOP:
-    ld    DATA, Z+
-    adc   YH, DATA
-    ld    DATA, Z+
-    adc   YL, DATA
+    ld    TMP_REG1, Z+
+    adc   YH, TMP_REG1
+    ld    TMP_REG1, Z+
+    adc   YL, TMP_REG1
     dec   ARG_REG1
     brne  IPV4_PING_CHECKSUM_LOOP
 
     brcc  IPV4_PING_CHECKSUM_END
     /* If the last addition generated a Carry, then add zero with carry, which
      * could also generate a Carry into YH, so, add zero with carry as well */
-    clr   DATA
+    clr   TMP_REG1
 IPV4_PING_CHECKSUM_REMAINING_CARRY:
-    adc   YH, DATA
-    adc   YL, DATA
+    adc   YH, TMP_REG1
+    adc   YL, TMP_REG1
     brcs  IPV4_PING_CHECKSUM_REMAINING_CARRY
 
 IPV4_PING_CHECKSUM_END:
     com   YL
     com   YH
 
-    pop   DATA
     pop   ARG_REG1
     pop   ZH
     pop   ZL
@@ -206,8 +215,8 @@ IPV4_PREPARE_DEFAULT_HEADER_20_40_BYTES:
     ldi   YH, hi8(EEPROM_IP_HEADER)
     ldi   COUNTER_REG, (EEPROM_IP_HEADER_TIL_CHK_SUM - EEPROM_IP_HEADER)
     /* Write to */
-    ldi   ZL, lo8(IPV4_HEADER)
-    ldi   ZH, hi8(IPV4_HEADER)
+    ldi   ZL, lo8(SRAM_IPV4_HEADER)
+    ldi   ZH, hi8(SRAM_IPV4_HEADER)
 IPV4_PREPARE_HEADER_GET_FROM_EEPROM:
     rcall EEPROM_READ_N_INC
     st    Z+, RETURN_VALUE
@@ -231,8 +240,8 @@ IPV4_PREPARE_HEADER_GET_IP_FROM_EEPROM:
     brne  IPV4_PREPARE_HEADER_GET_IP_FROM_EEPROM
 
     /* DST IP Address */
-    ldi   YL, lo8(IP_ADDR_DST)
-    ldi   YH, hi8(IP_ADDR_DST)
+    ldi   YL, lo8(SRAM_IP_ADDR_DST)
+    ldi   YH, hi8(SRAM_IP_ADDR_DST)
     ldi   COUNTER_REG, IPV4_SIZE_IN_BYTES
 IPV4_PREPARE_HEADER_GET_IP_FROM_EEPROM_DST:
     ld    TMP_REG1, Y+
@@ -241,8 +250,8 @@ IPV4_PREPARE_HEADER_GET_IP_FROM_EEPROM_DST:
     brne  IPV4_PREPARE_HEADER_GET_IP_FROM_EEPROM_DST
 
     /* Update Total length and calculate Checksum */
-    ldi   ZL, lo8(IPV4_HEADER)
-    ldi   ZH, hi8(IPV4_HEADER)
+    ldi   ZL, lo8(SRAM_IPV4_HEADER)
+    ldi   ZH, hi8(SRAM_IPV4_HEADER)
     std   Z + (IPV4_TOTAL_LENGTH + 1), ARG_REG1
 
     ldi   ARG_REG1, IPV4_DEFAULT_HEADER_LEN
@@ -259,3 +268,4 @@ IPV4_PREPARE_HEADER_GET_IP_FROM_EEPROM_DST:
     ret
 /* }}} */
 
+.end

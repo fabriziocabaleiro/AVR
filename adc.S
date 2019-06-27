@@ -8,6 +8,13 @@
 .global ADC_DISABLE
 .global ADC_vect
 
+.global SRAM_MQ135_PAYLOAD
+
+.section .data
+SRAM_MQ135_PAYLOAD: .skip MQ135_PAYLOAD_LEN
+
+.section .text
+
 /*******************************************************************************
  * ADC prescaler documentation {{{
  *******************************************************************************
@@ -81,12 +88,14 @@ ADC_vect:
     push  TMP_REG1
 
     in    TMP_REG1, _SFR_IO_ADDR(ADCL)
-    sts   MQ135_PAYLOAD + 1, TMP_REG1
+    sts   SRAM_MQ135_PAYLOAD + 1, TMP_REG1
     in    TMP_REG1, _SFR_IO_ADDR(ADCH)
-    sts   MQ135_PAYLOAD + 0, TMP_REG1
+    sts   SRAM_MQ135_PAYLOAD + 0, TMP_REG1
 
     pop   TMP_REG1
     out   _SFR_IO_ADDR(SREG), TMP_REG1
     pop   TMP_REG1
     reti
 /* }}} */
+
+.end

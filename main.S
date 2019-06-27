@@ -7,13 +7,20 @@
 #include <avr/interrupt.h>
 #include "defs.h"
 #include "enc28j60.h"
+#include "timer.h"
 .LIST
 
-.section .text
 .global main
 .global INT0_vect
 .global INT1_vect
 .global TIMER0_OVF_vect
+
+.global BIT_FIELD_1
+
+.section .data
+BIT_FIELD_1: .skip 1
+
+.section .text
 
 /*******************************************************************************
  * main, initialize everything {{{
@@ -24,18 +31,12 @@ main:
      */
 
     /* Set LED errors */
-    CLR_LED0
-    CLR_LED1
     ERR_SET_DDR
     DDR_LED0
     DDR_LED1
 
     /* Zero out SRAM */
-    rcall SRAM_TO_ZERO
-
-    /* Clear bitfields in SRAM */
-    clr   TMP_REG1
-    sts   BIT_FIELD_1, TMP_REG1
+    rcall ZERO_OUT_SRAM
 
     /* Set global interrupt enable, sleep mode and sleep enable */
     in    TMP_REG1, _SFR_IO_ADDR(MCUCR)
@@ -59,8 +60,6 @@ main:
     rcall SPI_MASTER_INIT
     rcall ETH_INIT
 
-    clr   DEBUG_REG_COUNT
-
     /* Enable external interrupt 0 and 1 */
     in    TMP_REG1, _SFR_IO_ADDR(GICR)
     sbr   TMP_REG1, (1 << INT1)|(1 << INT0)
@@ -83,11 +82,11 @@ LOOP:
     cbr   TMP_REG1, (1 << INT0)
     out   _SFR_IO_ADDR(GICR), TMP_REG1
     /* }}} */
-    lds   TMP_REG1, TIMER1_EVENTS
+    lds   TMP_REG1, SRAM_TIMER1_EVENTS
     sbrs  TMP_REG1, TIMER1_EVENTS_SECOND
     rjmp  LOOP
     cbr   TMP_REG1, (1 << TIMER1_EVENTS_SECOND)
-    sts   TIMER1_EVENTS, TMP_REG1
+    sts   SRAM_TIMER1_EVENTS, TMP_REG1
     rcall DHCP
     rjmp  LOOP
 /* }}} */
@@ -168,14 +167,14 @@ HANDLE_PACKET:
 
     rcall ETH_READ_MAC_ADDRS_N_LEN_TYPE
 
-    lds   TMP_REG2, RPKT_STATUS3
+    lds   TMP_REG2, SRAM_RPKT_STATUS3
     sbrs  TMP_REG2, RPKT_STATUS3_RECEIVE_BROADCAST_PACKET
     rjmp  CHK_RPKT_STATUS2
     /* Check if broadcast was sent by me {{{ */
     ldi   YH, hi8(EEPROM_MAC_ADDR)
     ldi   YL, lo8(EEPROM_MAC_ADDR)
-    ldi   ZH, hi8(MAC_ADDR_OTHER)
-    ldi   ZL, lo8(MAC_ADDR_OTHER)
+    ldi   ZH, hi8(SRAM_MAC_ADDR_OTHER)
+    ldi   ZL, lo8(SRAM_MAC_ADDR_OTHER)
     ldi   TMP_REG1, MAC_SIZE_IN_BYTES
 CHECK_BROADCAST_MAC_ADDR:
     rcall EEPROM_READ_N_INC
@@ -188,14 +187,14 @@ CHECK_BROADCAST_MAC_ADDR:
     rjmp  SKIP_ETH_PKT /* }}} */
 
 CHK_RPKT_STATUS2:
-    lds   TMP_REG2, RPKT_STATUS2
+    lds   TMP_REG2, SRAM_RPKT_STATUS2
     sbrc  TMP_REG2, RPKT_STATUS2_LENGTH_OUT_OF_RANGE
     rjmp  TYPE_LEN_TYPE
     rjmp  SKIP_ETH_PKT /* no support for type/length = length packets */
     /* }}} */
 TYPE_LEN_TYPE: /* {{{ */
-    lds   ZH, TYPE_LEN_H
-    lds   ZL, TYPE_LEN_L
+    lds   ZH, SRAM_TYPE_LEN_H
+    lds   ZL, SRAM_TYPE_LEN_L
 TYPE_LEN_IPV4: /* {{{ */
     /* Check Type/Len is IPv4 or jump to next type/len */
     cpi   ZH, hi8(ETHER_TYPE_IPV4)
@@ -224,17 +223,14 @@ TYPE_LEN_UNKNOWN: /* }}} */
 PACKET_END:
 SKIP_ETH_PKT:
     rcall ETH_PKT_PROCESSED
-#if 1 // {{{
+#if 0 // {{{
     // IF THIS BLOCK IS COMMENT, THEN PING DOESN'T WORK, REPLY HAS RUBBISH AT
     // THE END 
-    inc   DEBUG_REG_COUNT
-    sbrc  DEBUG_REG_COUNT, 5
     rjmp  SKIP_MESSAGE
 #ifdef USE_DHT11
     //rcall DHT11_READ
 #endif
-    // rcall SEND_PACKET
-    clr   DEBUG_REG_COUNT
+    //rcall SEND_PACKET
     //rcall DHCP_DISCOVER
 SKIP_MESSAGE:
 #endif // }}} 
@@ -251,12 +247,12 @@ RESET_ETH:
  ******************************************************************************/
 INT1_vect:
     /* Save and restore TMP_REG1 for EEPROM_COREDUMP */
-    sts   EEPROM_TMP_REG1_SAVE, TMP_REG1
+    sts   SRAM_EEPROM_TMP_REG1_SAVE, TMP_REG1
     push  TMP_REG1
     in    TMP_REG1, _SFR_IO_ADDR(SREG)
-    sts   EEPROM_SREG, TMP_REG1
+    sts   SRAM_EEPROM_SREG, TMP_REG1
     push  TMP_REG1
-    lds   TMP_REG1, EEPROM_TMP_REG1_SAVE
+    lds   TMP_REG1, SRAM_EEPROM_TMP_REG1_SAVE
 
 /* TODO: Fix connections in breadboard */
 //    /* Deliver interrupt to corresponding routine */
@@ -313,15 +309,17 @@ TIMER0_OVF_vect:
 /*******************************************************************************
  * Zero out SRAM {{{
  ******************************************************************************/
-SRAM_TO_ZERO:
+ZERO_OUT_SRAM:
     ldi   ZL, lo8(RAMSTART)
     ldi   ZH, hi8(RAMSTART)
     clr   TMP_REG1
-SRAM_TO_ZERO_LOOP:
+ZERO_OUT_SRAM_LOOP:
     st    Z+, TMP_REG1
     cpi   ZL, lo8(RAMEND - 2)
-    brne  SRAM_TO_ZERO_LOOP
+    brne  ZERO_OUT_SRAM_LOOP
     cpi   ZH, hi8(RAMEND - 2)
-    brne  SRAM_TO_ZERO_LOOP
+    brne  ZERO_OUT_SRAM_LOOP
     ret
  /* }}} */
+
+.end

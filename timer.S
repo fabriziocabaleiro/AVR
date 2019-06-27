@@ -2,10 +2,14 @@
 .NOLIST
 #include <avr/io.h>
 #include "defs.h"
+#include "timer.h"
 .LIST
 
 .global TIMER_INIT
 .global TIMER1_COMPA_vect
+
+.global SRAM_TIMER1_SECONDS
+.global SRAM_TIMER1_EVENTS
 
 #ifndef F_CPU
 #   error "CPU frequency not specified, cannot calculate timer parameters"
@@ -22,6 +26,12 @@
 #else
 #   error "Unsupported F_CPU value"
 #endif
+
+.section .data
+SRAM_TIMER1_SECONDS: .skip 4
+SRAM_TIMER1_EVENTS:  .skip 1
+
+.section .text
 /*******************************************************************************
  *  {{{
  * With a prescaler of 1024 and a OCR1A of 7812, then we will have a match every
@@ -45,10 +55,10 @@ TIMER_INIT:
     out   _SFR_IO_ADDR(TIMSK), TMP_REG1
 
     clr   TMP_REG1
-    sts   TIMER1_SECONDS + 0, TMP_REG1
-    sts   TIMER1_SECONDS + 1, TMP_REG1
-    sts   TIMER1_SECONDS + 2, TMP_REG1
-    sts   TIMER1_SECONDS + 3, TMP_REG1
+    sts   SRAM_TIMER1_SECONDS + 0, TMP_REG1
+    sts   SRAM_TIMER1_SECONDS + 1, TMP_REG1
+    sts   SRAM_TIMER1_SECONDS + 2, TMP_REG1
+    sts   SRAM_TIMER1_SECONDS + 3, TMP_REG1
 
     ret
 /* }}} */
@@ -65,13 +75,13 @@ TIMER1_COMPA_vect:
     push  YL
     push  YH
 
-    ldi   YL, lo8(TIMER1_SECONDS)
-    ldi   YH, hi8(TIMER1_SECONDS)
+    ldi   YL, lo8(SRAM_TIMER1_SECONDS)
+    ldi   YH, hi8(SRAM_TIMER1_SECONDS)
     ldi   TMP_REG2, TIMER1_SECONDS_LEN
 INC_SECONDS:
     ld    TMP_REG1, Y+
     inc   TMP_REG1
-    sts   TIMER1_SECONDS, TMP_REG1
+    sts   SRAM_TIMER1_SECONDS, TMP_REG1
     brne  TIMER1_SET_EVENTS
     /* if overflow, then increment next byte */
     dec   TMP_REG2
@@ -80,9 +90,9 @@ INC_SECONDS:
 
 TIMER1_SET_EVENTS:
 
-    lds   TMP_REG1, TIMER1_EVENTS
+    lds   TMP_REG1, SRAM_TIMER1_EVENTS
     sbr   TMP_REG1, (1 << TIMER1_EVENTS_SECOND)
-    sts   TIMER1_EVENTS, TMP_REG1
+    sts   SRAM_TIMER1_EVENTS, TMP_REG1
 
     pop   YH
     pop   YL
@@ -93,3 +103,5 @@ TIMER1_SET_EVENTS:
 
     reti
 /* }}} */
+
+.end

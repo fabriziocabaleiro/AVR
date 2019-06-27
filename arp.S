@@ -6,9 +6,15 @@
 #include "arp.h"
 .LIST
 
-#define DATA1   TMP_REG2
+#define DATA1            TMP_REG2
+#define ARP_PAYLOAD_LEN  28
 
 .global ARP_HANDLE_PKT
+
+.section .data
+ARP_PAYLOAD: .skip ARP_PAYLOAD_LEN
+
+.section .text
 
 /*******************************************************************************
  * Handle ARP packet {{{
@@ -45,8 +51,8 @@ ARP_PROCESS_READ_PAYLOAD:
     push  YH
     ldi   ZL, lo8(ARP_PAYLOAD + ARP_SPA)
     ldi   ZH, hi8(ARP_PAYLOAD + ARP_SPA)
-    ldi   YL, lo8(IP_ADDR_DST)
-    ldi   YH, hi8(IP_ADDR_DST)
+    ldi   YL, lo8(SRAM_IP_ADDR_DST)
+    ldi   YH, hi8(SRAM_IP_ADDR_DST)
     ldi   TMP_REG2, IPV4_SIZE_IN_BYTES
 TMP_LABEL_000:
     ld    RETURN_VALUE, Z+
@@ -133,3 +139,5 @@ ARP_PROCESS_EXIT_SUCCESS:
     pop   ZH
     ret
 /* }}} */
+
+.end

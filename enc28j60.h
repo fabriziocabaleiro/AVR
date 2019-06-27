@@ -2,6 +2,14 @@
 #ifndef _ENC28J60_H_
 #define _ENC28J60_H_
 
+/* Addresses in SRAM are 11 bits long, first MSB of the MAC Dst pointer set to
+ * one means broadcast */
+#define ENC_MAC_DST_PTR_BROADCAST_BIT        7
+/* As above, if this bit is set, then TYPE/LEN is IPv4 */
+#define ENC_TYPE_LEN_PTR_IPv4                7
+
+#define RPKT_STATUS_VECTOR_LEN         6
+
 /* Common set of registers {{{ */
 /* INTIE PKTIE DMAIE LINKIE TXIE r TXERIE RXERIE 0000 0000 */
 #define ENC_COMMON_EIE         0x1B

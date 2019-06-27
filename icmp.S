@@ -14,7 +14,7 @@
 
 /*******************************************************************************
  * Handle ICMP packet {{{
- * Z has been set to IPV4_HEADER in the previous routine
+ * Z has been set to SRAM_IPV4_HEADER in the previous routine
  * Not supporting ping with total length greater than 255
  ******************************************************************************/
 ICMP_HANDLE_PKT:
@@ -44,12 +44,12 @@ SWAP_IP_ADDR:
 
     /* Read IPv4 payload */
     /* Calculate IPv4 payload length */
-    lds   COUNTER_REG, (IPV4_HEADER + IPV4_TOTAL_LENGTH + 1)
-    lds   TMP_REG1, IPV4_IHL_IN_BYTES
+    lds   COUNTER_REG, (SRAM_IPV4_HEADER + IPV4_TOTAL_LENGTH + 1)
+    lds   TMP_REG1, SRAM_IPV4_IHL_IN_BYTES
     sub   COUNTER_REG, TMP_REG1
     /* Plus 1 as we already read ICMP MSG TYPE */
-    ldi   ZL, lo8(IPV4_PAYLOAD + 1)
-    ldi   ZH, hi8(IPV4_PAYLOAD + 1)
+    ldi   ZL, lo8(SRAM_IPV4_PAYLOAD + 1)
+    ldi   ZH, hi8(SRAM_IPV4_PAYLOAD + 1)
 READ_PAYLOAD:
     ETH_READ_NEXT_BYTE
     st    Z+, RETURN_VALUE
@@ -61,9 +61,9 @@ READ_PAYLOAD:
     rcall ETH_WRITE_BUFFER_PACKET_HEADER
 
     /* Write IPv4 Header into transmit buffer */
-    ldi   ZL, lo8(IPV4_HEADER)
-    ldi   ZH, hi8(IPV4_HEADER)
-    lds   ARG_REG1, IPV4_IHL_IN_BYTES
+    ldi   ZL, lo8(SRAM_IPV4_HEADER)
+    ldi   ZH, hi8(SRAM_IPV4_HEADER)
+    lds   ARG_REG1, SRAM_IPV4_IHL_IN_BYTES
     /* Taking the change to store IPv4 Total Length */
     ldd   IPV4_TOTAL_LENGTH_REG, Z + IPV4_TOTAL_LENGTH + 1
     rcall ETH_WRITE_Z_TO_TRANSMIT_BUFFER
@@ -73,14 +73,14 @@ READ_PAYLOAD:
      * packet into SRAM, now, we are modifying what we read to be sent as ICMP
      * reply, setting first byte for reply */
     ldi   TMP_REG1, ICMP_MSG_TYPE_ECHO_REPLY
-    sts   IPV4_PAYLOAD, TMP_REG1
+    sts   SRAM_IPV4_PAYLOAD, TMP_REG1
 
     /* Calculate ICMP packet size (IPv4 total length - IHL (in bytes)) */
-    lds   TMP_REG1, IPV4_IHL_IN_BYTES
+    lds   TMP_REG1, SRAM_IPV4_IHL_IN_BYTES
     sub   IPV4_TOTAL_LENGTH_REG, TMP_REG1
     mov   ARG_REG1, IPV4_TOTAL_LENGTH_REG
-    ldi   ZL, lo8(IPV4_PAYLOAD)
-    ldi   ZH, hi8(IPV4_PAYLOAD)
+    ldi   ZL, lo8(SRAM_IPV4_PAYLOAD)
+    ldi   ZH, hi8(SRAM_IPV4_PAYLOAD)
 
     /* Could check that received checksum is correct, but, why should I care? */
     /* Clear received checksum */
@@ -105,3 +105,7 @@ IPV4_RESPONSE_IF_PING_END:
     pop   COUNTER_REG
     ret
 /* }}} */
+
+#undef IPV4_TOTAL_LENGTH_REG
+
+.end

@@ -27,6 +27,37 @@
 .global ETH_MOVE_READ_POINTER
 .global ETH_GET_EWRPT_BANK0_TO_Z
 
+.global SRAM_ENC_HEADER
+.global SRAM_MAC_ADDR_OTHER
+.global SRAM_TYPE_LEN_H
+.global SRAM_TYPE_LEN_L
+.global SRAM_RPKT_STATUS2
+.global SRAM_RPKT_STATUS3
+.global SRAM_ENC_MAC_DST_PTR
+.global SRAM_ENC_TYPE_LEN_PTR
+
+.section .data
+/* Status vector, added by ENC28J60 HW before Ethernet header */
+SRAM_RPKT_N_PKT_L:      .skip 1
+SRAM_RPKT_N_PKT_H:      .skip 1
+SRAM_RPKT_BYTE_COUNT_L: .skip 1
+SRAM_RPKT_BYTE_COUNT_H: .skip 1
+SRAM_RPKT_STATUS2:      .skip 1
+SRAM_RPKT_STATUS3:      .skip 1
+/* Ethernet header, this fields are updated every time we start processing a
+ * packet */
+SRAM_ENC_HEADER:
+MAC_ADDR_MYSELF:        .skip 6
+SRAM_MAC_ADDR_OTHER:    .skip 6
+SRAM_TYPE_LEN_H:        .skip 1
+SRAM_TYPE_LEN_L:        .skip 1
+/* Pointer to Dst MAC address */
+SRAM_ENC_MAC_DST_PTR:   .skip 2
+/* Pointer to TYPE/LEN value */
+SRAM_ENC_TYPE_LEN_PTR:  .skip 2
+
+.section .text
+
 /*******************************************************************************
  * Initialize everything {{{
  ******************************************************************************/
@@ -412,8 +443,8 @@ ETH_READ_RECEIVE_HEADER:
 
     /* Read the whole receive status vector */
     ldi   COUNTER_REG, RPKT_STATUS_VECTOR_LEN
-    ldi   ZH, hi8(RPKT_N_PKT_L)
-    ldi   ZL, lo8(RPKT_N_PKT_L)
+    ldi   ZH, hi8(SRAM_RPKT_N_PKT_L)
+    ldi   ZL, lo8(SRAM_RPKT_N_PKT_L)
 ETH_READ_RECEIVE_HEADER_LOOP:
     rcall SPI_MASTER_TRANSMIT
     st    Z+, RETURN_VALUE
@@ -431,14 +462,14 @@ ETH_READ_RECEIVE_HEADER_LOOP:
  ******************************************************************************/
 ETH_CHECK_RECEIVE_STATUS_VECTOR:
     /* Check Received packet status 3 {{{ */
-    lds  RETURN_VALUE, RPKT_STATUS3
+    lds  RETURN_VALUE, SRAM_RPKT_STATUS3
     /* Discard VLAN, Unknown Opcode, Pause Control Frame, Control Frame */
     andi RETURN_VALUE, ~((1 << RPKT_STATUS3_RECEIVE_BROADCAST_PACKET) | \
                          (1 << RPKT_STATUS3_RECEIVE_MULTICAST_PACKET) | \
                          (1 << RPKT_STATUS3_DRIBBLE_NIBBLE))
     /* }}} */
     /* Check Received packet status 2 {{{ */
-    lds  TMP_REG1, RPKT_STATUS2
+    lds  TMP_REG1, SRAM_RPKT_STATUS2
     /* If OK bit is not set, then, set MSB bit on RETURN_VALUE */
     sbrs TMP_REG1, RPKT_STATUS2_RECEIVED_OK
     sbr  RETURN_VALUE, 0x80
@@ -467,8 +498,8 @@ ETH_READ_MAC_ADDRS_N_LEN_TYPE:
 
     /* Mac address SRC/DST and Type/len is all continuous in memory */
     ldi   TMP_REG1, (MAC_SIZE_IN_BYTES + MAC_SIZE_IN_BYTES + 2)
-    ldi   ZH, hi8(ETH_HEADER)
-    ldi   ZL, lo8(ETH_HEADER)
+    ldi   ZH, hi8(SRAM_ENC_HEADER)
+    ldi   ZL, lo8(SRAM_ENC_HEADER)
 ETH_READ_MAC_ADDRS_N_LEN_TYPE_KEEP_READING:
     rcall SPI_MASTER_TRANSMIT
     st    Z+, RETURN_VALUE
@@ -477,15 +508,15 @@ ETH_READ_MAC_ADDRS_N_LEN_TYPE_KEEP_READING:
 
     /* Update Mac Addr Dst & Type/Len ptr */
     /* TODO: Could be done in other way */
-    ldi   TMP_REG1, hi8(MAC_ADDR_OTHER)
-    sts   ENC_MAC_DST_PTR + 0, TMP_REG1
-    ldi   TMP_REG1, lo8(MAC_ADDR_OTHER)
-    sts   ENC_MAC_DST_PTR + 1, TMP_REG1
+    ldi   TMP_REG1, hi8(SRAM_MAC_ADDR_OTHER)
+    sts   SRAM_ENC_MAC_DST_PTR + 0, TMP_REG1
+    ldi   TMP_REG1, lo8(SRAM_MAC_ADDR_OTHER)
+    sts   SRAM_ENC_MAC_DST_PTR + 1, TMP_REG1
 
-    ldi   TMP_REG1, hi8(TYPE_LEN_H)
-    sts   ENC_TYPE_LEN_PTR + 0, TMP_REG1
-    ldi   TMP_REG1, lo8(TYPE_LEN_H)
-    sts   ENC_TYPE_LEN_PTR + 1, TMP_REG1
+    ldi   TMP_REG1, hi8(SRAM_TYPE_LEN_H)
+    sts   SRAM_ENC_TYPE_LEN_PTR + 0, TMP_REG1
+    ldi   TMP_REG1, lo8(SRAM_TYPE_LEN_H)
+    sts   SRAM_ENC_TYPE_LEN_PTR + 1, TMP_REG1
 
     pop   ZH
     pop   ZL
@@ -503,11 +534,11 @@ ETH_PKT_PROCESSED:
 
     /* Move the RX Read Point to the next packet */
     ldi   ARG_REG1, ENC_BANK0_ERXRDPTL
-    lds   ARG_REG2, RPKT_N_PKT_L
+    lds   ARG_REG2, SRAM_RPKT_N_PKT_L
     rcall ETH_WRITE_CONTROL_REGISTER
 
     ldi   ARG_REG1, ENC_BANK0_ERXRDPTH
-    lds   ARG_REG2, RPKT_N_PKT_H
+    lds   ARG_REG2, SRAM_RPKT_N_PKT_H
     rcall ETH_WRITE_CONTROL_REGISTER
 
     /* Decrement received packet count */
@@ -517,18 +548,18 @@ ETH_PKT_PROCESSED:
 
     /* Move the Read Pointer to the next packet */
     ldi   ARG_REG1, ENC_BANK0_ERDPTL
-    lds   ARG_REG2, RPKT_N_PKT_L
+    lds   ARG_REG2, SRAM_RPKT_N_PKT_L
     rcall ETH_WRITE_CONTROL_REGISTER
 
     ldi   ARG_REG1, ENC_BANK0_ERDPTH
-    lds   ARG_REG2, RPKT_N_PKT_H
+    lds   ARG_REG2, SRAM_RPKT_N_PKT_H
     rcall ETH_WRITE_CONTROL_REGISTER
 
     ret
 /* }}} */
 /*******************************************************************************
  * Write message header, Per packet control byte + Mac addresses + Type/Len {{{
- * ENC_MAC_DST_PTR pointer to Dst MAC address
+ * SRAM_ENC_MAC_DST_PTR pointer to Dst MAC address
  *   As we have 1k of SRAM, only the 11 LSB are used for addresses, then we have
  *   5 MBS to encode other options.
  *     If MSB of the pointer is set, then, the address is not a pointer and the
@@ -601,8 +632,8 @@ ETH_WRITE_BUFFER_PACKET_HEADER:
     rcall SPI_MASTER_TRANSMIT
 
     /* Write Dst Mac address */
-    ldi   YH, hi8(ENC_MAC_DST_PTR)
-    ldi   YL, lo8(ENC_MAC_DST_PTR)
+    ldi   YH, hi8(SRAM_ENC_MAC_DST_PTR)
+    ldi   YL, lo8(SRAM_ENC_MAC_DST_PTR)
     ld    TMP_PTR_H, Y+    /* High address ptr */
     /* Check if MSB is set to broadcast */
     sbrc  TMP_PTR_H, ENC_MAC_DST_PTR_BROADCAST_BIT
@@ -640,8 +671,8 @@ ETH_WRITE_BUFFER_PACKET_HEADER_WRITE_SRC_MAC:
     brne  ETH_WRITE_BUFFER_PACKET_HEADER_WRITE_SRC_MAC
 
     /* Write Type/Len */
-    ldi   YH, hi8(ENC_TYPE_LEN_PTR)
-    ldi   YL, lo8(ENC_TYPE_LEN_PTR)
+    ldi   YH, hi8(SRAM_ENC_TYPE_LEN_PTR)
+    ldi   YL, lo8(SRAM_ENC_TYPE_LEN_PTR)
     ld    TMP_PTR_H, Y+    /* High address ptr */
     /* Check if MSB is IPv4 */
     sbrc  TMP_PTR_H, ENC_TYPE_LEN_PTR_IPv4
@@ -683,8 +714,6 @@ ETH_SET_LISTEN_ON_SPI:
     SPI_SELECT_ETH
     rcall SPI_MASTER_TRANSMIT
     ret
-
-#define ETH_END_LISTEN_ON_SPI SPI_END_ETH
 /* }}} */
 /*******************************************************************************
  * Write Payload {{{
@@ -1058,3 +1087,5 @@ DEBUG_OPT_END:
     ret
 #endif
 /* }}} */
+
+.end

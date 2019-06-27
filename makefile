@@ -2,10 +2,10 @@
 #                          ATmega8 + ENC28J60 + DHT11                          #
 ################################################################################
 OBJS = main.o         \
+       eeprom.o       \
        spi.o          \
        adc.o          \
        timer.o        \
-       eeprom.o       \
        dht11.o        \
        enc28j60.o     \
        arp.o          \
@@ -26,9 +26,9 @@ DEPOPTS = -MP -MD -MF ${DEPDIR}/$(notdir $@).d
 
 main.elf: $(addprefix ${OBJDIR}/, ${OBJS})
 	avr-gcc ${GCCOPT} $^ -o $@
-	avr-objcopy -O ihex -R .eeprom -R .fuse -R .lock -R .signature $@ main.hex
+	avr-objcopy -O ihex -R .data -R .eeprom -R .fuse -R .lock -R .signature $@ main.hex
 	@echo Sizes:
-	@avr-size -B main.hex
+	@avr-size -B $@
 	@avr-size -B $(addprefix ${OBJDIR}/, ${OBJS}) | sed 1d | sort -n -r
 	@# Update cscope and ctags database
 	$(eval FILES := $(shell sed -n '/:$$/s/:$$//p' ${DEPDIR}/* | sort -u) \
