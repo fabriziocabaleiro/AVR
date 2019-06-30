@@ -56,6 +56,7 @@ eread:
 
 eeprom_data.hex eeprom_data.h: eeprom_data.S
 	avr-gcc $< -c -o eeprom_data.elf
+	@avr-size -B eeprom_data.elf
 	avr-objcopy -O ihex eeprom_data.elf eeprom_data.hex
 	avr-nm --no-sort -B eeprom_data.elf | awk 'BEGIN {                     \
 		printf "#ifndef _EEPROM_DATA_H_\n";                            \

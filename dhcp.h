@@ -38,33 +38,18 @@
                                       1   /* endmark */             \
                                 )
 
-#define DHCP_DISCOVERY_EXTRA_OPS_SIZE 0
-
 #define DHCP_REQUEST_EXTRA_OPS_SIZE (6 + /* Address Request */ \
                                      6 + /* Server IP address */ \
                                      6   /* Hostname */ \
                                     )
 
-#define DHCP_RENEWING_EXTRA_OPS_SIZE 0
-
-
 #define DHCP_UDP_COMMON_PKT_SIZE      (DHCP_UDP_BASE_PKT_SIZE)
 #define DHCP_IP_COMMON_PKT_SIZE       (DHCP_UDP_COMMON_PKT_SIZE + \
-                                       DHCP_IP_HEADER_SIZE)
-
-#define DHCP_UDP_DISCOVERY_PKT_SIZE   (DHCP_UDP_BASE_PKT_SIZE + \
-                                       DHCP_DISCOVERY_EXTRA_OPS_SIZE)
-#define DHCP_IP_DISCOVERY_PKT_SIZE    (DHCP_UDP_DISCOVERY_PKT_SIZE + \
                                        DHCP_IP_HEADER_SIZE)
 
 #define DHCP_UDP_REQUEST_PKT_SIZE     (DHCP_UDP_BASE_PKT_SIZE + \
                                        DHCP_REQUEST_EXTRA_OPS_SIZE)
 #define DHCP_IP_REQUEST_PKT_SIZE      (DHCP_UDP_REQUEST_PKT_SIZE + \
-                                       DHCP_IP_HEADER_SIZE)
-
-#define DHCP_UDP_RENEWING_PKT_SIZE    (DHCP_UDP_BASE_PKT_SIZE + \
-                                       DHCP_RENEWING_EXTRA_OPS_SIZE)
-#define DHCP_IP_RENEWING_PKT_SIZE     (DHCP_UDP_RENEWING_PKT_SIZE + \
                                        DHCP_IP_HEADER_SIZE)
 /* }}} */
 /*******************************************************************************

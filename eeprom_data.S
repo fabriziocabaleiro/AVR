@@ -3,14 +3,19 @@
 
 .section .data
 
-EEPROM_MAC_ADDR: /* {{{ */
-    .byte 0xFA
-    .byte 0xB2
-    .byte 0x13
-    .byte 0x10
-    .byte 0x00
-    .byte 0xCA
-EEPROM_MAC_ADDR_END: /* }}} */
+EEPROM_DHCP_REQUEST_OPS: /* {{{ */
+    /* Name of the device */
+    .byte DHCP_OPTION_HOSTNAME
+    .byte 4
+    .byte 'C'
+    .byte 'o'
+    .byte 't'
+    .byte 'e'
+    /* We set the Option and length here and the code is going to write the IP
+     * address */
+    .byte DHCP_OPTION_ADDRESS_REQUEST
+    .byte DHCP_OPTION_ADDRESS_REQUEST_LEN
+EEPROM_DHCP_REQUEST_OPS_END: /* }}} */
 EEPROM_IP_ADDR: /* {{{ */
     /* Initial IP address, this one gets overwritten by DHCP */
 #if 0
@@ -25,6 +30,14 @@ EEPROM_IP_ADDR: /* {{{ */
     .byte   0
 #endif
 EEPROM_IP_ADDR_END: /* }}} */
+EEPROM_MAC_ADDR: /* {{{ */
+    .byte 0xFA
+    .byte 0xB2
+    .byte 0x13
+    .byte 0x10
+    .byte 0x00
+    .byte 0xCA
+EEPROM_MAC_ADDR_END: /* }}} */
 EEPROM_MAC_DEBUG: /* {{{ */
     .byte 0xF0
     .byte 0x1F
@@ -52,7 +65,7 @@ EEPROM_IP_HEADER: /* {{{ */
     .byte 0xFF
     /* Protocol 17 (UDP) */
     .byte 0x11
-EEPROM_IP_HEADER_TIL_CHK_SUM: /* {{{ */
+EEPROM_IP_HEADER_TIL_CHK_SUM:
     /* Checksum to zero, so it can be calculated and set when necessary */
     .byte 0x00
     .byte 0x00
@@ -66,8 +79,15 @@ EEPROM_IP_HEADER_TIL_CHK_SUM: /* {{{ */
     .byte 0xFF
     .byte 0xFF
     .byte 0xFF
-EEPROM_IP_HEADER_TIL_CHK_SUM_END: /* }}} */
 EEPROM_IP_HEADER_END: /* }}} */
+EEPROM_UDP_DHCP_PORT: /* {{{ */
+    /* Must be next to EEPROM_IP_HEADER_END because we used in DHCP_SEND as a
+     * continuous array of data */
+    .byte hi8(UDP_SRC_PORT)
+    .byte lo8(UDP_SRC_PORT)
+    .byte hi8(UDP_DST_PORT)
+    .byte lo8(UDP_DST_PORT)
+EEPROM_UDP_DHCP_PORT_END: /* }}} */
 EEPROM_DHCP_HEADER: /* {{{ */
     /* OP, BOOTREQUEST */
     .byte 0x01
@@ -88,19 +108,10 @@ EEPROM_DHCP_MAGIC_COOKIE: /* {{{ */
     .byte 0x53
     .byte 0x63
 EEPROM_DHCP_MAGIC_COOKIE_END: /* }}} */
-EEPROM_DHCP_REQUEST_OPS: /* {{{ */
-    /* Name of the device */
-    .byte DHCP_OPTION_HOSTNAME
-    .byte 4
-    .byte 'C'
-    .byte 'o'
-    .byte 't'
-    .byte 'e'
-    /* We set the Option and length here and the code is going to write the IP
-     * address */
-    .byte DHCP_OPTION_ADDRESS_REQUEST
-    .byte DHCP_OPTION_ADDRESS_REQUEST_LEN
-EEPROM_DHCP_REQUEST_OPS_END: /* }}} */
+EEPROM_DHCP_OPTION_MSG_N_LEN: /* {{{ */
+    .byte DHCP_OPTION_DHCP_MSG_TYPE
+    .byte DHCP_OPTION_DHCP_MSG_TYPE_LEN
+EEPROM_DHCP_OPTION_MSG_N_LEN_END: /* }}} */
 EEPROM_DHCP_TIMERS: /* {{{ */
     .byte   2
     .byte   4
