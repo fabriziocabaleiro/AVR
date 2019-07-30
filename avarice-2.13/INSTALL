@@ -1,6 +1,10 @@
-To build avarice: in this directory
+# To build avarice: in this directory
+autoheader
+aclocal
+autoconf
+automake --add-missing --foreign
 ./configure
 make
 
-To install:
+# To install:
 make install
