@@ -27,7 +27,12 @@
  * Evaluate which diagnostic pragmas can be used.
  */
 #if defined(__GNUC__)
-#  if __GNUC__ > 4
+#  if __GNUC__ > 8
+#      define PRAGMA_DIAG_PUSH       _Pragma("GCC diagnostic push")
+#      define PRAGMA_DIAG_POP        _Pragma("GCC diagnostic pop")
+#      define PRAGMA_(x)             _Pragma(#x)
+#      define PRAGMA_DIAG_IGNORED(x) PRAGMA_(GCC diagnostic ignored x)
+#  elif __GNUC__ > 4
 #      define PRAGMA_DIAG_PUSH       _Pragma(GCC diagnostic push)
 #      define PRAGMA_DIAG_POP        _Pragma(GCC diagnostic pop)
 #      define PRAGMA_DIAG_IGNORED(x) _Pragma(GCC diagnostic ignored x)
