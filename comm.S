@@ -3,14 +3,24 @@
 #include <avr/io.h>
 #include "defs.h"
 #include "dht11.h"
+#include "ipv4.h"
+#include "enc28j60.h"
 .LIST
 
 .global SEND_PACKET
+.global COMM_REGISTER_IP
+
+.global SRAM_COMM_MAC_ADDR_DST
+.global SRAM_COMM_IP_ADDR_DST
+.global SRAM_COMM_UDP_PORT_DST
 
 .section .data
-SRAM_COMM_MAC_DST:  .skip 6
 SRAM_COMM_TYPE_LEN: .skip 2
 SRAM_COMM_PKT_LEN:  .skip 1
+
+SRAM_COMM_MAC_ADDR_DST: .skip MAC_ADDR_LEN
+SRAM_COMM_IP_ADDR_DST:  .skip IPV4_ADDR_LEN
+SRAM_COMM_UDP_PORT_DST: .skip IPV4_PORT_LEN
 
 .section .text
 
@@ -26,31 +36,30 @@ SEND_PACKET:
     push  YL
     push  YH
 
+    /* Check if first byte of DST IP address is zero, if so, we assume it isn't
+     * configure and skip sending a message */
+    lds   TMP_REG1, SRAM_COMM_IP_ADDR_DST
+    tst   TMP_REG1
+    breq  SEND_PACKET_EXIT
+
 #if 1 /* Waiting for fix */
     /* TODO: put this somewhere else */
     ldi   TMP_REG2, hi8(ETHER_TYPE_IPV4)
     sts   SRAM_COMM_TYPE_LEN + 0, TMP_REG2
     ldi   TMP_REG2, lo8(ETHER_TYPE_IPV4)
     sts   SRAM_COMM_TYPE_LEN + 1, TMP_REG2
-    /* TODO: Set the mac address better */
-    ldi   YH, hi8(SRAM_MAC_ADDR_OTHER)
-    ldi   YL, lo8(SRAM_MAC_ADDR_OTHER)
-    ldi   XH, hi8(SRAM_COMM_MAC_DST)
-    ldi   XL, lo8(SRAM_COMM_MAC_DST)
-    ldi   COUNTER_REG, MAC_SIZE_IN_BYTES
-TMP_LABEL_002:
-    ld    TMP_REG2, Y+
-    st    X+, TMP_REG2
-    dec   COUNTER_REG
-    brne  TMP_LABEL_002
 #endif
     
-    /* Set MAC Dst and Type/Len pointers */
-    ldi   TMP_REG2, hi8(SRAM_COMM_MAC_DST)
-    sts   SRAM_ENC_MAC_DST_PTR + 0, TMP_REG2
-    ldi   TMP_REG2, lo8(SRAM_COMM_MAC_DST)
-    sts   SRAM_ENC_MAC_DST_PTR + 1, TMP_REG2
+    /* Set MAC Dst pointer */
+    ldi   YL, lo8(SRAM_COMM_IP_ADDR_DST)
+    ldi   YH, hi8(SRAM_COMM_IP_ADDR_DST)
+    rcall ARP_GET_MAC_ADDR_PTR
+    tst   RETURN_VALUE
+    brne  SEND_PACKET_EXIT
+    sts   SRAM_ENC_MAC_DST_PTR + 0, YH
+    sts   SRAM_ENC_MAC_DST_PTR + 1, YL
 
+    /* Set type/len pointer */
     ldi   TMP_REG2, hi8(SRAM_COMM_TYPE_LEN)
     sts   SRAM_ENC_TYPE_LEN_PTR + 0, TMP_REG2
     ldi   TMP_REG2, lo8(SRAM_COMM_TYPE_LEN)
@@ -58,6 +67,9 @@ TMP_LABEL_002:
 
     /* Write Ethernet Header */
     rcall ETH_WRITE_BUFFER_PACKET_HEADER
+
+    /* Collect data */
+    //rcall DHT11_READ
 
     /* Prepare UDP packet, write it into IPv4 payload */
     ldi   ZH, hi8(SRAM_IPV4_PAYLOAD)
@@ -69,6 +81,19 @@ TMP_LABEL_002:
 
     push  RETURN_VALUE /* Save ipv4 payload size */
 
+    /* Set Dst IP Addr. TODO: MAKE IT BETTER {{{ */
+    /* TODO: memcpy */
+    ldi   YL, lo8(SRAM_COMM_IP_ADDR_DST)
+    ldi   YH, hi8(SRAM_COMM_IP_ADDR_DST)
+    ldi   ZL, lo8(SRAM_IP_ADDR_DST)
+    ldi   ZH, hi8(SRAM_IP_ADDR_DST)
+    ldi   COUNTER_REG, IPV4_ADDR_LEN
+COPY_IP_ADDR:
+    ld    TMP_REG1, Y+
+    st    Z+, TMP_REG1
+    dec   COUNTER_REG
+    brne  COPY_IP_ADDR
+    /* }}} */
     /* IPv4 default header size is 20, add UDP length to it */
     ldi   ARG_REG1, 20
     add   ARG_REG1, RETURN_VALUE
@@ -89,13 +114,32 @@ TMP_LABEL_002:
     /* Send the packet */
     rcall ETH_WRITE_BUFFER_PACKET_PAYLOAD_FINISH
 
+SEND_PACKET_EXIT:
     pop   YH
     pop   YL
     pop   XH
     pop   XL
     pop   COUNTER_REG
     ret
-
 /* }}} */
+/*******************************************************************************
+ * Register an IP to send packages to {{{
+ * Z points to the data
+ * ARG_REG1 is the length
+ ******************************************************************************/
+COMM_REGISTER_IP:
+    ldi   YL, lo8(SRAM_COMM_IP_ADDR_DST)
+    ldi   YH, hi8(SRAM_COMM_IP_ADDR_DST)
+    ldi   COUNTER_REG, IPV4_ADDR_LEN + IPV4_PORT_LEN
+COMM_REGISTER_IP_LOOP:
+    ETH_READ_NEXT_BYTE
+    st    Y+, RETURN_VALUE
+    dec   COUNTER_REG
+    brne  COMM_REGISTER_IP_LOOP
+    ETH_READ_BUFFER_END
 
+    /* TODO: move somewhere else */
+    rcall ARP_REQUEST
+    ret
+/* }}} */
 .end

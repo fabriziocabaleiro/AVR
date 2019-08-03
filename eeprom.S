@@ -2,11 +2,13 @@
 .NOLIST
 #include <avr/io.h>
 #include "defs.h"
+#include "eeprom_data.h"
 .LIST
 
 .global EEPROM_READ_N_INC
 .global EEPROM_WRITE_N_INC
 .global EEPROM_COREDUMP
+.global EEPROM_SRAM_CMP
 
 .global SRAM_EEPROM_TMP_REG1_SAVE
 .global SRAM_EEPROM_SREG
@@ -58,6 +60,39 @@ EEPROM_WRITE_N_INC:
     sbi   _SFR_IO_ADDR(EECR), EEMWE
     sbi   _SFR_IO_ADDR(EECR), EEWE
     adiw  YL, 1
+    ret
+/* }}} */
+/*******************************************************************************
+ * Compare the content of the EEPROM against the SRAM {{{
+ * Return 0 if equal.
+ * Z, SRAM ADDRESS
+ * Y, EEPROM ADDRESS
+ * ARG_REG1, number of bytes to compare
+ ******************************************************************************/
+EEPROM_SRAM_CMP:
+    push  YL
+    push  YH
+    push  ZL
+    push  ZH
+
+    mov   COUNTER_REG, ARG_REG1
+EEPROM_SRAM_CMP_LOOP:
+    rcall EEPROM_READ_N_INC
+    ld    TMP_REG1, Z+
+    cp    RETURN_VALUE, TMP_REG1
+    brne  EEPROM_NOT_EQUAL_SRAM
+    dec   COUNTER_REG
+    brne  EEPROM_SRAM_CMP_LOOP
+    ldi   RETURN_VALUE, 0
+    rjmp  EEPROM_SRAM_CMP_EXIT
+EEPROM_NOT_EQUAL_SRAM:
+    ldi   RETURN_VALUE, 0xFF
+
+EEPROM_SRAM_CMP_EXIT:
+    pop   ZH
+    pop   ZL
+    pop   YH
+    pop   YL
     ret
 /* }}} */
 /*******************************************************************************
@@ -147,5 +182,4 @@ WRITE_TO_EEPROM:
     pop   YH
     ret
 /* }}} */
-
 .end

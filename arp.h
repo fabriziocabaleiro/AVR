@@ -58,8 +58,6 @@
 #define ARP_OPER_REQUEST   1
 #define ARP_OPER_REPLY     2
 
-#define ETH_READ_NEXT_BYTE rcall SPI_MASTER_TRANSMIT
-
 /* }}} */
 
 #endif

@@ -2,8 +2,6 @@
 #ifndef _DEFS_H_
 #define _DEFS_H_
 
-#include "eeprom_data.h"
-
 /*******************************************************************************
  * Global configuration {{{
  ******************************************************************************/
@@ -97,7 +95,7 @@
 /********************
  * IP address sizes *
  *******************/
-#define MAC_SIZE_IN_BYTES  6
+#define MAC_ADDR_LEN       6
 #define IPV4_SIZE_IN_BYTES 4
 
 /* }}} */

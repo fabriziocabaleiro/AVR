@@ -15,6 +15,7 @@ OBJS = main.o         \
        tcp.o          \
        icmp.o         \
        division.o     \
+       utils.o        \
        comm.o
 
 DEPDIR = Deps
@@ -29,7 +30,7 @@ main.elf: $(addprefix ${OBJDIR}/, ${OBJS})
 	avr-objcopy -O ihex -R .data -R .eeprom -R .fuse -R .lock -R .signature $@ main.hex
 	@echo Sizes:
 	@avr-size -B $@
-	@avr-size -B $(addprefix ${OBJDIR}/, ${OBJS}) | sed 1d | sort -n -r
+	@avr-size -B eeprom_data.elf $(addprefix ${OBJDIR}/, ${OBJS}) | sed 1d | sort -n -r
 	@# Update cscope and ctags database
 	$(eval FILES := $(shell sed -n '/:$$/s/:$$//p' ${DEPDIR}/* | sort -u) \
 		${OBJS:.o=.S} eeprom_data.S)
@@ -56,7 +57,6 @@ eread:
 
 eeprom_data.hex eeprom_data.h: eeprom_data.S
 	avr-gcc $< -c -o eeprom_data.elf
-	@avr-size -B eeprom_data.elf
 	avr-objcopy -O ihex eeprom_data.elf eeprom_data.hex
 	avr-nm --no-sort -B eeprom_data.elf | awk 'BEGIN {                     \
 		printf "#ifndef _EEPROM_DATA_H_\n";                            \

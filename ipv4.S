@@ -4,6 +4,7 @@
 #include "enc28j60.h"
 #include "ipv4.h"
 #include "defs.h"
+#include "eeprom_data.h"
 .LIST
 
 .global IPV4_HANDLE_PKT

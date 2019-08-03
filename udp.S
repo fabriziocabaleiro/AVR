@@ -4,6 +4,7 @@
 #include "defs.h"
 #include "udp.h"
 #include "enc28j60.h"
+#include "eeprom_data.h"
 .LIST
 
 .global UDP_HANDLE_PKT
@@ -12,41 +13,59 @@
 #define UDP_SRC_PORT 7070
 #define UDP_DST_PORT 7070
 #define UDP_PKT_LEN    14
+#define UDP_HEADER_LEN  8
 
 #define TMP_REG4 ARG_REG2
+
+.section .data
+SRAM_UDP_HEADER:
+SRAM_UDP_SRC_PORT: .skip 2
+SRAM_UDP_DST_PORT: .skip 2
+SRAM_UDP_PKT_LEN:  .skip 2
+SRAM_UDP_CHKSUM:   .skip 2
+
+.section .text
 
 /*******************************************************************************
  * Handle received UDP packet {{{
  ******************************************************************************/
 UDP_HANDLE_PKT:
-    rcall ETH_READ_BUFFER_START
-    ETH_READ_NEXT_BYTE
-    mov   TMP_REG1, RETURN_VALUE
-    ETH_READ_NEXT_BYTE
-    mov   TMP_REG2, RETURN_VALUE
-    ETH_READ_NEXT_BYTE
-    mov   TMP_REG3, RETURN_VALUE
-    ETH_READ_NEXT_BYTE
-    mov   TMP_REG4, RETURN_VALUE
-    /* TODO: store correctly rest of UDP header */
-    ETH_READ_NEXT_BYTE
-    ETH_READ_NEXT_BYTE
-    ETH_READ_NEXT_BYTE
-    ETH_READ_NEXT_BYTE
+    push  YL
+    push  YH
 
-    /* check if DHCP */
-    cpi   TMP_REG1, hi8(INTERNET_SERVICE_BOOTPS_67_UDP)
-    brne  NO_DHCP
-    cpi   TMP_REG2, lo8(INTERNET_SERVICE_BOOTPS_67_UDP)
-    brne  NO_DHCP
-    cpi   TMP_REG3, hi8(INTERNET_SERVICE_BOOTPC_68_TCP)
-    brne  NO_DHCP
-    cpi   TMP_REG4, lo8(INTERNET_SERVICE_BOOTPC_68_TCP)
-    brne  NO_DHCP
+    rcall ETH_READ_BUFFER_START
+    /* Read UDP header {{{ */
+    ldi   COUNTER_REG, UDP_HEADER_LEN
+    ldi   ZL, lo8(SRAM_UDP_HEADER)
+    ldi   ZH, hi8(SRAM_UDP_HEADER)
+READ_HEADER:
+    ETH_READ_NEXT_BYTE
+    st    Z+, RETURN_VALUE
+    dec   COUNTER_REG
+    brne  READ_HEADER
+    /* }}} */
+    /* Set common argument for EEPROM_SRAM_CMP {{{ */
+    ldi   ZL, lo8(SRAM_UDP_HEADER)
+    ldi   ZH, hi8(SRAM_UDP_HEADER)
+    ldi   ARG_REG1, 4
+    /* }}} */
+    /* DHCP {{{ */
+    ldi   YL, lo8(EEPROM_DHCP_SRC_DST_PORT)
+    ldi   YH, hi8(EEPROM_DHCP_SRC_DST_PORT)
+    rcall EEPROM_SRAM_CMP
+    sbrs  RETURN_VALUE, 0
     rcall DHCP_HANDLE_PKT
-    ret
-NO_DHCP:
+    /* }}} */
+    /* Register a device IP to send messages to {{{ */
+    ldi   YL, lo8(EEPROM_COMM_SRC_DST_PORT)
+    ldi   YH, hi8(EEPROM_COMM_SRC_DST_PORT)
+    rcall EEPROM_SRAM_CMP
+    sbrs  RETURN_VALUE, 0
+    rcall COMM_REGISTER_IP
+    /* }}} */
     ETH_READ_BUFFER_END
+    pop   YH
+    pop   YL
     ret
 /* }}} */
 /*******************************************************************************

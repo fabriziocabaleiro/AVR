@@ -7,9 +7,26 @@
 #define ENC_MAC_DST_PTR_BROADCAST_BIT        7
 /* As above, if this bit is set, then TYPE/LEN is IPv4 */
 #define ENC_TYPE_LEN_PTR_IPv4                7
+/* As above, if this bit is set, then TYPE/LEN is ARP */
+#define ENC_TYPE_LEN_PTR_ARP                 6
 
 #define RPKT_STATUS_VECTOR_LEN         6
 
+/* Buffer initialization {{{ */
+#define BUF_TX_ST_L 0x00
+#define BUF_TX_ST_H 0x00
+#define BUF_TX_ND_L 0xF0
+#define BUF_TX_ND_H 0x0F
+
+/* After the transmit buffer, the system writes 7 bytes of status vector */
+#define BUF_RX_ST_L (BUF_TX_ND_L + 0x8)
+#define BUF_RX_ST_H BUF_TX_ND_H
+#define BUF_RX_ND_L 0xFE
+#define BUF_RX_ND_H 0x1F
+
+#define BUF_RX_SIZE (((BUF_RX_ND_H << 8) + BUF_RX_ND_L) - \
+                     ((BUF_RX_ST_H << 8) + BUF_RX_ST_L) + 1)
+/* }}} */
 /* Common set of registers {{{ */
 /* INTIE PKTIE DMAIE LINKIE TXIE r TXERIE RXERIE 0000 0000 */
 #define ENC_COMMON_EIE         0x1B

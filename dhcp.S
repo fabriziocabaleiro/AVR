@@ -7,13 +7,14 @@
 #include "ipv4.h"
 #include "enc28j60.h"
 #include "timer.h"
+#include "eeprom_data.h"
 .LIST
 
 .global DHCP_HANDLE_PKT
 .global DHCP_INIT
 .global DHCP
 
-#define DHCP_TIMER_ANDI         0x0F
+#define DHCP_TIMER_ANDI         0x03
 #define DHCP_DOMAIN_SERVER_LEN  8
 #define DHCP_STATE_R            R23
 #define DHCP_PKT_SIZE_L         R24
@@ -81,7 +82,9 @@ DHCP:
     rjmp  DHCP_IN_INIT_REBOOT_STATE
     sbrc  DHCP_STATE_R, DHCP_STATE_REBOOTING
     rjmp  DHCP_IN_REBOOTING_STATE
-    /* TODO: add error check if SRAM_DHCP_STATE == 0 ? */
+    /* We expect any of the previous RJMPs to be executed, so, we never should
+     * fall over this line, but, if we do, then it would be treat as init state,
+     * which seems sensible */
     /* }}} */
 DHCP_IN_INIT_STATE: /* {{{ */
     /* Try to send a REQUEST every 16 seconds, {{{
@@ -343,9 +346,9 @@ SECS_FLAGS_TO_ZERO:
 CIADDR_TO_ZERO_OR_MY_IP:
     clr   RETURN_VALUE
     /* IP ADDR is zero for DISCOVER, as it is unset, then, safe to read from
-     * EEPROM, then at request we already wrote the offer to EEPROM, so, don't
-     * use EEPROM value, then, at BOUND/REVEW/REBIND use EEPROM value.
-     * TODO: DHCPDECLINE */
+     * EEPROM. At request we already wrote the offer to EEPROM, so, don't use
+     * EEPROM value, then, at BOUND/RENEW/REBIND use EEPROM value.
+     * Ignoring DHCPDECLINE as logic for declining is not implemented */
 #if EEPROM_IP_ADDR_END != EEPROM_MAC_ADDR
     /* if the code reduction optimization is off, then, optimize power by
      * skipping eeprom read, else, do eeprom read to increment Y as required by
@@ -378,7 +381,7 @@ YIADDR_SIADDR_GIADDR_TO_ZERO:
     ldi   YL, lo8(EEPROM_MAC_ADDR)
     ldi   YH, hi8(EEPROM_MAC_ADDR)
 #endif
-    ldi   COUNTER_REG, MAC_SIZE_IN_BYTES
+    ldi   COUNTER_REG, MAC_ADDR_LEN
 DHCP_CHADDR_LOOP:
     rcall EEPROM_READ_N_INC
     mov   ARG_REG1, RETURN_VALUE

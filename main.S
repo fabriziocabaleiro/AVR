@@ -8,6 +8,7 @@
 #include "defs.h"
 #include "enc28j60.h"
 #include "timer.h"
+#include "eeprom_data.h"
 .LIST
 
 .global main
@@ -56,6 +57,7 @@ main:
 #ifdef USE_DHT11
     rcall DHT11_SETUP
 #endif
+    rcall ARP_INIT
     rcall DHCP_INIT
     rcall SPI_MASTER_INIT
     rcall ETH_INIT
@@ -88,6 +90,8 @@ LOOP:
     cbr   TMP_REG1, (1 << TIMER1_EVENTS_SECOND)
     sts   SRAM_TIMER1_EVENTS, TMP_REG1
     rcall DHCP
+    //rcall DHT11_READ
+    rcall SEND_PACKET
     rjmp  LOOP
 /* }}} */
 /*******************************************************************************
@@ -137,12 +141,6 @@ READ_ETHERNET_INTERRUPT_REQUEST:
     out   _SFR_IO_ADDR(GIFR), TMP_REG2
 #endif
 
-#if 0
-    ERR_CLR
-    CLR_LED0
-    CLR_LED1
-#endif
-
     /* Enable INT0 */
     in    TMP_REG1, _SFR_IO_ADDR(GICR)
     sbr   TMP_REG1, (1 << INT0)
@@ -175,7 +173,7 @@ HANDLE_PACKET:
     ldi   YL, lo8(EEPROM_MAC_ADDR)
     ldi   ZH, hi8(SRAM_MAC_ADDR_OTHER)
     ldi   ZL, lo8(SRAM_MAC_ADDR_OTHER)
-    ldi   TMP_REG1, MAC_SIZE_IN_BYTES
+    ldi   TMP_REG1, MAC_ADDR_LEN
 CHECK_BROADCAST_MAC_ADDR:
     rcall EEPROM_READ_N_INC
     ld    TMP_REG2, Z+

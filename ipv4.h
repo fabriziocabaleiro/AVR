@@ -3,6 +3,7 @@
 #define _IPV4_H_
 
 #define IPV4_ADDR_LEN                        4
+#define IPV4_PORT_LEN                        2
 #define IPV4_MAX_HEADER_LEN                 60
 #define IPV4_DEFAULT_HEADER_LEN             20
 #define IPV4_PAYLOAD_LEN                   200
