@@ -8,6 +8,7 @@
 .global DHT11_SETUP
 .global DHT11_READ
 .global DHT11_INT1_vect
+.global INT1_vect
 .global TIMER2_OVF_vect
 
 .global SRAM_DHT11_PAYLOAD
@@ -76,6 +77,8 @@ DHT11_SETUP:
  * Data is store in SRAM_DHT11_PAYLOAD
  * Interrupt are used with falling edge
  * BEWARE: Idle is the only sleep mode that support edge interrupts
+ * BEWARE: Calling this routine at 1Hz causes issues, calling frequency must be
+ *         lower.
  ******************************************************************************/
 DHT11_READ:
     push  ZL
@@ -129,10 +132,12 @@ DHT11_READ_WAIT_START_SIGNAL:
     ldi   ZH, hi8(SRAM_DHT11_PAYLOAD)
     ldi   ZL, lo8(SRAM_DHT11_PAYLOAD)
 
+#if 0
     /* Set bitfield to call DHT11 handle on interrupt */
     lds   TMP_REG1, BIT_FIELD_1
     sbr   TMP_REG1, BIT_FIELD_1_INT1_DHT11
     sts   BIT_FIELD_1, TMP_REG1
+#endif
 
     /* Now the DHT11 will take control of the data line, enable signal and wait
      * to change down */
@@ -142,22 +147,18 @@ DHT11_READ_WAIT_START_SIGNAL:
     /* 40 cycles, one for each bit, plus 2 falling edges at the beginning */
     /* TODO: add way to wakeup in case data doesn't arrive */
     ldi   TMP_REG1, 42
+    SET_LED0
 DHT11_TRANSMISSION_LOOP:
     sleep
     dec   TMP_REG1
     brne  DHT11_TRANSMISSION_LOOP
 
+#if 0
     /* Unset bitfield to call DHT11 handle on interrupt */
     lds   TMP_REG1, BIT_FIELD_1
     cbr   TMP_REG1, BIT_FIELD_1_INT1_DHT11
     sts   BIT_FIELD_1, TMP_REG1
-
-    /* FIXME: MOVE TO ITS OWN PLACE */
-    /* ADC for MQ135 { */
-    // rcall ADC_ENABLE_N_START
-    // sleep
-    // rcall ADC_DISABLE
-    /* ADC for MQ135 } */
+#endif
 
     pop   DHT11_COUNTER
     pop   DHT11_TRANSMISSION_INTERVAL
@@ -174,7 +175,8 @@ DHT11_TRANSMISSION_LOOP:
  *
  * Use Z as pointer to the memory
  ******************************************************************************/
-DHT11_INT1_vect:
+// DHT11_INT1_vect:
+INT1_vect:
     /* Read counter and reset it */
     in    DHT11_TRANSMISSION_INTERVAL, _SFR_IO_ADDR(TCNT2)
     clr   TMP_REG2

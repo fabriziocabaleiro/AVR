@@ -4,9 +4,9 @@
 OBJS = main.o         \
        eeprom.o       \
        spi.o          \
-       adc.o          \
        timer.o        \
        dht11.o        \
+       adc.o          \
        enc28j60.o     \
        arp.o          \
        ipv4.o         \

@@ -64,8 +64,8 @@ TIMER_INIT:
 /* }}} */
 /*******************************************************************************
  * TIMER1_COMPA_vect {{{
- * With a prescaler of 1024 and a OCR1A of 7812, then we will have a match every
- * 8 seconds for a clock of 1Mhz
+ * With a prescaler of 1024 and a OCR1A of OCR1A_VAL, we will have a match every
+ * second.
  ******************************************************************************/
 TIMER1_COMPA_vect:
     push  TMP_REG1
@@ -91,6 +91,11 @@ INC_SECONDS:
 TIMER1_SET_EVENTS:
 
     lds   TMP_REG1, SRAM_TIMER1_EVENTS
+
+    lds   TMP_REG2, SRAM_TIMER1_SECONDS
+    sbrs  TMP_REG2, 0
+    sbr   TMP_REG1, (1 << TIMER1_EVENTS_2S)
+
     sbr   TMP_REG1, (1 << TIMER1_EVENTS_SECOND)
     sts   SRAM_TIMER1_EVENTS, TMP_REG1
 

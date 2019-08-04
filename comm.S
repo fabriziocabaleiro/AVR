@@ -9,6 +9,7 @@
 
 .global SEND_PACKET
 .global COMM_REGISTER_IP
+.global COMM_INIT
 
 .global SRAM_COMM_MAC_ADDR_DST
 .global SRAM_COMM_IP_ADDR_DST
@@ -19,16 +20,24 @@ SRAM_COMM_TYPE_LEN: .skip 2
 SRAM_COMM_PKT_LEN:  .skip 1
 
 SRAM_COMM_MAC_ADDR_DST: .skip MAC_ADDR_LEN
-SRAM_COMM_IP_ADDR_DST:  .skip IPV4_ADDR_LEN
+SRAM_COMM_IP_ADDR_DST:  .skip IPV4_ADDR_LEN /* SRAM_COMM_UDP_PORT_DST must
+                                               follow SRAM_COMM_IP_ADDR_DST */
 SRAM_COMM_UDP_PORT_DST: .skip IPV4_PORT_LEN
 
 .section .text
 
-/*******************************************************************************
- * Send a packet to the MAC Address in SRAM_MAC_ADDR_OTHER {{{
+/* COMM init {{{
+ * Initialize communication */
+COMM_INIT:
+    ldi   TMP_REG2, hi8(ETHER_TYPE_IPV4)
+    sts   SRAM_COMM_TYPE_LEN + 0, TMP_REG2
+    ldi   TMP_REG2, lo8(ETHER_TYPE_IPV4)
+    sts   SRAM_COMM_TYPE_LEN + 1, TMP_REG2
+    ret
+/* }}} */
+/* Send a packet to the MAC Address in SRAM_MAC_ADDR_OTHER {{{
  * Z points to the data
- * ARG_REG1 is the length
- ******************************************************************************/
+ * ARG_REG1 is the length */
 SEND_PACKET:
     push  COUNTER_REG
     push  XL
@@ -42,14 +51,17 @@ SEND_PACKET:
     tst   TMP_REG1
     breq  SEND_PACKET_EXIT
 
-#if 1 /* Waiting for fix */
-    /* TODO: put this somewhere else */
-    ldi   TMP_REG2, hi8(ETHER_TYPE_IPV4)
-    sts   SRAM_COMM_TYPE_LEN + 0, TMP_REG2
-    ldi   TMP_REG2, lo8(ETHER_TYPE_IPV4)
-    sts   SRAM_COMM_TYPE_LEN + 1, TMP_REG2
-#endif
-    
+    /* Collect data {{{ */
+    rcall DHT11_READ
+
+    /* ADC for MQ135 { */
+    rcall ADC_ENABLE_N_START
+    sleep
+    rcall ADC_DISABLE
+    /* ADC for MQ135 } */
+    /* }}} */
+
+
     /* Set MAC Dst pointer */
     ldi   YL, lo8(SRAM_COMM_IP_ADDR_DST)
     ldi   YH, hi8(SRAM_COMM_IP_ADDR_DST)
@@ -68,10 +80,8 @@ SEND_PACKET:
     /* Write Ethernet Header */
     rcall ETH_WRITE_BUFFER_PACKET_HEADER
 
-    /* Collect data */
-    //rcall DHT11_READ
-
     /* Prepare UDP packet, write it into IPv4 payload */
+    /* TODO: break requirement of DHT11 and MQ135 data consecutive */
     ldi   ZH, hi8(SRAM_IPV4_PAYLOAD)
     ldi   ZL, lo8(SRAM_IPV4_PAYLOAD)
     ldi   YH, hi8(SRAM_DHT11_PAYLOAD)
@@ -122,11 +132,9 @@ SEND_PACKET_EXIT:
     pop   COUNTER_REG
     ret
 /* }}} */
-/*******************************************************************************
- * Register an IP to send packages to {{{
+/* Register an IP to send packages to {{{
  * Z points to the data
- * ARG_REG1 is the length
- ******************************************************************************/
+ * ARG_REG1 is the length */
 COMM_REGISTER_IP:
     ldi   YL, lo8(SRAM_COMM_IP_ADDR_DST)
     ldi   YH, hi8(SRAM_COMM_IP_ADDR_DST)

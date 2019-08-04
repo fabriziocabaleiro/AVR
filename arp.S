@@ -74,28 +74,6 @@ ARP_PROCESS_READ_PAYLOAD:
 
     ETH_READ_BUFFER_END
     /* }}} */
-    /* TODO: find another way to get IP address of other device  {{{ */
-#if 0 /* FIXME */
-    push  ZL
-    push  ZH
-    push  YL
-    push  YH
-    ldi   ZL, lo8(SRAM_ARP_PAYLOAD + ARP_SPA)
-    ldi   ZH, hi8(SRAM_ARP_PAYLOAD + ARP_SPA)
-    ldi   YL, lo8(SRAM_IP_ADDR_DST)
-    ldi   YH, hi8(SRAM_IP_ADDR_DST)
-    ldi   TMP_REG2, IPV4_SIZE_IN_BYTES
-TMP_LABEL_000:
-    ld    RETURN_VALUE, Z+
-    st    Y+, RETURN_VALUE
-    dec   TMP_REG2
-    brne  TMP_LABEL_000
-    pop   YH
-    pop   YL
-    pop   ZH
-    pop   ZL
-#endif
-    /* }}} */
     /* Check that ARP is for me  {{{ */
     ldi   COUNTER_REG, IPV4_SIZE_IN_BYTES
     /* Z */
@@ -236,18 +214,15 @@ ARP_FROM_EEPROM_LOOP:
     dec   COUNTER_REG
     brne  ARP_FROM_EEPROM_LOOP
     /* }}} */
-    /* TPA {{{ */
+    /* TPA Copy Target IP Address {{{ */
     ldi   YL, lo8(SRAM_COMM_IP_ADDR_DST)
     ldi   YH, hi8(SRAM_COMM_IP_ADDR_DST)
-    ldi   COUNTER_REG, IPV4_ADDR_LEN
-COPY_DST_IP:
-    ld    TMP_REG1, Y+
-    st    Z+, TMP_REG1
-    dec   COUNTER_REG
-    brne  COPY_DST_IP
+    ldi   ARG_REG1, IPV4_ADDR_LEN
+    rcall MEMCPY
     /* }}} */
-    /* SPA Copy SRC IP Address */
-    sbiw  ZL, (ARP_TPA - ARP_SPA + IPV4_ADDR_LEN)
+    /* SPA Copy SRC IP Address  {{{ */
+    /* TODO: implement EEPROM_MEMCPY */
+    sbiw  ZL, (ARP_TPA - ARP_SPA)
     ldi   YL, lo8(EEPROM_IP_ADDR)
     ldi   YH, hi8(EEPROM_IP_ADDR)
     ldi   COUNTER_REG, IPV4_ADDR_LEN
@@ -256,13 +231,14 @@ COPY_SRC_IP_LOOP:
     st    Z+, RETURN_VALUE
     dec   COUNTER_REG
     brne  COPY_SRC_IP_LOOP
-
+    /* }}} */
+    /* Set Ethernet Dst address and Type/Len {{{ */
     ldi   TMP_REG2, (1 << ENC_MAC_DST_PTR_BROADCAST_BIT)
     sts   SRAM_ENC_MAC_DST_PTR, TMP_REG2
     ldi   TMP_REG2, (1 << ENC_TYPE_LEN_PTR_ARP)
     sts   SRAM_ENC_TYPE_LEN_PTR, TMP_REG2
+    /* }}} */
     rcall ARP_SEND_PACKET
-
     ret
 /* }}} */
 /*******************************************************************************

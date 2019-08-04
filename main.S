@@ -13,7 +13,7 @@
 
 .global main
 .global INT0_vect
-.global INT1_vect
+//.global INT1_vect
 .global TIMER0_OVF_vect
 
 .global BIT_FIELD_1
@@ -35,6 +35,8 @@ main:
     ERR_SET_DDR
     DDR_LED0
     DDR_LED1
+    CLR_LED0
+    CLR_LED1
 
     /* Zero out SRAM */
     rcall ZERO_OUT_SRAM
@@ -58,6 +60,7 @@ main:
     rcall DHT11_SETUP
 #endif
     rcall ARP_INIT
+    rcall COMM_INIT
     rcall DHCP_INIT
     rcall SPI_MASTER_INIT
     rcall ETH_INIT
@@ -76,6 +79,11 @@ LOOP:
     sbr   TMP_REG1, (1 << INT0)
     out   _SFR_IO_ADDR(GICR), TMP_REG1
     /* }}} */
+    /* Enable timer interrupt {{{ */
+    in    TMP_REG1, _SFR_IO_ADDR(TIMSK)
+    sbr   TMP_REG1, (1 << OCIE1A)
+    out   _SFR_IO_ADDR(TIMSK), TMP_REG1
+    /* }}} */
     sleep
     CLR_LED0
     CLR_LED1
@@ -84,14 +92,27 @@ LOOP:
     cbr   TMP_REG1, (1 << INT0)
     out   _SFR_IO_ADDR(GICR), TMP_REG1
     /* }}} */
+    /* Disable Timer interrupt {{{ */
+    in    TMP_REG1, _SFR_IO_ADDR(TIMSK)
+    cbr   TMP_REG1, (1 << OCIE1A)
+    out   _SFR_IO_ADDR(TIMSK), TMP_REG1
+    /* }}} */
     lds   TMP_REG1, SRAM_TIMER1_EVENTS
     sbrs  TMP_REG1, TIMER1_EVENTS_SECOND
     rjmp  LOOP
     cbr   TMP_REG1, (1 << TIMER1_EVENTS_SECOND)
     sts   SRAM_TIMER1_EVENTS, TMP_REG1
+
     rcall DHCP
-    //rcall DHT11_READ
+
+    lds   TMP_REG1, SRAM_TIMER1_EVENTS
+    sbrs  TMP_REG1, TIMER1_EVENTS_2S
+    rjmp  LOOP
+    cbr   TMP_REG1, (1 << TIMER1_EVENTS_2S)
+    sts   SRAM_TIMER1_EVENTS, TMP_REG1
+
     rcall SEND_PACKET
+
     rjmp  LOOP
 /* }}} */
 /*******************************************************************************
@@ -243,6 +264,7 @@ RESET_ETH:
 /*******************************************************************************
  * INT1 handle {{{
  ******************************************************************************/
+#if 0
 INT1_vect:
     /* Save and restore TMP_REG1 for EEPROM_COREDUMP */
     sts   SRAM_EEPROM_TMP_REG1_SAVE, TMP_REG1
@@ -279,6 +301,7 @@ COREDUMP:
 SEND_DHCP_DISCOVER:
     rcall DHCP
     rjmp  INT1_vect_EXIT
+#endif
 /* }}} */
 /*******************************************************************************
  * Testing at the moment other interrupts {{{

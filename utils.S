@@ -5,15 +5,16 @@
 .LIST
 
 .global MEMCMP
+.global MEMCPY
 
 .section .data
 
 .section .text
 
-; MEMCMP {{{
-; Compare memory space pointed by Y and Z
-; ARG_REG1 is the numbers of bytes to compare
-; RETURN_VALUE => 0 if memory areas are the same
+/* MEMCMP {{{
+ * Compare memory space pointed by Y and Z
+ * ARG_REG1 is the numbers of bytes to compare
+ * RETURN_VALUE => 0 if memory areas are the same */
 MEMCMP:
     push  YL
     push  YH
@@ -37,6 +38,31 @@ MEMCMP_END:
     pop   ZL
     pop   YH
     pop   YL
-    ret ; }}}
-
+    ret
+/* }}} */
+/* MEMCPY {{{
+ * Copy from Y to Z the length of ARG_REG1 */
+MEMCPY:
+    push  YL
+    push  YH
+    push  ZL
+    push  ZH
+    push  ARG_REG1
+    
+    clr   RETURN_VALUE
+MEMCPY_LOOP:
+    dec   ARG_REG1
+    brmi  MEMCPY_END
+    ld    TMP_REG1, Y+
+    st    Z+, TMP_REG1
+    rjmp  MEMCPY_LOOP
+    
+MEMCPY_END:
+    pop   ARG_REG1
+    pop   ZH
+    pop   ZL
+    pop   YH
+    pop   YL
+    ret
+/* }}} */
 .end
