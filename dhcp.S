@@ -169,7 +169,7 @@ DHCP_IN_INIT_REBOOT_STATE: /* {{{ */
 DHCP_IN_REBOOTING_STATE: /* {{{ */
     rcall DHCP_WAITING_IN_STATE
     brne  DHCP_IN_REBOOTING_STATE_EXIT /* SREG set on DHCP_WAITING_IN_STATE */
-    ldi   TMP_REG1, DHCP_STATE_INIT
+    ldi   TMP_REG1, (1 << DHCP_STATE_INIT)
     sts   SRAM_DHCP_STATE, TMP_REG1
 DHCP_IN_REBOOTING_STATE_EXIT:
     rjmp  DHCP_EXIT_SUCCESS
@@ -193,7 +193,7 @@ DHCP_INIT:
     /* Check if our current IP in the EEPROM was set */
     ldi   YL, lo8(EEPROM_IP_ADDR)
     ldi   YH, hi8(EEPROM_IP_ADDR)
-    ldi   COUNTER_REG, IPV4_SIZE_IN_BYTES
+    ldi   COUNTER_REG, IPV4_ADDR_LEN
 CHECK_IF_VALID_IP:
     rcall EEPROM_READ_N_INC
     tst   RETURN_VALUE
@@ -229,22 +229,17 @@ DHCP_SEND:
 #if EEPROM_IP_HEADER_END != EEPROM_UDP_DHCP_PORT
 #   error "Optimization requires EEPROM_IP_HEADER_END == EEPROM_UDP_DHCP_PORT"
 #endif
+    ldi   ZL, lo8(SRAM_IPV4_HEADER)
+    ldi   ZH, hi8(SRAM_IPV4_HEADER)
+    /* Write to SRAM, so total length and checksum can be set */
     ldi   YL, lo8(EEPROM_IP_HEADER)
     ldi   YH, hi8(EEPROM_IP_HEADER)
-    ldi   COUNTER_REG, (EEPROM_UDP_DHCP_PORT_END - EEPROM_IP_HEADER)
-    /* Write to SRAM, so total length and checksum can be set */
-    ldi   ZL, lo8(SRAM_IPV4_HEADER)
-    ldi   ZH, hi8(SRAM_IPV4_HEADER)
-DHCP_WRITE_IP_HEADER_TO_SRAM:
-    rcall EEPROM_READ_N_INC
-    st    Z+, RETURN_VALUE
-    dec   COUNTER_REG
-    brne  DHCP_WRITE_IP_HEADER_TO_SRAM
+    ldi   ARG_REG1, (EEPROM_UDP_DHCP_PORT_END - EEPROM_IP_HEADER)
+    rcall ES_MEMCPY
+    /* Set Z back to SRAM_IPV4_HEADER */
+    sbiw  ZL, (EEPROM_UDP_DHCP_PORT_END - EEPROM_IP_HEADER)
     /* }}} */
     /* Set non default IPv4 header fields {{{ */
-    ldi   ZL, lo8(SRAM_IPV4_HEADER)
-    ldi   ZH, hi8(SRAM_IPV4_HEADER)
-
     /* IP TOTAL LENGTH {{{ */
     std   Z + (IPV4_TOTAL_LENGTH + 0), DHCP_PKT_SIZE_H
     std   Z + (IPV4_TOTAL_LENGTH + 1), DHCP_PKT_SIZE_L
@@ -252,29 +247,21 @@ DHCP_WRITE_IP_HEADER_TO_SRAM:
     /* Src and Dst IP addresses for RENEWING {{{ */
     sbrs  DHCP_STATE_R, DHCP_STATE_RENEWING
     rjmp  DEFAULT_SRC_DST_ADDRESSES
+    /* Copy Src IP address */
     adiw  ZL, IPV4_SRC_ADDR
-    ldi   COUNTER_REG, IPV4_SIZE_IN_BYTES
+    ldi   ARG_REG1, IPV4_ADDR_LEN
     ldi   YL, lo8(EEPROM_IP_ADDR)
     ldi   YH, hi8(EEPROM_IP_ADDR)
-DHCP_IP_HEADER_SRC_IP_LOOP:
-    rcall EEPROM_READ_N_INC
-    st    Z+, RETURN_VALUE
-    dec   COUNTER_REG
-    brne  DHCP_IP_HEADER_SRC_IP_LOOP
-
-    ldi   COUNTER_REG, IPV4_SIZE_IN_BYTES
+    rcall ES_MEMCPY
+    /* Copy DHCP server IP address */
     ldi   YL, lo8(SRAM_DHCP_SERVER_IP_ADDR)
     ldi   YH, hi8(SRAM_DHCP_SERVER_IP_ADDR)
-DHCP_IP_HEADER_DST_IP_LOOP:
-    ld    TMP_REG1, Y+
-    st    Z+, TMP_REG1
-    dec   COUNTER_REG
-    brne  DHCP_IP_HEADER_DST_IP_LOOP
+    rcall MEMCPY
+    /* Set Z back to SRAM_IPV4_HEADER */
+    sbiw  ZL, (IPV4_ADDR_LEN * 2)
 DEFAULT_SRC_DST_ADDRESSES:
     /* }}} */
     /* Internet Checksum {{{ */
-    ldi   ZL, lo8(SRAM_IPV4_HEADER)
-    ldi   ZH, hi8(SRAM_IPV4_HEADER)
     ldi   ARG_REG1, (EEPROM_IP_HEADER_END - EEPROM_IP_HEADER)
     rcall INTERNET_CHECKSUM_RFC1071
     std   Z + (IPV4_H_CHECKSUM + 0), YH
@@ -342,7 +329,7 @@ SECS_FLAGS_TO_ZERO:
     */
     ldi   YL, lo8(EEPROM_IP_ADDR)
     ldi   YH, hi8(EEPROM_IP_ADDR)
-    ldi   COUNTER_REG, IPV4_SIZE_IN_BYTES
+    ldi   COUNTER_REG, IPV4_ADDR_LEN
 CIADDR_TO_ZERO_OR_MY_IP:
     clr   RETURN_VALUE
     /* IP ADDR is zero for DISCOVER, as it is unset, then, safe to read from
@@ -426,6 +413,7 @@ DHCP_MAGIC_COOKIE_LOOP:
      * BEWARE DHCP_STATE_R gets modified here */
     andi  DHCP_STATE_R, (1 << DHCP_STATE_INIT)        | \
                         (1 << DHCP_STATE_INIT_REBOOT) | \
+                        (1 << DHCP_STATE_REBOOTING)   | \
                         (1 << DHCP_STATE_RENEWING)    | \
                         (1 << DHCP_STATE_REBIDING)
     brne  DHCP_END_OP
@@ -509,7 +497,7 @@ CHECK_DHCP_HEADER:
     rcall ETH_READ_BUFFER_START
     /* }}} */
     /* Read offered IP and write it into EEPROM {{{ */
-    ldi   COUNTER_REG, IPV4_SIZE_IN_BYTES
+    ldi   COUNTER_REG, IPV4_ADDR_LEN
     ldi   YL, lo8(EEPROM_IP_ADDR)
     ldi   YH, hi8(EEPROM_IP_ADDR)
 UPDATE_EEPROM_IP_ADDR:
