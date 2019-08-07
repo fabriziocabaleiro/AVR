@@ -84,7 +84,7 @@ READ_HEADER:
     ldi   YL, lo8(EEPROM_IP_ADDR)
     ldi   ZL, lo8(SRAM_IPV4_HEADER)
     ldi   ZH, hi8(SRAM_IPV4_HEADER)
-    ldi   COUNTER_REG, IPV4_SIZE_IN_BYTES
+    ldi   COUNTER_REG, IPV4_ADDR_LEN
 CHECK_IP_ADDR:
     rcall EEPROM_READ_N_INC
     ldd   TMP_REG1, Z + IPV4_DST_ADDR
@@ -114,7 +114,7 @@ NOT_BROADCAST:
     /* }}} */
     /* Deliver packet using IPv4 protocol {{{ */
     /* Faster than setting ZH:ZL, just subtract... previously added value */
-    sbiw  ZL, IPV4_SIZE_IN_BYTES
+    sbiw  ZL, IPV4_ADDR_LEN
     /* Load Internet protocol number */
     ldd   TMP_REG1, Z + IPV4_PROTOCOL
 
@@ -233,7 +233,7 @@ IPV4_PREPARE_HEADER_GET_FROM_EEPROM:
     /* SRC IP Address */
     ldi   YL, lo8(EEPROM_IP_ADDR)
     ldi   YH, hi8(EEPROM_IP_ADDR)
-    ldi   COUNTER_REG, IPV4_SIZE_IN_BYTES
+    ldi   COUNTER_REG, IPV4_ADDR_LEN
 IPV4_PREPARE_HEADER_GET_IP_FROM_EEPROM:
     rcall EEPROM_READ_N_INC
     st    Z+, RETURN_VALUE
@@ -243,7 +243,7 @@ IPV4_PREPARE_HEADER_GET_IP_FROM_EEPROM:
     /* DST IP Address */
     ldi   YL, lo8(SRAM_IP_ADDR_DST)
     ldi   YH, hi8(SRAM_IP_ADDR_DST)
-    ldi   COUNTER_REG, IPV4_SIZE_IN_BYTES
+    ldi   COUNTER_REG, IPV4_ADDR_LEN
 IPV4_PREPARE_HEADER_GET_IP_FROM_EEPROM_DST:
     ld    TMP_REG1, Y+
     st    Z+, TMP_REG1

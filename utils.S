@@ -13,16 +13,17 @@
 
 .global MEMCMP
 .global MEMCPY
+.global ES_MEMCMP
 .global ES_MEMCPY
 
 .section .data
 
 .section .text
 
-/* MEMCMP {{{
+/* MEMCMP {{{1 -----------------------------------------------------------------
  * Compare ARG_REG1 bytes pointed by Y and Z
  * Y, Z and ARG_REG1 unchanged after routine
- * RETURN_VALUE => 0 if memory areas are equal, 1 otherwise */
+ * Zero flag => 1 if memory regions are equal, 0 otherwise */
 MEMCMP:
     push  YL
     push  YH
@@ -30,7 +31,6 @@ MEMCMP:
     push  ZH
     push  ARG_REG1
 
-    clr   RETURN_VALUE
 MEMCMP_LOOP:
     dec   ARG_REG1
     brmi  MEMCMP_END
@@ -38,17 +38,19 @@ MEMCMP_LOOP:
     ld    TMP_REG2, Z+
     cp    TMP_REG1, TMP_REG2
     breq  MEMCMP_LOOP
-    inc   RETURN_VALUE ; memory spaces aren't equal
-
+    /* If falling here from line above, then ARG_REG1 didn't reach -1, then
+     * after the inc below, it will have a value greater than Zero, setting the
+     * Zero flag to 0 */
 MEMCMP_END:
+    inc   ARG_REG1
     pop   ARG_REG1
     pop   ZH
     pop   ZL
     pop   YH
     pop   YL
     ret
-/* }}} */
-/* MEMCPY {{{
+
+/* MEMCPY {{{1 -----------------------------------------------------------------
  * Copy from Y to Z ARG_REG1 bytes
  * ARG_REG1 unchanged after routine
  * Y += ARG_REG1 ; after routine
@@ -66,32 +68,49 @@ MEMCPY_LOOP:
 MEMCPY_END:
     pop   ARG_REG1
     ret
-/* }}} */
-/* ES_MEMCPY {{{
+
+/* ES_MEMCMP {{{1 --------------------------------------------------------------
+ * Same as MEMCMP, but Y from EEPROM */
+ES_MEMCMP:
+    push  YL
+    push  YH
+    push  ZL
+    push  ZH
+    push  ARG_REG1
+
+ES_MEMCMP_LOOP:
+    dec   ARG_REG1
+    brmi  ES_MEMCMP_END
+    rcall EEPROM_READ_N_INC
+    ld    TMP_REG1, Z+
+    cp    TMP_REG1, RETURN_VALUE
+    breq  ES_MEMCMP_LOOP
+    /* If falling here from line above, then ARG_REG1 didn't reach -1, then
+     * after the inc below, it will have a value greater than Zero, setting the
+     * Zero flag to 0 */
+ES_MEMCMP_END:
+    inc   ARG_REG1
+ES_MEMCPY_EXIT:
+    pop   ARG_REG1
+    pop   ZH
+    pop   ZL
+    pop   YH
+    pop   YL
+    ret
+
+/* ES_MEMCPY {{{1 --------------------------------------------------------------
  * Same as MEMCPY, but source from EEPROM */
 ES_MEMCPY:
-    /* Wait for any previous EEPROM write to finish {{{ */
-    sbic  _SFR_IO_ADDR(EECR), EEWE
-    rjmp  ES_MEMCPY
     push  ARG_REG1
-    /* }}} */
 ES_MEMCPY_LOOP:
     dec   ARG_REG1
     brmi  ES_MEMCPY_END
-    /* EEPROM read, INC Y {{{ */
-    /* Set EEPROM address */
-    out   _SFR_IO_ADDR(EEARH), YH
-    out   _SFR_IO_ADDR(EEARL), YL
-    adiw  YL, 1
-    /* Set Read Enable and read */
-    sbi   _SFR_IO_ADDR(EECR), EERE
-    in    TMP_REG1, _SFR_IO_ADDR(EEDR)
-    /* }}} */
-    st    Z+, TMP_REG1
+    rcall EEPROM_READ_N_INC
+    st    Z+, RETURN_VALUE
     rjmp  ES_MEMCPY_LOOP
 
 ES_MEMCPY_END:
     pop   ARG_REG1
     ret
-/* }}} */
+
 .end

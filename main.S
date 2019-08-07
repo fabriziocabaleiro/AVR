@@ -234,8 +234,6 @@ TYPE_LEN_ARP: /* {{{ */
     brne  TYPE_LEN_UNKNOWN
 
     rcall ARP_HANDLE_PKT
-    cpi   RETURN_VALUE, 0
-    brne  ERROR
     rjmp  PACKET_END
     /* }}} */
 TYPE_LEN_UNKNOWN: /* }}} */

@@ -96,7 +96,6 @@
  * IP address sizes *
  *******************/
 #define MAC_ADDR_LEN       6
-#define IPV4_SIZE_IN_BYTES 4
 
 /* }}} */
 

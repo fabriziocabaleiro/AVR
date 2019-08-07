@@ -32,7 +32,7 @@ ICMP_HANDLE_PKT:
 
     /* Before reading ICMP ECHO payload, modify IPv4 Header, swapping Src and
      * Dst IP addresses */
-    ldi   COUNTER_REG, IPV4_SIZE_IN_BYTES
+    ldi   COUNTER_REG, IPV4_ADDR_LEN
 SWAP_IP_ADDR:
     ldd   TMP_REG1, Z + IPV4_SRC_ADDR
     ldd   TMP_REG2, Z + IPV4_DST_ADDR

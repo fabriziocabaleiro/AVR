@@ -40,8 +40,8 @@ COMM_INIT:
  * ARG_REG1 is the length */
 SEND_PACKET:
     push  COUNTER_REG
-    push  XL
-    push  XH
+    push  ZL
+    push  ZH
     push  YL
     push  YH
 
@@ -60,13 +60,10 @@ SEND_PACKET:
     rcall ADC_DISABLE
     /* ADC for MQ135 } */
     /* }}} */
-
-
     /* Set MAC Dst pointer */
     ldi   YL, lo8(SRAM_COMM_IP_ADDR_DST)
     ldi   YH, hi8(SRAM_COMM_IP_ADDR_DST)
     rcall ARP_GET_MAC_ADDR_PTR
-    tst   RETURN_VALUE
     brne  SEND_PACKET_EXIT
     sts   SRAM_ENC_MAC_DST_PTR + 0, YH
     sts   SRAM_ENC_MAC_DST_PTR + 1, YL
@@ -91,18 +88,13 @@ SEND_PACKET:
 
     push  RETURN_VALUE /* Save ipv4 payload size */
 
-    /* Set Dst IP Addr. TODO: MAKE IT BETTER {{{ */
-    /* TODO: memcpy */
+    /* Set Dst IP address {{{ */
     ldi   YL, lo8(SRAM_COMM_IP_ADDR_DST)
     ldi   YH, hi8(SRAM_COMM_IP_ADDR_DST)
     ldi   ZL, lo8(SRAM_IP_ADDR_DST)
     ldi   ZH, hi8(SRAM_IP_ADDR_DST)
-    ldi   COUNTER_REG, IPV4_ADDR_LEN
-COPY_IP_ADDR:
-    ld    TMP_REG1, Y+
-    st    Z+, TMP_REG1
-    dec   COUNTER_REG
-    brne  COPY_IP_ADDR
+    ldi   ARG_REG1, IPV4_ADDR_LEN
+    rcall MEMCPY
     /* }}} */
     /* IPv4 default header size is 20, add UDP length to it */
     ldi   ARG_REG1, 20
@@ -127,8 +119,8 @@ COPY_IP_ADDR:
 SEND_PACKET_EXIT:
     pop   YH
     pop   YL
-    pop   XH
-    pop   XL
+    pop   ZH
+    pop   ZL
     pop   COUNTER_REG
     ret
 /* }}} */
