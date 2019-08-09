@@ -10,9 +10,9 @@
 /* As above, if this bit is set, then TYPE/LEN is ARP */
 #define ENC_TYPE_LEN_PTR_ARP                 6
 
-#define RPKT_STATUS_VECTOR_LEN         6
+#define RPKT_STATUS_VECTOR_LEN               6
 
-/* Buffer initialization {{{ */
+/* Buffer initialization {{{1  -----------------------------------------------*/
 #define BUF_TX_ST_L 0x00
 #define BUF_TX_ST_H 0x00
 #define BUF_TX_ND_L 0xF0
@@ -26,8 +26,8 @@
 
 #define BUF_RX_SIZE (((BUF_RX_ND_H << 8) + BUF_RX_ND_L) - \
                      ((BUF_RX_ST_H << 8) + BUF_RX_ST_L) + 1)
-/* }}} */
-/* Common set of registers {{{ */
+
+/* Common set of registers {{{1  ---------------------------------------------*/
 /* INTIE PKTIE DMAIE LINKIE TXIE r TXERIE RXERIE 0000 0000 */
 #define ENC_COMMON_EIE         0x1B
 #define ENC_COMMON_EIE_INTIE      7
@@ -90,8 +90,8 @@
 #define ENC_COMMON_BANK3 ( ENC_COMMON_ECON1_BSEL1)|( ENC_COMMON_ECON1_BSEL0)
 
 #define ENC_COMMON_BANK_MASK ((ENC_COMMON_ECON1_BSEL1)|(ENC_COMMON_ECON1_BSEL0))
-/* }}} */
-/* Control register Bank 0 {{{ */
+
+/* Control register Bank 0 {{{1  ---------------------------------------------*/
 /* Read Pointer Low Byte ERDPT<7:0>) 1111 1010 */
 #define ENC_BANK0_ERDPTL      0x00
 /* — — — Read Pointer High Byte (ERDPT<12:8>) ---0 0101 */
@@ -143,8 +143,8 @@
 /* - 0x18 */
 /* - 0x19 */
 /* #define Reserved    0x1A */
-/* }}} */
-/* Control register Bank 1  {{{ */
+
+/* Control register Bank 1  {{{1  --------------------------------------------*/
 /* Hash Table Byte 0 (EHT<7:0>) 0000 0000 */
 #define ENC_BANK1_EHT0        0x00
 /* Hash Table Byte 1 (EHT<15:8>) 0000 0000 */
@@ -252,8 +252,8 @@
 /* Ethernet Packet Count 0000 0000 43 */
 #define ENC_BANK1_EPKTCNT        0x19
 /* #define Reserved    0x1A */
-/* }}} */
-/* Control register Bank 2 {{{ */
+
+/* Control register Bank 2 {{{1  ---------------------------------------------*/
 /* bit 7-5           Unimplemented: Read as ‘0’
  * bit 4             Reserved: Maintain as ‘0’
  * bit 3             TXPAUS: Pause Control Frame Transmission Enable bit
@@ -375,8 +375,8 @@
 /* MII Read Data High Byte(MIRD<15:8>) 0000 0000 19 */
 #define ENC_BANK2_MIRDH       0x19
 /* #define Reserved    0x1A */
-/* }}} */
-/* Control register Bank 3 {{{ */
+
+/* Control register Bank 3 {{{1  ---------------------------------------------*/
 /* MAC Address Byte 5 (MAADR<15:8>) 0000 0000 34 */
 #define ENC_BANK3_MAADR5      0x00
 /* MAC Address Byte 6 (MAADR<7:0>) 0000 0000 34 */
@@ -419,8 +419,8 @@
 #define ENC_BANK3_EPAUSL      0x18
 #define ENC_BANK3_EPAUSH      0x19
 /* #define Reserved    0x1A */
-/* }}} */
-/* SPI commands {{{ */
+
+/* SPI commands {{{1  --------------------------------------------------------*/
 /*
 Read Buffer Memory
 (RBM)   0 0 1   1 1 0 1 0       N/A
@@ -442,8 +442,8 @@ System Reset Command (Soft Reset)
 #define ETH_SPI_CMD_BFS 0x80
 #define ETH_SPI_CMD_BFC 0xA0
 #define ETH_SPI_CMD_SRC 0xFF
-/* }}} */
-/* RPKT_STATUS3 {{{
+
+/* RPKT_STATUS3 {{{1 -----------------------------------------------------------
     31  Zero
         0
     30  Receive VLAN Type Detected
@@ -473,8 +473,8 @@ System Reset Command (Soft Reset)
 #define RPKT_STATUS3_DRIBBLE_NIBBLE                 2
 #define RPKT_STATUS3_RECEIVE_BROADCAST_PACKET       1
 #define RPKT_STATUS3_RECEIVE_MULTICAST_PACKET       0
-/* }}} */
-/* RPKT_STATUS2 {{{
+
+/* RPKT_STATUS2 {{{1 -----------------------------------------------------------
     23  Received Ok
         Indicates that at the packet had a valid CRC and no symbol errors.
     22  Length Out of Range
@@ -505,14 +505,14 @@ System Reset Command (Soft Reset)
 #define RPKT_STATUS2_CARRIER_EVENT_PREVIOUSLY_SEEN  2
 //#define RPKT_STATUS2_RESERVED                       1
 #define RPKT_STATUS2_LONG_EVENT_DROP_EVENT          0
-/* }}} */
-/* [RPKT_BYTE_COUNT_H:RPKT_BYTE_COUNT_L] {{{
+
+/* [RPKT_BYTE_COUNT_H:RPKT_BYTE_COUNT_L] {{{1 ----------------------------------
     15-0  Received Byte Count
     Indicates length of the received frame. This includes the destination
     address, source address, type/length, data, padding and CRC fields. This
-    field is stored in little-endian format.
-}}} */
-#ifdef USE_FULL_DUPLEX /* {{{ */
+    field is stored in little-endian format. */
+
+#ifdef USE_FULL_DUPLEX /* {{{1 */
 #  define ENC_BANK2_MACON1_FULL_DUPLEX   (ENC_BANK2_MACON1_RXPAUS | ENC_BANK2_MACON1_TXPAUS)
 #  define ENC_BANK2_MABBIPG_FULL_DUPLEX  0x15
 #  define ENC_BANK2_MACON3_FULL_DUPLEX   (ENC_BANK2_MACON3_FULDPX)
@@ -520,7 +520,7 @@ System Reset Command (Soft Reset)
 #  define ENC_BANK2_MACON1_FULL_DUPLEX   0
 #  define ENC_BANK2_MABBIPG_FULL_DUPLEX  0x12
 #  define ENC_BANK2_MACON3_FULL_DUPLEX   0
-#endif /* }}} */
+#endif /* }}}1 */
 
 #define ETH_READ_NEXT_BYTE  rcall SPI_MASTER_TRANSMIT
 #define ETH_READ_BUFFER_END SPI_END_ETH

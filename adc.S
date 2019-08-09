@@ -1,19 +1,9 @@
 /* vim: set filetype=S foldmethod=marker: */
+/* INCLUDES {{{1 */
 .NOLIST
 #include <avr/io.h>
 #include "defs.h"
 .LIST
-
-.global ADC_ENABLE_N_START
-.global ADC_DISABLE
-.global ADC_vect
-
-.global SRAM_MQ135_PAYLOAD
-
-.section .data
-SRAM_MQ135_PAYLOAD: .skip MQ135_PAYLOAD_LEN
-
-.section .text
 
 /* ADC prescaler documentation {{{1 --------------------------------------------
  * By default, the successive approximation circuitry requires an input clock
@@ -57,7 +47,20 @@ SRAM_MQ135_PAYLOAD: .skip MQ135_PAYLOAD_LEN
 #   error "Unsupported F_CPU value"
 #endif
 
-/* Enable ADC and start conversion {{{1 ----------------------------------------
+/* GLOBAL {{{1 ---------------------------------------------------------------*/
+.global ADC_ENABLE_N_START
+.global ADC_DISABLE
+.global ADC_vect
+
+.global SRAM_MQ135_PAYLOAD
+
+.section .data
+SRAM_MQ135_PAYLOAD: .skip MQ135_PAYLOAD_LEN
+
+/* TEXT {{{1 -----------------------------------------------------------------*/
+.section .text
+
+/* Enable ADC and start conversion {{{2 ----------------------------------------
  * Also setting at the same time:
  *   Enable ADC interrupt
  *   ADC prescaler to 8 (expecting running at 1MHz) */
@@ -67,12 +70,12 @@ ADC_ENABLE_N_START:
     out   _SFR_IO_ADDR(ADCSRA), TMP_REG1
     ret
 
-/* Disable ADC {{{1 ----------------------------------------------------------*/
+/* Disable ADC {{{2 ----------------------------------------------------------*/
 ADC_DISABLE:
     cbi   _SFR_IO_ADDR(ADCSRA), ADEN
     ret
 
-/* ADC interrupt routine {{{1 --------------------------------------------------
+/* ADC interrupt routine {{{2 --------------------------------------------------
  * Read the content of [ADCH:ADCL] and store it into SRAM */
 ADC_vect:
     push  TMP_REG1

@@ -1,4 +1,5 @@
 /* vim: set filetype=S foldmethod=marker: */
+/* INCLUDES {{{1 */
 .NOLIST
 #include <avr/io.h>
 #include <avr/interrupt.h>
@@ -6,9 +7,12 @@
 #include "enc28j60.h"
 .LIST
 
+/* GLOBAL {{{1 ---------------------------------------------------------------*/
 .global DIV_RIGHT_SHIFT
 
-/* Divide by right shift
+/* TEXT {{{1 -----------------------------------------------------------------*/
+.section .text
+/* Divide by right shift {{{2
  * Y points to src data
  * Z points to dst data
  * ARG_REG1 number of right shift, i.e. ARG_REG1 = 1 means division by 2

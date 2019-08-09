@@ -1,4 +1,5 @@
 /* vim: set filetype=S foldmethod=marker: */
+/* INCLUDES {{{1 */
 .NOLIST
 #include <avr/io.h>
 #include "defs.h"
@@ -68,7 +69,7 @@ ARP_HANDLE_PKT:
     ldi   ZL, lo8(SRAM_ARP_PAYLOAD)
 ARP_PROCESS_READ_PAYLOAD:
     ETH_READ_NEXT_BYTE
-    st    Z+, RETURN_VALUE
+    st    Z+, RTV_L_REG
     dec   COUNTER_REG
     brne  ARP_PROCESS_READ_PAYLOAD
 
@@ -101,7 +102,7 @@ ARP_PROCESS_KEEP_WRITING_MY_MAC:
     std   Z+(ARP_THA - ARP_SHA), DATA1
     /* Set Addr to read from EEPROM, read and write into SRAM */
     rcall EEPROM_READ_N_INC
-    st    Z+, RETURN_VALUE
+    st    Z+, RTV_L_REG
     dec   COUNTER_REG
     brne  ARP_PROCESS_KEEP_WRITING_MY_MAC
 
@@ -116,7 +117,7 @@ ARP_PROCESS_WRITE_IP_BYTE:
     std   Z+(ARP_TPA - ARP_SPA), DATA1
     /* Set addr to read from EEPROM, read into DATA1 and write it into SRAM */
     rcall EEPROM_READ_N_INC
-    st    Z+,  RETURN_VALUE
+    st    Z+,  RTV_L_REG
     dec   COUNTER_REG
     brne  ARP_PROCESS_WRITE_IP_BYTE
     /* Send ARP packet back {{{4 */
@@ -226,12 +227,12 @@ ARP_TABLE_LOOP:
     breq  ARP_ENTRY_FOUND
     dec   COUNTER_REG
     brne  ARP_TABLE_LOOP
-    sez
+    clz
     rjmp  ARP_GET_MAC_ADDR_EXIT
 ARP_ENTRY_FOUND:
     movw  YL, ZL
     adiw  YL, (ARP_TABLE_MAC - ARP_TABLE_IPV4)
-    clz
+    sez
 
 ARP_GET_MAC_ADDR_EXIT:
     pop   ZH

@@ -1,4 +1,5 @@
 /* vim: set filetype=S foldmethod=marker: */
+/* INCLUDES {{{1 */
 .NOLIST
 #include <avr/io.h>
 #include "defs.h"
@@ -11,16 +12,16 @@
  *   - ARG_REG1 is the length to copy
  ******************************************************************************/
 
+/* GLOBAL {{{1 ---------------------------------------------------------------*/
 .global MEMCMP
 .global MEMCPY
 .global ES_MEMCMP
 .global ES_MEMCPY
 
-.section .data
-
+/* TEXT {{{1 -----------------------------------------------------------------*/
 .section .text
 
-/* MEMCMP {{{1 -----------------------------------------------------------------
+/* MEMCMP {{{2 -----------------------------------------------------------------
  * Compare ARG_REG1 bytes pointed by Y and Z
  * Y, Z and ARG_REG1 unchanged after routine
  * Zero flag => 1 if memory regions are equal, 0 otherwise */
@@ -50,7 +51,7 @@ MEMCMP_END:
     pop   YL
     ret
 
-/* MEMCPY {{{1 -----------------------------------------------------------------
+/* MEMCPY {{{2 -----------------------------------------------------------------
  * Copy from Y to Z ARG_REG1 bytes
  * ARG_REG1 unchanged after routine
  * Y += ARG_REG1 ; after routine
@@ -69,7 +70,7 @@ MEMCPY_END:
     pop   ARG_REG1
     ret
 
-/* ES_MEMCMP {{{1 --------------------------------------------------------------
+/* ES_MEMCMP {{{2 --------------------------------------------------------------
  * Same as MEMCMP, but Y from EEPROM */
 ES_MEMCMP:
     push  YL
@@ -83,7 +84,7 @@ ES_MEMCMP_LOOP:
     brmi  ES_MEMCMP_END
     rcall EEPROM_READ_N_INC
     ld    TMP_REG1, Z+
-    cp    TMP_REG1, RETURN_VALUE
+    cp    TMP_REG1, RTV_L_REG
     breq  ES_MEMCMP_LOOP
     /* If falling here from line above, then ARG_REG1 didn't reach -1, then
      * after the inc below, it will have a value greater than Zero, setting the
@@ -98,7 +99,7 @@ ES_MEMCPY_EXIT:
     pop   YL
     ret
 
-/* ES_MEMCPY {{{1 --------------------------------------------------------------
+/* ES_MEMCPY {{{2 --------------------------------------------------------------
  * Same as MEMCPY, but source from EEPROM */
 ES_MEMCPY:
     push  ARG_REG1
@@ -106,7 +107,7 @@ ES_MEMCPY_LOOP:
     dec   ARG_REG1
     brmi  ES_MEMCPY_END
     rcall EEPROM_READ_N_INC
-    st    Z+, RETURN_VALUE
+    st    Z+, RTV_L_REG
     rjmp  ES_MEMCPY_LOOP
 
 ES_MEMCPY_END:

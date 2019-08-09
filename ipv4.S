@@ -1,4 +1,5 @@
 /* vim: set filetype=S foldmethod=marker: */
+/* INCLUDES {{{1 */
 .NOLIST
 #include <avr/io.h>
 #include "enc28j60.h"
@@ -7,6 +8,7 @@
 #include "eeprom_data.h"
 .LIST
 
+/* GLOBAL {{{1 ---------------------------------------------------------------*/
 .global IPV4_HANDLE_PKT
 .global INTERNET_CHECKSUM_RFC1071
 .global IPV4_PREPARE_DEFAULT_HEADER_20_40_BYTES
@@ -16,6 +18,7 @@
 .global SRAM_IPV4_PAYLOAD
 .global SRAM_IP_ADDR_DST
 
+/* DATA  {{{1 ----------------------------------------------------------------*/
 .section .data
 SRAM_IPV4_HEADER:       .skip   IPV4_MAX_HEADER_LEN
 SRAM_IPV4_PAYLOAD:      .skip   IPV4_PAYLOAD_LEN
@@ -25,17 +28,17 @@ SRAM_IPV4_IHL_IN_BYTES: .skip   1
  * just assigning it through ping request */
 SRAM_IP_ADDR_DST:       .skip   IPV4_ADDR_LEN
 
+/* TEXT {{{1 -----------------------------------------------------------------*/
 .section .text
-/*******************************************************************************
- * Handle IPv4 packet {{{
+
+/* Handle IPv4 packet {{{2 -----------------------------------------------------
  * Check protocol (tcp, udp, etc) and port to deliver to corresponding routine
- * IP version != 4 will be ignore
- ******************************************************************************/
+ * IP version != 4 will be ignore */
 IPV4_HANDLE_PKT:
     push  ZH
     push  ZL
 
-    /* Read IPv4 Header {{{ */
+    /* Read IPv4 Header {{{3 */
     ldi   ZL, lo8(SRAM_IPV4_HEADER)
     ldi   ZH, hi8(SRAM_IPV4_HEADER)
     rcall ETH_READ_BUFFER_START
@@ -44,10 +47,10 @@ IPV4_HANDLE_PKT:
      * assign counter with the length and check that version is 4, if not,
      * return 1 and exit */
     ETH_READ_NEXT_BYTE
-    st    Z+, RETURN_VALUE
-    mov   COUNTER_REG, RETURN_VALUE
-    andi  RETURN_VALUE, 0xF0
-    cpi   RETURN_VALUE, 0x40
+    st    Z+, RTV_L_REG
+    mov   COUNTER_REG, RTV_L_REG
+    andi  RTV_L_REG, 0xF0
+    cpi   RTV_L_REG, 0x40
     /* Only IPv4 will be handle, other versions will be ignore */
     breq  PACKET_IS_IPV4
     rjmp  IPV4_HANDLE_EXIT_SUCCESS
@@ -64,12 +67,12 @@ PACKET_IS_IPV4:
     /* Read the rest of the IPv4 header */
 READ_HEADER:
     ETH_READ_NEXT_BYTE
-    st    Z+, RETURN_VALUE
+    st    Z+, RTV_L_REG
     dec   COUNTER_REG
     brne  READ_HEADER
     ETH_READ_BUFFER_END
-    /* }}} */
-    /* Check if IPv4 packet is for me, set IPV4_PACKET_FOR_ME {{{
+
+    /* Check if IPv4 packet is for me, set IPV4_PACKET_FOR_ME {{{3
      * Beware EEPROM_READ_N_INC does not modify TMP_REG[123]
      * DHCP may have an IPv4 Dst address different than mine... */
     push  YL
@@ -88,7 +91,7 @@ READ_HEADER:
 CHECK_IP_ADDR:
     rcall EEPROM_READ_N_INC
     ldd   TMP_REG1, Z + IPV4_DST_ADDR
-    cp    TMP_REG1, RETURN_VALUE
+    cp    TMP_REG1, RTV_L_REG
     brne  NOT_MY_IP
     subi  TMP_REG2, -0x01
 NOT_MY_IP:
@@ -111,8 +114,7 @@ NOT_BROADCAST:
     ERR_SET
 #endif
 
-    /* }}} */
-    /* Deliver packet using IPv4 protocol {{{ */
+    /* Deliver packet using IPv4 protocol {{{3 */
     /* Faster than setting ZH:ZL, just subtract... previously added value */
     sbiw  ZL, IPV4_ADDR_LEN
     /* Load Internet protocol number */
@@ -143,68 +145,65 @@ TRY_PROTOCOL_TCP:
     rcall TCP_HANDLE_PKT
     rjmp  IPV4_HANDLE_EXIT_SUCCESS
 #endif
-    /* }}} */
+    /* }}}3 */
 
 IPV4_HANDLE_EXIT_SUCCESS:
-    ldi   RETURN_VALUE, 0
+    ldi   RTV_L_REG, 0
 IPV4_HANDLE_END:
     pop   ZL
     pop   ZH
     ret
-/* }}} */
-/*******************************************************************************
- * Internet Checksum RFC 1071 {{{
+
+/* Internet Checksum RFC 1071 {{{2 ---------------------------------------------
  * Byte order independent
  *
  * Input:
  *   ZH:ZL     Address to start reading from
  *   ARG_REG1  Bytes to read, if odd, then, rounded down.
  *
- * Return value (checksum) in Y
- * previous value of Y is lost, caller must take care of it.
- ******************************************************************************/
+ * Return value (checksum) in [RTV_H_REG:RTV_L_REG]
+ * previous value of Y is lost, caller must take care of it. */
 INTERNET_CHECKSUM_RFC1071:
     push  ZL
     push  ZH
     push  ARG_REG1
 
-    clr   YL
-    clr   YH
+    clr   RTV_L_REG
+    clr   RTV_H_REG
 
     lsr   ARG_REG1 /* adding by word */
     clc   /* Clear any carry from before */
 
 IPV4_PING_CHECKSUM_LOOP:
     ld    TMP_REG1, Z+
-    adc   YH, TMP_REG1
+    adc   RTV_H_REG, TMP_REG1
     ld    TMP_REG1, Z+
-    adc   YL, TMP_REG1
+    adc   RTV_L_REG, TMP_REG1
     dec   ARG_REG1
     brne  IPV4_PING_CHECKSUM_LOOP
 
     brcc  IPV4_PING_CHECKSUM_END
     /* If the last addition generated a Carry, then add zero with carry, which
-     * could also generate a Carry into YH, so, add zero with carry as well */
+     * could also generate a Carry into RTV_H_REG, so, add zero with carry as
+     * well */
     clr   TMP_REG1
 IPV4_PING_CHECKSUM_REMAINING_CARRY:
-    adc   YH, TMP_REG1
-    adc   YL, TMP_REG1
+    adc   RTV_H_REG, TMP_REG1
+    adc   RTV_L_REG, TMP_REG1
     brcs  IPV4_PING_CHECKSUM_REMAINING_CARRY
 
 IPV4_PING_CHECKSUM_END:
-    com   YL
-    com   YH
+    com   RTV_L_REG
+    com   RTV_H_REG
 
     pop   ARG_REG1
     pop   ZH
     pop   ZL
     ret
-/* }}} */
-/*******************************************************************************
- * Prepare IPv4 header {{{
+
+/* Prepare IPv4 header {{{2 ----------------------------------------------------
  * This routine returns the size of the header
- * ARG_REG1 total size
- ******************************************************************************/
+ * ARG_REG1 total size */
 IPV4_PREPARE_DEFAULT_HEADER_20_40_BYTES:
     push  YH
     push  YL
@@ -220,7 +219,7 @@ IPV4_PREPARE_DEFAULT_HEADER_20_40_BYTES:
     ldi   ZH, hi8(SRAM_IPV4_HEADER)
 IPV4_PREPARE_HEADER_GET_FROM_EEPROM:
     rcall EEPROM_READ_N_INC
-    st    Z+, RETURN_VALUE
+    st    Z+, RTV_L_REG
     dec   COUNTER_REG
     brne  IPV4_PREPARE_HEADER_GET_FROM_EEPROM
     /* till here we have 10 bytes written. Now we have to write checksum and
@@ -236,7 +235,7 @@ IPV4_PREPARE_HEADER_GET_FROM_EEPROM:
     ldi   COUNTER_REG, IPV4_ADDR_LEN
 IPV4_PREPARE_HEADER_GET_IP_FROM_EEPROM:
     rcall EEPROM_READ_N_INC
-    st    Z+, RETURN_VALUE
+    st    Z+, RTV_L_REG
     dec   COUNTER_REG
     brne  IPV4_PREPARE_HEADER_GET_IP_FROM_EEPROM
 
@@ -257,16 +256,15 @@ IPV4_PREPARE_HEADER_GET_IP_FROM_EEPROM_DST:
 
     ldi   ARG_REG1, IPV4_DEFAULT_HEADER_LEN
     rcall INTERNET_CHECKSUM_RFC1071
-    std   Z + (IPV4_H_CHECKSUM + 0), YH
-    std   Z + (IPV4_H_CHECKSUM + 1), YL
+    std   Z + (IPV4_H_CHECKSUM + 0), RTV_H_REG
+    std   Z + (IPV4_H_CHECKSUM + 1), RTV_L_REG
 
-    ldi   RETURN_VALUE, IPV4_DEFAULT_HEADER_LEN
+    ldi   RTV_L_REG, IPV4_DEFAULT_HEADER_LEN
 
     pop   ZL
     pop   ZH
     pop   YL
     pop   YH
     ret
-/* }}} */
 
 .end

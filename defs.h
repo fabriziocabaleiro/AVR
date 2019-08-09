@@ -2,26 +2,24 @@
 #ifndef _DEFS_H_
 #define _DEFS_H_
 
-/*******************************************************************************
- * Global configuration {{{
- ******************************************************************************/
-#define F_CPU 1000000 /* Default value of internal RC oscillator */
+/* Global configuration {{{1 --------------------------------------------------*/
+/* Default value of internal RC oscillator */
+#define F_CPU 1000000
 #define USE_DHT11
-/* }}} */
-/*******************************************************************************
- * Registers {{{
- ******************************************************************************/
-/*  */
+
+/* Registers {{{1 -------------------------------------------------------------*/
 #define ETH_INT_RQST     R15
 /* Register used for temporary values, they may be change after any rcall */
 #define TMP_REG1         R16
 #define TMP_REG2         R17
-#define TMP_REG3         R18
-/* Register used to pass arguments to routines */
-#define ARG_REG1         R19
-#define ARG_REG2         R20
-/* Register used to pass values back from routines */
-#define RETURN_VALUE     R21
+/* Register used to pass arguments to routines, some routines will change their
+ * values, other won't */
+#define ARG_REG1         R18
+#define ARG_REG2         R19
+/* Registers used to pass values back from routines.
+ * Routines may change them even though they don't return anything */
+#define RTV_L_REG        R20
+#define RTV_H_REG        R21
 /* Counter */
 #define COUNTER_REG      R22
 
@@ -33,23 +31,20 @@
 #pragma GCC poison R20
 #pragma GCC poison R21
 #pragma GCC poison R22
-/* Poison [R27:R31] to avoid overwriting X, Y and Z without noticing */
+/* Poison [R26:R31] to avoid overwriting X, Y and Z without noticing */
+#pragma GCC poison R26
 #pragma GCC poison R27
 #pragma GCC poison R28
 #pragma GCC poison R29
 #pragma GCC poison R30
 #pragma GCC poison R31
-/* }}} */
-/*******************************************************************************
- * SPI Slave selection {{{
- ******************************************************************************/
+
+/* SPI Slave selection {{{1 ---------------------------------------------------*/
 #define SPI_SS_ETH       PB2
 #define SPI_SELECT_ETH   cbi _SFR_IO_ADDR(PORTB), SPI_SS_ETH
 #define SPI_END_ETH      sbi _SFR_IO_ADDR(PORTB), SPI_SS_ETH
-/* }}} */
-/*******************************************************************************
- * Miscellaneous {{{
- ******************************************************************************/
+
+/* Miscellaneous {{{1 ---------------------------------------------------------*/
 /* ADC reading MQ135 */
 #define MQ135_PAYLOAD_LEN 2
 /* Own messages type/len */

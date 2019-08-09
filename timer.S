@@ -1,16 +1,12 @@
 /* vim: set filetype=S foldmethod=marker: */
+/* INCLUDES {{{1 */
 .NOLIST
 #include <avr/io.h>
 #include "defs.h"
 #include "timer.h"
 .LIST
 
-.global TIMER_INIT
-.global TIMER1_COMPA_vect
-
-.global SRAM_TIMER1_SECONDS
-.global SRAM_TIMER1_EVENTS
-
+/* MACORS {{{1 ---------------------------------------------------------------*/
 #ifndef F_CPU
 #   error "CPU frequency not specified, cannot calculate timer parameters"
 #endif
@@ -27,16 +23,23 @@
 #   error "Unsupported F_CPU value"
 #endif
 
+/* GLOBAL {{{1 ---------------------------------------------------------------*/
+.global TIMER_INIT
+.global TIMER1_COMPA_vect
+
+.global SRAM_TIMER1_SECONDS
+.global SRAM_TIMER1_EVENTS
+
+/* DATA  {{{1 ----------------------------------------------------------------*/
 .section .data
 SRAM_TIMER1_SECONDS: .skip 4
 SRAM_TIMER1_EVENTS:  .skip 1
 
+/* TEXT {{{1 -----------------------------------------------------------------*/
 .section .text
-/*******************************************************************************
- *  {{{
+/* INIT {{{2 -------------------------------------------------------------------
  * With a prescaler of 1024 and a OCR1A of 7812, then we will have a match every
- * 8 seconds for a clock of 1Mhz
- ******************************************************************************/
+ * 8 seconds for a clock of 1Mhz */
 TIMER_INIT:
     /* Set CTC with top OCR1A, prescaler clk_io/1024 */
     in    TMP_REG1, _SFR_IO_ADDR(TCCR1B)
@@ -61,12 +64,10 @@ TIMER_INIT:
     sts   SRAM_TIMER1_SECONDS + 3, TMP_REG1
 
     ret
-/* }}} */
-/*******************************************************************************
- * TIMER1_COMPA_vect {{{
+
+/* TIMER1_COMPA_vect {{{2 ------------------------------------------------------
  * With a prescaler of 1024 and a OCR1A of OCR1A_VAL, we will have a match every
- * second.
- ******************************************************************************/
+ * second. */
 TIMER1_COMPA_vect:
     push  TMP_REG1
     in    TMP_REG1, _SFR_IO_ADDR(SREG)
@@ -107,6 +108,5 @@ TIMER1_SET_EVENTS:
     pop   TMP_REG1
 
     reti
-/* }}} */
 
 .end

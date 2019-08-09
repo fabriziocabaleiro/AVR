@@ -1,4 +1,5 @@
 /* vim: set filetype=S foldmethod=marker: */
+/* INCLUDES {{{1 */
 .NOLIST
 #ifndef __AVR_ATmega8__
 #   define __AVR_ATmega8__
@@ -11,6 +12,7 @@
 #include "eeprom_data.h"
 .LIST
 
+/* GLOBAL {{{1 ---------------------------------------------------------------*/
 .global main
 .global INT0_vect
 //.global INT1_vect
@@ -18,14 +20,14 @@
 
 .global BIT_FIELD_1
 
+/* DATA  {{{1 ----------------------------------------------------------------*/
 .section .data
 BIT_FIELD_1: .skip 1
 
+/* TEXT {{{1 -----------------------------------------------------------------*/
 .section .text
 
-/*******************************************************************************
- * main, initialize everything {{{
- ******************************************************************************/
+/* main, initialize everything {{{2 ------------------------------------------*/
 main:
     /* Interrupt on INT0: low level, which is the default
      * ISC00 = ISC01 = 0
@@ -69,34 +71,32 @@ main:
     in    TMP_REG1, _SFR_IO_ADDR(GICR)
     sbr   TMP_REG1, (1 << INT1)|(1 << INT0)
     out   _SFR_IO_ADDR(GICR), TMP_REG1
-/* }}} */
-/*******************************************************************************
- * LOOP {{{
- ******************************************************************************/
+
+/* LOOP {{{2 -----------------------------------------------------------------*/
 LOOP:
-    /* Enable INT0, {{{ */
+    /* Enable INT0, {{{3 */
     in    TMP_REG1, _SFR_IO_ADDR(GICR)
     sbr   TMP_REG1, (1 << INT0)
     out   _SFR_IO_ADDR(GICR), TMP_REG1
-    /* }}} */
-    /* Enable timer interrupt {{{ */
+
+    /* Enable timer interrupt {{{3 */
     in    TMP_REG1, _SFR_IO_ADDR(TIMSK)
     sbr   TMP_REG1, (1 << OCIE1A)
     out   _SFR_IO_ADDR(TIMSK), TMP_REG1
-    /* }}} */
+    /* }}}3 */
     sleep
     CLR_LED0
     CLR_LED1
-    /* Disable INT0, because can interfere with code using ENC28J60 {{{ */
+    /* Disable INT0, because can interfere with code using ENC28J60 {{{3 */
     in    TMP_REG1, _SFR_IO_ADDR(GICR)
     cbr   TMP_REG1, (1 << INT0)
     out   _SFR_IO_ADDR(GICR), TMP_REG1
-    /* }}} */
-    /* Disable Timer interrupt {{{ */
+
+    /* Disable Timer interrupt {{{3 */
     in    TMP_REG1, _SFR_IO_ADDR(TIMSK)
     cbr   TMP_REG1, (1 << OCIE1A)
     out   _SFR_IO_ADDR(TIMSK), TMP_REG1
-    /* }}} */
+    /* }}}3 */
     lds   TMP_REG1, SRAM_TIMER1_EVENTS
     sbrs  TMP_REG1, TIMER1_EVENTS_SECOND
     rjmp  LOOP
@@ -111,14 +111,18 @@ LOOP:
     cbr   TMP_REG1, (1 << TIMER1_EVENTS_2S)
     sts   SRAM_TIMER1_EVENTS, TMP_REG1
 
+    /* Collect data */
+    rcall DHT11_READ
+    rcall ADC_ENABLE_N_START
+    sleep
+    rcall ADC_DISABLE
+    /* Send data */
     rcall SEND_PACKET
 
     rjmp  LOOP
-/* }}} */
-/*******************************************************************************
- * INT0 handle. Received packet interrupt routine {{{
- * Within INT0 handle, INT0 is disable, interrupts are re-enabled
- ******************************************************************************/
+
+/* INT0 handle. Received packet interrupt routine {{{2 -------------------------
+ * Within INT0 handle, INT0 is disable, interrupts are re-enabled */
 INT0_vect:
     push  TMP_REG1
     in    TMP_REG1, _SFR_IO_ADDR(SREG)
@@ -137,7 +141,7 @@ INT0_vect:
 READ_ETHERNET_INTERRUPT_REQUEST:
     ldi   ARG_REG1, ENC_COMMON_EIR
     rcall ETH_READ_CONTROL_REGISTER
-    mov   ETH_INT_RQST, RETURN_VALUE
+    mov   ETH_INT_RQST, RTV_L_REG
 
     sbrc  ETH_INT_RQST, ENC_COMMON_EIR_PKTIF
     rcall HANDLE_PACKET
@@ -171,16 +175,14 @@ READ_ETHERNET_INTERRUPT_REQUEST:
     out   _SFR_IO_ADDR(SREG), TMP_REG1
     pop   TMP_REG1
     reti
-/* }}} */
-/*******************************************************************************
- * Handle received packet {{{
- * enc28j60 will trigger an interrupt whenever a packet is received.
- ******************************************************************************/
+
+/* Handle received packet {{{2 -------------------------------------------------
+ * enc28j60 will trigger an interrupt whenever a packet is received. */
 HANDLE_PACKET:
-    /* Packet and Ethernet headers {{{ */
+    /* Packet and Ethernet headers {{{3 */
     rcall ETH_READ_RECEIVE_HEADER
     rcall ETH_CHECK_RECEIVE_STATUS_VECTOR
-    cpi   RETURN_VALUE, 0
+    cpi   RTV_L_REG, 0
     /* TODO: improve action upon this error */
     brne  RESET_ETH
 
@@ -189,32 +191,32 @@ HANDLE_PACKET:
     lds   TMP_REG2, SRAM_RPKT_STATUS3
     sbrs  TMP_REG2, RPKT_STATUS3_RECEIVE_BROADCAST_PACKET
     rjmp  CHK_RPKT_STATUS2
-    /* Check if broadcast was sent by me {{{ */
+    /* Check if broadcast was sent by me {{{4 */
     ldi   YH, hi8(EEPROM_MAC_ADDR)
     ldi   YL, lo8(EEPROM_MAC_ADDR)
     ldi   ZH, hi8(SRAM_MAC_ADDR_OTHER)
     ldi   ZL, lo8(SRAM_MAC_ADDR_OTHER)
     ldi   TMP_REG1, MAC_ADDR_LEN
-CHECK_BROADCAST_MAC_ADDR:
+CHECK_BROADCAST_MAC_ADDR: /* TODO: ES_MEMCPY */
     rcall EEPROM_READ_N_INC
     ld    TMP_REG2, Z+
-    cp    TMP_REG2, RETURN_VALUE
+    cp    TMP_REG2, RTV_L_REG
     brne  CHK_RPKT_STATUS2
     dec   TMP_REG1
     brne  CHECK_BROADCAST_MAC_ADDR
     /* Src MAC addr from broadcast is mine, skip packet */
-    rjmp  SKIP_ETH_PKT /* }}} */
+    rjmp  SKIP_ETH_PKT /* }}}4 */
 
 CHK_RPKT_STATUS2:
     lds   TMP_REG2, SRAM_RPKT_STATUS2
     sbrc  TMP_REG2, RPKT_STATUS2_LENGTH_OUT_OF_RANGE
     rjmp  TYPE_LEN_TYPE
     rjmp  SKIP_ETH_PKT /* no support for type/length = length packets */
-    /* }}} */
-TYPE_LEN_TYPE: /* {{{ */
+    /* }}}3 */
+TYPE_LEN_TYPE: /* {{{3 */
     lds   ZH, SRAM_TYPE_LEN_H
     lds   ZL, SRAM_TYPE_LEN_L
-TYPE_LEN_IPV4: /* {{{ */
+TYPE_LEN_IPV4: /* {{{4 */
     /* Check Type/Len is IPv4 or jump to next type/len */
     cpi   ZH, hi8(ETHER_TYPE_IPV4)
     brne  TYPE_LEN_ARP
@@ -222,11 +224,11 @@ TYPE_LEN_IPV4: /* {{{ */
     brne  TYPE_LEN_ARP
 
     rcall IPV4_HANDLE_PKT
-    cpi   RETURN_VALUE, 0
+    cpi   RTV_L_REG, 0
     brne  ERROR
     rjmp  PACKET_END
-    /* }}} */
-TYPE_LEN_ARP: /* {{{ */
+
+TYPE_LEN_ARP: /* {{{4 */
     /* Check Type/Len is ARP or jump to next type/len */
     cpi   ZH, hi8(ETHER_TYPE_ARP)
     brne  TYPE_LEN_UNKNOWN
@@ -235,22 +237,11 @@ TYPE_LEN_ARP: /* {{{ */
 
     rcall ARP_HANDLE_PKT
     rjmp  PACKET_END
-    /* }}} */
-TYPE_LEN_UNKNOWN: /* }}} */
+
+TYPE_LEN_UNKNOWN: /* }}}3 */
 PACKET_END:
 SKIP_ETH_PKT:
     rcall ETH_PKT_PROCESSED
-#if 0 // {{{
-    // IF THIS BLOCK IS COMMENT, THEN PING DOESN'T WORK, REPLY HAS RUBBISH AT
-    // THE END 
-    rjmp  SKIP_MESSAGE
-#ifdef USE_DHT11
-    //rcall DHT11_READ
-#endif
-    //rcall SEND_PACKET
-    //rcall DHCP_DISCOVER
-SKIP_MESSAGE:
-#endif // }}} 
     ret
 
 ERROR:
@@ -258,10 +249,8 @@ ERROR:
 RESET_ETH:
     rcall ETH_INIT
     ret
-/* }}} */
-/*******************************************************************************
- * INT1 handle {{{
- ******************************************************************************/
+
+/* INT1 handle {{{2 ----------------------------------------------------------*/
 #if 0
 INT1_vect:
     /* Save and restore TMP_REG1 for EEPROM_COREDUMP */
@@ -298,36 +287,28 @@ COREDUMP:
 
 SEND_DHCP_DISCOVER:
     rcall DHCP
-    rjmp  INT1_vect_EXIT
+    rjmp  INT1_vect_EXIT -------------------------------------------------------
 #endif
-/* }}} */
-/*******************************************************************************
- * Testing at the moment other interrupts {{{
- ******************************************************************************/
+
+/* Testing at the moment other interrupts {{{2 -------------------------------*/
 COREDUMP_N_CONTINUE:
     //rcall EEPROM_COREDUMP
     ERR_SET
     ret
-/* }}} */
-/*******************************************************************************
- * Error handling {{{
- ******************************************************************************/
+
+/* Error handling {{{2 -------------------------------------------------------*/
 HANDLE_RECEIVE_ERROR:
     //ERR_SET
     ldi   ARG_REG1, ENC_COMMON_EIR
     ldi   ARG_REG2, (1 << ENC_COMMON_EIR_RXERIF)
     rcall ETH_BIT_FIELD_CLEAR
     ret
-/* }}} */
-/*******************************************************************************
- * Error handling {{{
- ******************************************************************************/
+
+/* Error handling {{{2 -------------------------------------------------------*/
 TIMER0_OVF_vect:
    reti
- /* }}} */
-/*******************************************************************************
- * Zero out SRAM {{{
- ******************************************************************************/
+
+/* Zero out SRAM {{{2 --------------------------------------------------------*/
 ZERO_OUT_SRAM:
     ldi   ZL, lo8(RAMSTART)
     ldi   ZH, hi8(RAMSTART)
@@ -339,6 +320,5 @@ ZERO_OUT_SRAM_LOOP:
     cpi   ZH, hi8(RAMEND - 2)
     brne  ZERO_OUT_SRAM_LOOP
     ret
- /* }}} */
 
 .end

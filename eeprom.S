@@ -1,10 +1,12 @@
 /* vim: set filetype=S foldmethod=marker: */
+/* INCLUDES {{{1 */
 .NOLIST
 #include <avr/io.h>
 #include "defs.h"
 #include "eeprom_data.h"
 .LIST
 
+/* GLOBAL {{{1 ---------------------------------------------------------------*/
 .global EEPROM_READ_N_INC
 .global EEPROM_WRITE_N_INC
 .global EEPROM_COREDUMP
@@ -14,6 +16,7 @@
 .global SRAM_EEPROM_SREG
 .global SRAM_EEPROM_TMP_REG1_SAVE
 
+/* DATA  {{{1 ----------------------------------------------------------------*/
 .section .data
 SRAM_EEPROM_COREDUMP_DISPLACEMENT:
 SRAM_EEPROM_SREG:          .skip 1
@@ -23,12 +26,11 @@ SRAM_EEPROM_PCL:           .skip 1
 SRAM_EEPROM_TMP_REG1_SAVE: .skip 1
 AFTER_LAST_COREDUMP_ELEMENT:
 
+/* TEXT {{{1 -----------------------------------------------------------------*/
 .section .text
 
-/*******************************************************************************
- * Read bytes pointed by Y and return them on RETURN_VALUE {{{
- * Y gets incremented after every call
- ******************************************************************************/
+/* Read bytes pointed by Y and return them on RTV_L_REG {{{2 -------------------
+ * Y gets incremented after every call */
 EEPROM_READ_N_INC:
     /* Wait for previous write to finish */
     sbic  _SFR_IO_ADDR(EECR), EEWE
@@ -38,15 +40,13 @@ EEPROM_READ_N_INC:
     out   _SFR_IO_ADDR(EEARL), YL
     /* Set Read Enable and read */
     sbi   _SFR_IO_ADDR(EECR), EERE
-    in    RETURN_VALUE, _SFR_IO_ADDR(EEDR)
+    in    RTV_L_REG, _SFR_IO_ADDR(EEDR)
     /* Increment Y for continuous eeprom reading */
     adiw  YL, 1
     ret
-/* }}} */
-/*******************************************************************************
- * Write ARG_REG1 to EEPROM pointer by Y {{{
- * Y gets incremented after every call
- ******************************************************************************/
+
+/* Write ARG_REG1 to EEPROM pointer by Y {{{2 ----------------------------------
+ * Y gets incremented after every call */
 EEPROM_WRITE_N_INC:
     /* Wait for previous write to finish */
     sbic  _SFR_IO_ADDR(EECR), EEWE
@@ -61,14 +61,12 @@ EEPROM_WRITE_N_INC:
     sbi   _SFR_IO_ADDR(EECR), EEWE
     adiw  YL, 1
     ret
-/* }}} */
-/*******************************************************************************
- * Compare the content of the EEPROM against the SRAM {{{
+
+/* Compare the content of the EEPROM against the SRAM {{{2 ---------------------
  * Return 0 if equal.
  * Z, SRAM ADDRESS
  * Y, EEPROM ADDRESS
- * ARG_REG1, number of bytes to compare
- ******************************************************************************/
+ * ARG_REG1, number of bytes to compare */
 EEPROM_SRAM_CMP:
     push  YL
     push  YH
@@ -79,14 +77,14 @@ EEPROM_SRAM_CMP:
 EEPROM_SRAM_CMP_LOOP:
     rcall EEPROM_READ_N_INC
     ld    TMP_REG1, Z+
-    cp    RETURN_VALUE, TMP_REG1
+    cp    RTV_L_REG, TMP_REG1
     brne  EEPROM_NOT_EQUAL_SRAM
     dec   COUNTER_REG
     brne  EEPROM_SRAM_CMP_LOOP
-    ldi   RETURN_VALUE, 0
+    ldi   RTV_L_REG, 0
     rjmp  EEPROM_SRAM_CMP_EXIT
 EEPROM_NOT_EQUAL_SRAM:
-    ldi   RETURN_VALUE, 0xFF
+    ldi   RTV_L_REG, 0xFF
 
 EEPROM_SRAM_CMP_EXIT:
     pop   ZH
@@ -94,10 +92,8 @@ EEPROM_SRAM_CMP_EXIT:
     pop   YH
     pop   YL
     ret
-/* }}} */
-/*******************************************************************************
- * Coredump into EEPROM {{{
- ******************************************************************************/
+
+/* Coredump into EEPROM {{{2 -------------------------------------------------*/
 EEPROM_COREDUMP:
     /* Using YH as tmp reg */
     push  YH
@@ -181,5 +177,5 @@ WRITE_TO_EEPROM:
     pop   ZL
     pop   YH
     ret
-/* }}} */
+
 .end

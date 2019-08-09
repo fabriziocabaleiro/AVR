@@ -1,4 +1,5 @@
 /* vim: set filetype=S foldmethod=marker: */
+/* INCLUDES {{{1 */
 .NOLIST
 #include <avr/io.h>
 #include "defs.h"
@@ -7,42 +8,43 @@
 #include "ipv4.h"
 .LIST
 
+/* MACROS {{{1 ---------------------------------------------------------------*/
+#define IPV4_TOTAL_LENGTH_REG R14
+#pragma GCC poison R14
+
+/* GLOBAL {{{1 ---------------------------------------------------------------*/
 .global ICMP_HANDLE_PKT
 
-#define IPV4_TOTAL_LENGTH_REG R1
-#pragma GCC poison R1
-
-/*******************************************************************************
- * Handle ICMP packet {{{
+/* TEXT {{{1 -----------------------------------------------------------------*/
+/* Handle ICMP packet {{{2 -----------------------------------------------------
  * Z has been set to SRAM_IPV4_HEADER in the previous routine
- * Not supporting ping with total length greater than 255
- ******************************************************************************/
+ * Not supporting ping with total length greater than 255 */
 ICMP_HANDLE_PKT:
+    push  IPV4_TOTAL_LENGTH_REG
     push  COUNTER_REG
     push  ZL
     push  ZH
     push  YL
     push  YH
 
-    /* Read message type, if not ICMP_MSG_TYPE_ECHO, then ignore packet */
+    /* Read message type, if not ICMP_MSG_TYPE_ECHO, then ignore packet {{{3 */
     rcall ETH_READ_BUFFER_START
     ETH_READ_NEXT_BYTE
-    cpi   RETURN_VALUE, ICMP_MSG_TYPE_ECHO
-    brne  ICMP_HANDLE_PKT_EXIT_SUCCESS
+    cpi   RTV_L_REG, ICMP_MSG_TYPE_ECHO
+    brne  ICMP_HANDLE_PKT_EXIT
 
-    /* Before reading ICMP ECHO payload, modify IPv4 Header, swapping Src and
-     * Dst IP addresses */
+    /* Swap Src and Dst IP addresses {{{3 */
     ldi   COUNTER_REG, IPV4_ADDR_LEN
+    adiw  ZL, IPV4_SRC_ADDR
 SWAP_IP_ADDR:
-    ldd   TMP_REG1, Z + IPV4_SRC_ADDR
-    ldd   TMP_REG2, Z + IPV4_DST_ADDR
-    std   Z + IPV4_DST_ADDR, TMP_REG1
-    std   Z + IPV4_SRC_ADDR, TMP_REG2
-    adiw  ZL, 1
+    ld    TMP_REG1, Z
+    ldd   TMP_REG2, Z + (IPV4_DST_ADDR - IPV4_SRC_ADDR)
+    std   Z + (IPV4_DST_ADDR - IPV4_SRC_ADDR), TMP_REG1
+    st    Z+, TMP_REG2
     dec   COUNTER_REG
     brne  SWAP_IP_ADDR
 
-    /* Read IPv4 payload */
+    /* Read IPv4 payload {{{3 */
     /* Calculate IPv4 payload length */
     lds   COUNTER_REG, (SRAM_IPV4_HEADER + IPV4_TOTAL_LENGTH + 1)
     lds   TMP_REG1, SRAM_IPV4_IHL_IN_BYTES
@@ -52,15 +54,15 @@ SWAP_IP_ADDR:
     ldi   ZH, hi8(SRAM_IPV4_PAYLOAD + 1)
 READ_PAYLOAD:
     ETH_READ_NEXT_BYTE
-    st    Z+, RETURN_VALUE
+    st    Z+, RTV_L_REG
     dec   COUNTER_REG
     brne  READ_PAYLOAD
     ETH_READ_BUFFER_END
 
-    /* Write Ethernet header into transmit buffer */
+    /* Write Ethernet header into transmit buffer {{{3 */
     rcall ETH_WRITE_BUFFER_PACKET_HEADER
 
-    /* Write IPv4 Header into transmit buffer */
+    /* Write IPv4 Header into transmit buffer {{{3 */
     ldi   ZL, lo8(SRAM_IPV4_HEADER)
     ldi   ZH, hi8(SRAM_IPV4_HEADER)
     lds   ARG_REG1, SRAM_IPV4_IHL_IN_BYTES
@@ -68,6 +70,7 @@ READ_PAYLOAD:
     ldd   IPV4_TOTAL_LENGTH_REG, Z + IPV4_TOTAL_LENGTH + 1
     rcall ETH_WRITE_Z_TO_TRANSMIT_BUFFER
 
+    /* Prepare ICMP packet {{{3 */
     /* We read the first byte of the ICMP packet to check if it was
      * ICMP_MSG_TYPE_ECHO, then skipped the first byte when coping the ICMP
      * packet into SRAM, now, we are modifying what we read to be sent as ICMP
@@ -89,23 +92,20 @@ READ_PAYLOAD:
     std   Z + IPV4_ICMP_CHECKSUM + 1, TMP_REG2
     /* ARG_REG1 & Z must be not changed by INTERNET_CHECKSUM_RFC1071 */
     rcall INTERNET_CHECKSUM_RFC1071
-    std   Z + IPV4_ICMP_CHECKSUM + 0, YH
-    std   Z + IPV4_ICMP_CHECKSUM + 1, YL
+    std   Z + IPV4_ICMP_CHECKSUM + 0, RTV_H_REG
+    std   Z + IPV4_ICMP_CHECKSUM + 1, RTV_L_REG
 
+    /* Write IPv4 payload and finilize ETH transmission {{{3 */
     rcall ETH_WRITE_Z_TO_TRANSMIT_BUFFER
     rcall ETH_WRITE_BUFFER_PACKET_PAYLOAD_FINISH
-
-ICMP_HANDLE_PKT_EXIT_SUCCESS:
-    ldi   RETURN_VALUE, 0
-IPV4_RESPONSE_IF_PING_END:
+    /* }}}3 */
+ICMP_HANDLE_PKT_EXIT:
     pop   YH
     pop   YL
     pop   ZH
     pop   ZL
     pop   COUNTER_REG
+    pop   IPV4_TOTAL_LENGTH_REG
     ret
-/* }}} */
-
-#undef IPV4_TOTAL_LENGTH_REG
 
 .end

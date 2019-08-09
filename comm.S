@@ -1,4 +1,5 @@
 /* vim: set filetype=S foldmethod=marker: */
+/* INCLUDES {{{1 -------------------------------------------------------------*/
 .NOLIST
 #include <avr/io.h>
 #include "defs.h"
@@ -7,6 +8,7 @@
 #include "enc28j60.h"
 .LIST
 
+/* GLOBAL {{{1 ---------------------------------------------------------------*/
 .global SEND_PACKET
 .global COMM_REGISTER_IP
 .global COMM_INIT
@@ -15,18 +17,19 @@
 .global SRAM_COMM_IP_ADDR_DST
 .global SRAM_COMM_UDP_PORT_DST
 
+/* DATA  {{{1 ----------------------------------------------------------------*/
 .section .data
 SRAM_COMM_TYPE_LEN: .skip 2
-SRAM_COMM_PKT_LEN:  .skip 1
 
 SRAM_COMM_MAC_ADDR_DST: .skip MAC_ADDR_LEN
 SRAM_COMM_IP_ADDR_DST:  .skip IPV4_ADDR_LEN /* SRAM_COMM_UDP_PORT_DST must
                                                follow SRAM_COMM_IP_ADDR_DST */
 SRAM_COMM_UDP_PORT_DST: .skip IPV4_PORT_LEN
 
+/* TEXT {{{1 -----------------------------------------------------------------*/
 .section .text
 
-/* COMM init {{{
+/* COMM init {{{2 --------------------------------------------------------------
  * Initialize communication */
 COMM_INIT:
     ldi   TMP_REG2, hi8(ETHER_TYPE_IPV4)
@@ -34,8 +37,8 @@ COMM_INIT:
     ldi   TMP_REG2, lo8(ETHER_TYPE_IPV4)
     sts   SRAM_COMM_TYPE_LEN + 1, TMP_REG2
     ret
-/* }}} */
-/* Send a packet to the MAC Address in SRAM_MAC_ADDR_OTHER {{{
+
+/* Send a packet to the MAC Address in SRAM_MAC_ADDR_OTHER {{{2 ----------------
  * Z points to the data
  * ARG_REG1 is the length */
 SEND_PACKET:
@@ -51,15 +54,6 @@ SEND_PACKET:
     tst   TMP_REG1
     breq  SEND_PACKET_EXIT
 
-    /* Collect data {{{ */
-    rcall DHT11_READ
-
-    /* ADC for MQ135 { */
-    rcall ADC_ENABLE_N_START
-    sleep
-    rcall ADC_DISABLE
-    /* ADC for MQ135 } */
-    /* }}} */
     /* Set MAC Dst pointer */
     ldi   YL, lo8(SRAM_COMM_IP_ADDR_DST)
     ldi   YH, hi8(SRAM_COMM_IP_ADDR_DST)
@@ -86,7 +80,7 @@ SEND_PACKET:
     ldi   ARG_REG1, (DHT11_PAYLOAD_LEN + MQ135_PAYLOAD_LEN)
     rcall UDP_PREPARE_PACKET
 
-    push  RETURN_VALUE /* Save ipv4 payload size */
+    push  RTV_L_REG /* Save ipv4 payload size */
 
     /* Set Dst IP address {{{ */
     ldi   YL, lo8(SRAM_COMM_IP_ADDR_DST)
@@ -98,7 +92,7 @@ SEND_PACKET:
     /* }}} */
     /* IPv4 default header size is 20, add UDP length to it */
     ldi   ARG_REG1, 20
-    add   ARG_REG1, RETURN_VALUE
+    add   ARG_REG1, RTV_L_REG
     rcall IPV4_PREPARE_DEFAULT_HEADER_20_40_BYTES
 
     /* Write IPv4 header into enc28j60 */
@@ -133,7 +127,7 @@ COMM_REGISTER_IP:
     ldi   COUNTER_REG, IPV4_ADDR_LEN + IPV4_PORT_LEN
 COMM_REGISTER_IP_LOOP:
     ETH_READ_NEXT_BYTE
-    st    Y+, RETURN_VALUE
+    st    Y+, RTV_L_REG
     dec   COUNTER_REG
     brne  COMM_REGISTER_IP_LOOP
     ETH_READ_BUFFER_END

@@ -8,7 +8,7 @@
 #define IPV4_DEFAULT_HEADER_LEN             20
 #define IPV4_PAYLOAD_LEN                   200
 
-/* IPv4 header  {{{
+/* IPv4 header  {{{1 -----------------------------------------------------------
     0               1               2               3
     1 2 3 4 5 6 7 8 1 2 3 4 5 6 7 8 1 2 3 4 5 6 7 8 1 2 3 4 5 6 7 8
    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
@@ -44,8 +44,8 @@
 #define IPV4_ICMP_CHECKSUM    2
 #define IPV4_ICMP_HEADER      4
 #define IPV4_ICMP_PAYLOAD     8 /* Optional */
-/* }}} */
-/* https://tools.ietf.org/html/rfc790 {{{ */
+
+/* https://tools.ietf.org/html/rfc790 {{{1 */
 // #define INTERNET_PROTOCOL_NUMBER_RESERVED 0
 #define INTERNET_PROTOCOL_NUMBER_ICMP                               1
 // #define INTERNET_PROTOCOL_NUMBER_UNASSIGNED 2
@@ -82,6 +82,6 @@
 #define INTERNET_PROTOCOL_NUMBER_WIDEBAND_EXPAK                    79
 // #define INTERNET_PROTOCOL_NUMBER_UNASSIGNED 80-254
 // #define INTERNET_PROTOCOL_NUMBER_RESERVED 255
-/* }}} */
+/* }}}1 */
 
 #endif

@@ -1,27 +1,14 @@
 /* vim: set filetype=S foldmethod=marker: */
+/* INCLUDES {{{1 */
 .NOLIST
 #include <avr/io.h>
 #include "dht11.h"
 #include "defs.h"
 .LIST
 
-.global DHT11_SETUP
-.global DHT11_READ
-.global DHT11_INT1_vect
-.global INT1_vect
-.global TIMER2_OVF_vect
-
-.global SRAM_DHT11_PAYLOAD
-
-.section .data
-SRAM_DHT11_PAYLOAD: .skip DHT11_PAYLOAD_LEN
-
-.section .text
-
+/* MACORS {{{1 ---------------------------------------------------------------*/
 /* Tested At 1MHz */
-/*******************************************************************************
- * Macros {{{
- ******************************************************************************/
+
 /* Starting at 6, so it matches that every time we need to increment the
  * pointer, the last 3 bits of the counter are zero, and we can check that with
  * just one AND */
@@ -49,14 +36,27 @@ SRAM_DHT11_PAYLOAD: .skip DHT11_PAYLOAD_LEN
 #endif
 
 /* Reusing registers that aren't used on this routines */
-#define DHT11_COUNTER                      RETURN_VALUE
+/* TODO: review this */
+#define DHT11_COUNTER                      RTV_L_REG
 #define DHT11_TRANSMISSION_INTERVAL        ARG_REG1
-/* }}} */
-/*******************************************************************************
- * DHT11 setup {{{ 
+
+/* GLOBAL {{{1 ---------------------------------------------------------------*/
+.global DHT11_SETUP
+.global DHT11_READ
+.global DHT11_INT1_vect
+.global INT1_vect
+.global TIMER2_OVF_vect
+.global SRAM_DHT11_PAYLOAD
+
+/* DATA  {{{1 ----------------------------------------------------------------*/
+.section .data
+SRAM_DHT11_PAYLOAD: .skip DHT11_PAYLOAD_LEN
+
+/* TEXT {{{1 -----------------------------------------------------------------*/
+.section .text
+/* DHT11 setup {{{2 ------------------------------------------------------------
  * Setup interrupt in falling edge
- * Setup interrupt port as Input with value Zero
- ******************************************************************************/
+ * Setup interrupt port as Input with value Zero */
 DHT11_SETUP:
     /* Set INT1 on falling edge */
     in    TMP_REG1, _SFR_IO_ADDR(MCUCR)
@@ -71,15 +71,13 @@ DHT11_SETUP:
      * impedance */
     cbi   _SFR_IO_ADDR(PORTD), PD3
     ret
-/* }}} */
-/*******************************************************************************
- * Read data from sensor {{{
+
+/* Read data from sensor {{{2 --------------------------------------------------
  * Data is store in SRAM_DHT11_PAYLOAD
  * Interrupt are used with falling edge
  * BEWARE: Idle is the only sleep mode that support edge interrupts
  * BEWARE: Calling this routine at 1Hz causes issues, calling frequency must be
- *         lower.
- ******************************************************************************/
+ *         lower. */
 DHT11_READ:
     push  ZL
     push  ZH
@@ -147,7 +145,6 @@ DHT11_READ_WAIT_START_SIGNAL:
     /* 40 cycles, one for each bit, plus 2 falling edges at the beginning */
     /* TODO: add way to wakeup in case data doesn't arrive */
     ldi   TMP_REG1, 42
-    SET_LED0
 DHT11_TRANSMISSION_LOOP:
     sleep
     dec   TMP_REG1
@@ -165,16 +162,14 @@ DHT11_TRANSMISSION_LOOP:
     pop   ZH
     pop   ZL
     ret
-/* }}} */
-/*******************************************************************************
- * Handle INT1 interrupt {{{
+
+/* Handle INT1 interrupt {{{2 --------------------------------------------------
  * Get and process data in every falling edge
  *
  * Use DHT11_TRANSMISSION_INTERVAL to hold the current counter since the last
  * interrupt
  *
- * Use Z as pointer to the memory
- ******************************************************************************/
+ * Use Z as pointer to the memory */
 // DHT11_INT1_vect:
 INT1_vect:
     /* Read counter and reset it */
@@ -208,8 +203,5 @@ DHT11_SENT_0:
     adiw  ZL, 1
 DHT11_INT1_vect_EXIT:
     reti
-/* }}} */
-
-#undef DHT11_COUNTER
 
 .end

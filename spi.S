@@ -1,24 +1,27 @@
 /* vim: set filetype=S foldmethod=marker: */
+/* INCLUDES {{{1 */
 .NOLIST
 #include <avr/io.h>
 #include "defs.h"
 #include "spi.h"
 .LIST
 
-.global SPI_MASTER_INIT
-.global SPI_MASTER_TRANSMIT
-
-/*******************************************************************************
- * Slow SPI macro {{{
- ******************************************************************************/
+/* MACORS {{{1 ---------------------------------------------------------------*/
 //#define SPI_SLOW
 #ifdef  SPI_SLOW
 #   define SPI_SCK ((1 << SPR1)|(1 << SPR0))
 #else
 #   define SPI_SCK (1 << SPR0)
-#endif /* }}} */
-/*******************************************************************************
- * Init SPI {{{
+#endif
+
+/* GLOBAL {{{1 ---------------------------------------------------------------*/
+.global SPI_MASTER_INIT
+.global SPI_MASTER_TRANSMIT
+
+/* TEXT {{{1 -----------------------------------------------------------------*/
+.section .text
+
+/* Init SPI {{{2 ---------------------------------------------------------------
  * Set SS, so all slaves are not listening
  * Set pins as output:
  * - MOSI
@@ -27,8 +30,7 @@
  * Set bits on register:
  * - SPE  enable SPI
  * - MSTR set as master
- * - SPR1 set, clock rate fck/64
- ******************************************************************************/
+ * - SPR1 set, clock rate fck/64 */
 SPI_MASTER_INIT:
     SPI_END_ETH
     ldi TMP_REG2, ((1 << SPI_MOSI_BIT) | \
@@ -38,9 +40,8 @@ SPI_MASTER_INIT:
     ldi TMP_REG2, (1 << SPE)|(1 << MSTR)|SPI_SCK
     out _SFR_IO_ADDR(SPCR), TMP_REG2
     ret
-/* }}} */
-/*******************************************************************************
- * Init SPI {{{
+
+/* Init SPI {{{2 ---------------------------------------------------------------
  * We need to:
  * - SS must be set previous to this routine
  * - Set data in register SPSR
@@ -58,8 +59,7 @@ SPI_WAIT_TRANSMIT:
     rjmp SPI_WAIT_TRANSMIT
 
     /* Get received message */
-    in RETURN_VALUE, _SFR_IO_ADDR(SPDR)
+    in RTV_L_REG, _SFR_IO_ADDR(SPDR)
     ret
-/* }}} */
 
 .end
