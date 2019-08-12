@@ -186,10 +186,9 @@ IPV4_PING_CHECKSUM_LOOP:
     /* If the last addition generated a Carry, then add zero with carry, which
      * could also generate a Carry into RTV_H_REG, so, add zero with carry as
      * well */
-    clr   TMP_REG1
 IPV4_PING_CHECKSUM_REMAINING_CARRY:
-    adc   RTV_H_REG, TMP_REG1
-    adc   RTV_L_REG, TMP_REG1
+    adc   RTV_H_REG, ZERO_REG
+    adc   RTV_L_REG, ZERO_REG
     brcs  IPV4_PING_CHECKSUM_REMAINING_CARRY
 
 IPV4_PING_CHECKSUM_END:
@@ -224,9 +223,8 @@ IPV4_PREPARE_HEADER_GET_FROM_EEPROM:
     /* till here we have 10 bytes written. Now we have to write checksum and
      * src/dst IP addresses */
     /* Write zero checksum for the moment */
-    clr   TMP_REG1
-    st    Z+, TMP_REG1
-    st    Z+, TMP_REG1
+    st    Z+, ZERO_REG
+    st    Z+, ZERO_REG
 
     /* SRC IP Address */
     ldi   YL, lo8(EEPROM_IP_ADDR)

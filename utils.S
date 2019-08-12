@@ -121,12 +121,11 @@ MEMCMP_ZERO:
     push  YH
     push  ARG_REG1
 
-    clr   TMP_REG1
 MEMCMP_ZERO_LOOP:
     dec   ARG_REG1
     brmi  MEMCMP_ZERO_END
     ld    TMP_REG2, Y+
-    cp    TMP_REG1, TMP_REG2
+    cp    ZERO_REG, TMP_REG2
     breq  MEMCMP_ZERO_LOOP
     /* If falling here from line above, then ARG_REG1 didn't reach -1, then
      * after the inc below, it will have a value greater than Zero, setting the

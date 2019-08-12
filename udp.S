@@ -91,9 +91,8 @@ UDP_PREPARE_PACKET:
     rcall MEMCPY
 
     /* Clear checksum */
-    clr   TMP_REG1
-    st    Z+, TMP_REG1
-    st    Z+, TMP_REG1
+    st    Z+, ZERO_REG
+    st    Z+, ZERO_REG
 
     /* Copy payload */
     pop   YH

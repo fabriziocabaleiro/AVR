@@ -329,9 +329,8 @@ TIMER0_OVF_vect:
 ZERO_OUT_SRAM:
     ldi   ZL, lo8(RAMSTART)
     ldi   ZH, hi8(RAMSTART)
-    clr   TMP_REG1
 ZERO_OUT_SRAM_LOOP:
-    st    Z+, TMP_REG1
+    st    Z+, ZERO_REG
     cpi   ZL, lo8(RAMEND - 2)
     brne  ZERO_OUT_SRAM_LOOP
     cpi   ZH, hi8(RAMEND - 2)

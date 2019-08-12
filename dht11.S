@@ -101,8 +101,7 @@ DHT11_READ:
     sbi   _SFR_IO_ADDR(DDRD),  PD3
 
     /* Clear the counter */
-    clr   ZL
-    out   _SFR_IO_ADDR(TCNT2), ZL
+    out   _SFR_IO_ADDR(TCNT2), ZERO_REG
     /* Pulling Down data line for at least 18ms */
 DHT11_READ_WAIT_START_SIGNAL:
     in    ZL, _SFR_IO_ADDR(TCNT2)
@@ -174,8 +173,7 @@ DHT11_TRANSMISSION_LOOP:
 INT1_vect:
     /* Read counter and reset it */
     in    DHT11_TRANSMISSION_INTERVAL, _SFR_IO_ADDR(TCNT2)
-    clr   TMP_REG2
-    out   _SFR_IO_ADDR(TCNT2), TMP_REG2
+    out   _SFR_IO_ADDR(TCNT2), ZERO_REG
 
     inc   DHT11_COUNTER
     cpi   DHT11_COUNTER, DHT11_RESPONSE_DATA_COMING

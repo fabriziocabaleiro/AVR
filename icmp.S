@@ -87,9 +87,8 @@ READ_PAYLOAD:
 
     /* Could check that received checksum is correct, but, why should I care? */
     /* Clear received checksum */
-    clr   TMP_REG2
-    std   Z + IPV4_ICMP_CHECKSUM + 0, TMP_REG2
-    std   Z + IPV4_ICMP_CHECKSUM + 1, TMP_REG2
+    std   Z + IPV4_ICMP_CHECKSUM + 0, ZERO_REG
+    std   Z + IPV4_ICMP_CHECKSUM + 1, ZERO_REG
     /* ARG_REG1 & Z must be not changed by INTERNET_CHECKSUM_RFC1071 */
     rcall INTERNET_CHECKSUM_RFC1071
     std   Z + IPV4_ICMP_CHECKSUM + 0, RTV_H_REG

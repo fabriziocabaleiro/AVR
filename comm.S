@@ -15,8 +15,8 @@
 #define COMM_DST_TBL_ENTRY      (IPV4_ADDR_LEN +                               \
                                  IPV4_PORT_LEN +                               \
                                  IPV4_PORT_LEN +                               \
-                                 TIMER1_LEN +                                  \
-                                 TIMER1_LEN)
+                                 TIMER_LEN +                                  \
+                                 TIMER_LEN)
 #define COMM_DST_TBL_SIZE       4
 #define COMM_DST_TBL_LEN        (COMM_DST_TBL_ENTRY * COMM_DST_TBL_SIZE)
 
@@ -99,8 +99,7 @@ SEND_PACKET:
     rcall MEMCPY
 
     /* Set UDP packet length {{{3 */
-    clr   TMP_REG1
-    st    Z+, TMP_REG1
+    st    Z+, ZERO_REG
     ldi   TMP_REG1, (DHT11_PAYLOAD_LEN + MQ135_PAYLOAD_LEN + UDP_HEADER_LEN)
     st    Z+, TMP_REG1
 

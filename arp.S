@@ -152,8 +152,7 @@ EMPTY_ENTRY_FOUND:
     rcall MEMCPY
 
     /* Set access counter to zero  {{{4 */
-    clr   TMP_REG1
-    st    Z, TMP_REG1
+    st    Z, ZERO_REG
     /* }}}3 */
 ARP_PROCESS_EXIT_SUCCESS:
     pop   COUNTER_REG
