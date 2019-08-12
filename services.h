@@ -187,7 +187,7 @@
 #define INTERNET_SERVICE_SUNRPC_111_UDP                                               111 // SUN Remote Procedure Call
 #define INTERNET_SERVICE_MCIDAS_112_TCP                                               112 // McIDAS Data Transmission Protocol
 #define INTERNET_SERVICE_MCIDAS_112_UDP                                               112 // McIDAS Data Transmission Protocol
-#define INTERNET_SERVICE_IDENT_113_TCP                                                113 // 
+#define INTERNET_SERVICE_IDENT_113_TCP                                                113 //
 #define INTERNET_SERVICE_AUTH_113_TCP                                                 113 // Authentication Service
 #define INTERNET_SERVICE_AUTH_113_UDP                                                 113 // Authentication Service
 #define INTERNET_SERVICE_SFTP_115_TCP                                                 115 // Simple File Transfer Protocol
@@ -854,20 +854,20 @@
 #define INTERNET_SERVICE_PASSGO_511_TCP                                               511 // PassGo
 #define INTERNET_SERVICE_PASSGO_511_UDP                                               511 // PassGo
 #define INTERNET_SERVICE_EXEC_512_TCP                                                 512 // remote process execution; authentication performed using passwords and UNIX login names
-#define INTERNET_SERVICE_COMSAT_512_UDP                                               512 // 
+#define INTERNET_SERVICE_COMSAT_512_UDP                                               512 //
 #define INTERNET_SERVICE_BIFF_512_UDP                                                 512 // used by mail system to notify users of new mail received; currently receives messages only from processes on the same machine
 #define INTERNET_SERVICE_LOGIN_513_TCP                                                513 // "remote login a la telnet; automatic authentication performed based on priviledged port numbers and distributed data bases which identify ""authentication domains"""
 #define INTERNET_SERVICE_WHO_513_UDP                                                  513 // maintains data bases showing who's logged in to machines on a local net and the load average of the machine
 #define INTERNET_SERVICE_SHELL_514_TCP                                                514 // "cmd like exec
-#define INTERNET_SERVICE_SYSLOG_514_UDP                                               514 // 
+#define INTERNET_SERVICE_SYSLOG_514_UDP                                               514 //
 #define INTERNET_SERVICE_PRINTER_515_TCP                                              515 // spooler
 #define INTERNET_SERVICE_PRINTER_515_UDP                                              515 // spooler
 #define INTERNET_SERVICE_VIDEOTEX_516_TCP                                             516 // videotex
 #define INTERNET_SERVICE_VIDEOTEX_516_UDP                                             516 // videotex
 #define INTERNET_SERVICE_TALK_517_TCP                                                 517 // "like tenex link
 #define INTERNET_SERVICE_TALK_517_UDP                                                 517 // "like tenex link
-#define INTERNET_SERVICE_NTALK_518_TCP                                                518 // 
-#define INTERNET_SERVICE_NTALK_518_UDP                                                518 // 
+#define INTERNET_SERVICE_NTALK_518_TCP                                                518 //
+#define INTERNET_SERVICE_NTALK_518_UDP                                                518 //
 #define INTERNET_SERVICE_UTIME_519_TCP                                                519 // unixtime
 #define INTERNET_SERVICE_UTIME_519_UDP                                                519 // unixtime
 #define INTERNET_SERVICE_EFS_520_TCP                                                  520 // extended file name server
@@ -916,8 +916,8 @@
 #define INTERNET_SERVICE_UUCP_RLOGIN_541_UDP                                          541 // uucp-rlogin
 #define INTERNET_SERVICE_COMMERCE_542_TCP                                             542 // commerce
 #define INTERNET_SERVICE_COMMERCE_542_UDP                                             542 // commerce
-#define INTERNET_SERVICE_KLOGIN_543_TCP                                               543 // 
-#define INTERNET_SERVICE_KLOGIN_543_UDP                                               543 // 
+#define INTERNET_SERVICE_KLOGIN_543_TCP                                               543 //
+#define INTERNET_SERVICE_KLOGIN_543_UDP                                               543 //
 #define INTERNET_SERVICE_KSHELL_544_TCP                                               544 // krcmd
 #define INTERNET_SERVICE_KSHELL_544_UDP                                               544 // krcmd
 #define INTERNET_SERVICE_APPLEQTCSRVR_545_TCP                                         545 // appleqtcsrvr
@@ -940,8 +940,8 @@
 #define INTERNET_SERVICE_PIRP_553_UDP                                                 553 // pirp
 #define INTERNET_SERVICE_RTSP_554_TCP                                                 554 // Real Time Streaming Protocol (RTSP)
 #define INTERNET_SERVICE_RTSP_554_UDP                                                 554 // Real Time Streaming Protocol (RTSP)
-#define INTERNET_SERVICE_DSF_555_TCP                                                  555 // 
-#define INTERNET_SERVICE_DSF_555_UDP                                                  555 // 
+#define INTERNET_SERVICE_DSF_555_TCP                                                  555 //
+#define INTERNET_SERVICE_DSF_555_UDP                                                  555 //
 #define INTERNET_SERVICE_REMOTEFS_556_TCP                                             556 // rfs server
 #define INTERNET_SERVICE_REMOTEFS_556_UDP                                             556 // rfs server
 #define INTERNET_SERVICE_OPENVMS_SYSIPC_557_TCP                                       557 // openvms-sysipc
@@ -952,8 +952,8 @@
 #define INTERNET_SERVICE_TEEDTAP_559_UDP                                              559 // TEEDTAP
 #define INTERNET_SERVICE_RMONITOR_560_TCP                                             560 // rmonitord
 #define INTERNET_SERVICE_RMONITOR_560_UDP                                             560 // rmonitord
-#define INTERNET_SERVICE_MONITOR_561_TCP                                              561 // 
-#define INTERNET_SERVICE_MONITOR_561_UDP                                              561 // 
+#define INTERNET_SERVICE_MONITOR_561_TCP                                              561 //
+#define INTERNET_SERVICE_MONITOR_561_UDP                                              561 //
 #define INTERNET_SERVICE_CHSHELL_562_TCP                                              562 // chcmd
 #define INTERNET_SERVICE_CHSHELL_562_UDP                                              562 // chcmd
 #define INTERNET_SERVICE_NNTPS_563_TCP                                                563 // nntp protocol over TLS/SSL (was snntp)
@@ -1161,8 +1161,8 @@
 #define INTERNET_SERVICE_ASF_SECURE_RMCP_664_UDP                                      664 // ASF Secure Remote Management and Control Protocol
 #define INTERNET_SERVICE_SUN_DR_665_TCP                                               665 // Sun DR
 #define INTERNET_SERVICE_SUN_DR_665_UDP                                               665 // Sun DR
-#define INTERNET_SERVICE_MDQS_666_TCP                                                 666 // 
-#define INTERNET_SERVICE_MDQS_666_UDP                                                 666 // 
+#define INTERNET_SERVICE_MDQS_666_TCP                                                 666 //
+#define INTERNET_SERVICE_MDQS_666_UDP                                                 666 //
 #define INTERNET_SERVICE_DOOM_666_TCP                                                 666 // doom Id Software
 #define INTERNET_SERVICE_DOOM_666_UDP                                                 666 // doom Id Software
 #define INTERNET_SERVICE_DISCLOSE_667_TCP                                             667 // campaign contribution disclosures - SDR Technologies
@@ -1278,63 +1278,63 @@
 #define INTERNET_SERVICE_RIS_CM_748_UDP                                               748 // Russell Info Sci Calendar Manager
 #define INTERNET_SERVICE_KERBEROS_ADM_749_TCP                                         749 // kerberos administration
 #define INTERNET_SERVICE_KERBEROS_ADM_749_UDP                                         749 // kerberos administration
-#define INTERNET_SERVICE_RFILE_750_TCP                                                750 // 
-#define INTERNET_SERVICE_LOADAV_750_UDP                                               750 // 
+#define INTERNET_SERVICE_RFILE_750_TCP                                                750 //
+#define INTERNET_SERVICE_LOADAV_750_UDP                                               750 //
 #define INTERNET_SERVICE_KERBEROS_IV_750_UDP                                          750 // kerberos version iv
-#define INTERNET_SERVICE_PUMP_751_TCP                                                 751 // 
-#define INTERNET_SERVICE_PUMP_751_UDP                                                 751 // 
-#define INTERNET_SERVICE_QRH_752_TCP                                                  752 // 
-#define INTERNET_SERVICE_QRH_752_UDP                                                  752 // 
-#define INTERNET_SERVICE_RRH_753_TCP                                                  753 // 
-#define INTERNET_SERVICE_RRH_753_UDP                                                  753 // 
+#define INTERNET_SERVICE_PUMP_751_TCP                                                 751 //
+#define INTERNET_SERVICE_PUMP_751_UDP                                                 751 //
+#define INTERNET_SERVICE_QRH_752_TCP                                                  752 //
+#define INTERNET_SERVICE_QRH_752_UDP                                                  752 //
+#define INTERNET_SERVICE_RRH_753_TCP                                                  753 //
+#define INTERNET_SERVICE_RRH_753_UDP                                                  753 //
 #define INTERNET_SERVICE_TELL_754_TCP                                                 754 // send
 #define INTERNET_SERVICE_TELL_754_UDP                                                 754 // send
-#define INTERNET_SERVICE_NLOGIN_758_TCP                                               758 // 
-#define INTERNET_SERVICE_NLOGIN_758_UDP                                               758 // 
-#define INTERNET_SERVICE_CON_759_TCP                                                  759 // 
-#define INTERNET_SERVICE_CON_759_UDP                                                  759 // 
-#define INTERNET_SERVICE_NS_760_TCP                                                   760 // 
-#define INTERNET_SERVICE_NS_760_UDP                                                   760 // 
-#define INTERNET_SERVICE_RXE_761_TCP                                                  761 // 
-#define INTERNET_SERVICE_RXE_761_UDP                                                  761 // 
-#define INTERNET_SERVICE_QUOTAD_762_TCP                                               762 // 
-#define INTERNET_SERVICE_QUOTAD_762_UDP                                               762 // 
-#define INTERNET_SERVICE_CYCLESERV_763_TCP                                            763 // 
-#define INTERNET_SERVICE_CYCLESERV_763_UDP                                            763 // 
-#define INTERNET_SERVICE_OMSERV_764_TCP                                               764 // 
-#define INTERNET_SERVICE_OMSERV_764_UDP                                               764 // 
-#define INTERNET_SERVICE_WEBSTER_765_TCP                                              765 // 
-#define INTERNET_SERVICE_WEBSTER_765_UDP                                              765 // 
+#define INTERNET_SERVICE_NLOGIN_758_TCP                                               758 //
+#define INTERNET_SERVICE_NLOGIN_758_UDP                                               758 //
+#define INTERNET_SERVICE_CON_759_TCP                                                  759 //
+#define INTERNET_SERVICE_CON_759_UDP                                                  759 //
+#define INTERNET_SERVICE_NS_760_TCP                                                   760 //
+#define INTERNET_SERVICE_NS_760_UDP                                                   760 //
+#define INTERNET_SERVICE_RXE_761_TCP                                                  761 //
+#define INTERNET_SERVICE_RXE_761_UDP                                                  761 //
+#define INTERNET_SERVICE_QUOTAD_762_TCP                                               762 //
+#define INTERNET_SERVICE_QUOTAD_762_UDP                                               762 //
+#define INTERNET_SERVICE_CYCLESERV_763_TCP                                            763 //
+#define INTERNET_SERVICE_CYCLESERV_763_UDP                                            763 //
+#define INTERNET_SERVICE_OMSERV_764_TCP                                               764 //
+#define INTERNET_SERVICE_OMSERV_764_UDP                                               764 //
+#define INTERNET_SERVICE_WEBSTER_765_TCP                                              765 //
+#define INTERNET_SERVICE_WEBSTER_765_UDP                                              765 //
 #define INTERNET_SERVICE_PHONEBOOK_767_TCP                                            767 // phone
 #define INTERNET_SERVICE_PHONEBOOK_767_UDP                                            767 // phone
-#define INTERNET_SERVICE_VID_769_TCP                                                  769 // 
-#define INTERNET_SERVICE_VID_769_UDP                                                  769 // 
-#define INTERNET_SERVICE_CADLOCK_770_TCP                                              770 // 
-#define INTERNET_SERVICE_CADLOCK_770_UDP                                              770 // 
-#define INTERNET_SERVICE_RTIP_771_TCP                                                 771 // 
-#define INTERNET_SERVICE_RTIP_771_UDP                                                 771 // 
-#define INTERNET_SERVICE_CYCLESERV2_772_TCP                                           772 // 
-#define INTERNET_SERVICE_CYCLESERV2_772_UDP                                           772 // 
-#define INTERNET_SERVICE_SUBMIT_773_TCP                                               773 // 
-#define INTERNET_SERVICE_NOTIFY_773_UDP                                               773 // 
-#define INTERNET_SERVICE_RPASSWD_774_TCP                                              774 // 
+#define INTERNET_SERVICE_VID_769_TCP                                                  769 //
+#define INTERNET_SERVICE_VID_769_UDP                                                  769 //
+#define INTERNET_SERVICE_CADLOCK_770_TCP                                              770 //
+#define INTERNET_SERVICE_CADLOCK_770_UDP                                              770 //
+#define INTERNET_SERVICE_RTIP_771_TCP                                                 771 //
+#define INTERNET_SERVICE_RTIP_771_UDP                                                 771 //
+#define INTERNET_SERVICE_CYCLESERV2_772_TCP                                           772 //
+#define INTERNET_SERVICE_CYCLESERV2_772_UDP                                           772 //
+#define INTERNET_SERVICE_SUBMIT_773_TCP                                               773 //
+#define INTERNET_SERVICE_NOTIFY_773_UDP                                               773 //
+#define INTERNET_SERVICE_RPASSWD_774_TCP                                              774 //
 #define INTERNET_SERVICE_ACMAINT_DBD_774_UDP                                          774 // "IANA assigned this well-formed service name as a replacement for ""acmaint_dbd""."
-#define INTERNET_SERVICE_ACMAINT_DBD_774_UDP                                          774 // 
-#define INTERNET_SERVICE_ENTOMB_775_TCP                                               775 // 
+#define INTERNET_SERVICE_ACMAINT_DBD_774_UDP                                          774 //
+#define INTERNET_SERVICE_ENTOMB_775_TCP                                               775 //
 #define INTERNET_SERVICE_ACMAINT_TRANSD_775_UDP                                       775 // "IANA assigned this well-formed service name as a replacement for ""acmaint_transd""."
-#define INTERNET_SERVICE_ACMAINT_TRANSD_775_UDP                                       775 // 
-#define INTERNET_SERVICE_WPAGES_776_TCP                                               776 // 
-#define INTERNET_SERVICE_WPAGES_776_UDP                                               776 // 
+#define INTERNET_SERVICE_ACMAINT_TRANSD_775_UDP                                       775 //
+#define INTERNET_SERVICE_WPAGES_776_TCP                                               776 //
+#define INTERNET_SERVICE_WPAGES_776_UDP                                               776 //
 #define INTERNET_SERVICE_MULTILING_HTTP_777_TCP                                       777 // Multiling HTTP
 #define INTERNET_SERVICE_MULTILING_HTTP_777_UDP                                       777 // Multiling HTTP
-#define INTERNET_SERVICE_WPGS_780_TCP                                                 780 // 
-#define INTERNET_SERVICE_WPGS_780_UDP                                                 780 // 
+#define INTERNET_SERVICE_WPGS_780_TCP                                                 780 //
+#define INTERNET_SERVICE_WPGS_780_UDP                                                 780 //
 #define INTERNET_SERVICE_MDBS_DAEMON_800_TCP                                          800 // "IANA assigned this well-formed service name as a replacement for ""mdbs_daemon""."
-#define INTERNET_SERVICE_MDBS_DAEMON_800_TCP                                          800 // 
+#define INTERNET_SERVICE_MDBS_DAEMON_800_TCP                                          800 //
 #define INTERNET_SERVICE_MDBS_DAEMON_800_UDP                                          800 // "IANA assigned this well-formed service name as a replacement for ""mdbs_daemon""."
-#define INTERNET_SERVICE_MDBS_DAEMON_800_UDP                                          800 // 
-#define INTERNET_SERVICE_DEVICE_801_TCP                                               801 // 
-#define INTERNET_SERVICE_DEVICE_801_UDP                                               801 // 
+#define INTERNET_SERVICE_MDBS_DAEMON_800_UDP                                          800 //
+#define INTERNET_SERVICE_DEVICE_801_TCP                                               801 //
+#define INTERNET_SERVICE_DEVICE_801_UDP                                               801 //
 #define INTERNET_SERVICE_MBAP_S_802_TCP                                               802 // Modbus Application Protocol Secure
 #define INTERNET_SERVICE_MBAP_S_802_UDP                                               802 // Modbus Application Protocol Secure
 #define INTERNET_SERVICE_FCP_UDP_810_TCP                                              810 // FCP
@@ -1407,16 +1407,16 @@
 #define INTERNET_SERVICE_POP3S_995_UDP                                                995 // pop3 protocol over TLS/SSL (was spop3)
 #define INTERNET_SERVICE_VSINET_996_TCP                                               996 // vsinet
 #define INTERNET_SERVICE_VSINET_996_UDP                                               996 // vsinet
-#define INTERNET_SERVICE_MAITRD_997_TCP                                               997 // 
-#define INTERNET_SERVICE_MAITRD_997_UDP                                               997 // 
-#define INTERNET_SERVICE_BUSBOY_998_TCP                                               998 // 
-#define INTERNET_SERVICE_PUPARP_998_UDP                                               998 // 
-#define INTERNET_SERVICE_GARCON_999_TCP                                               999 // 
+#define INTERNET_SERVICE_MAITRD_997_TCP                                               997 //
+#define INTERNET_SERVICE_MAITRD_997_UDP                                               997 //
+#define INTERNET_SERVICE_BUSBOY_998_TCP                                               998 //
+#define INTERNET_SERVICE_PUPARP_998_UDP                                               998 //
+#define INTERNET_SERVICE_GARCON_999_TCP                                               999 //
 #define INTERNET_SERVICE_APPLIX_999_UDP                                               999 // Applix ac
-#define INTERNET_SERVICE_PUPROUTER_999_TCP                                            999 // 
-#define INTERNET_SERVICE_PUPROUTER_999_UDP                                            999 // 
-#define INTERNET_SERVICE_CADLOCK2_1000_TCP                                            1000 // 
-#define INTERNET_SERVICE_CADLOCK2_1000_UDP                                            1000 // 
+#define INTERNET_SERVICE_PUPROUTER_999_TCP                                            999 //
+#define INTERNET_SERVICE_PUPROUTER_999_UDP                                            999 //
+#define INTERNET_SERVICE_CADLOCK2_1000_TCP                                            1000 //
+#define INTERNET_SERVICE_CADLOCK2_1000_UDP                                            1000 //
 #define INTERNET_SERVICE_WEBPUSH_1001_TCP                                             1001 // HTTP Web Push
 #define INTERNET_SERVICE_SURF_1010_TCP                                                1010 // surf
 #define INTERNET_SERVICE_SURF_1010_UDP                                                1010 // surf
@@ -3395,105 +3395,105 @@
 #define INTERNET_SERVICE_TCP_ID_PORT_1999_UDP                                         1999 // cisco identification port
 #define INTERNET_SERVICE_CISCO_SCCP_2000_TCP                                          2000 // Cisco SCCP
 #define INTERNET_SERVICE_CISCO_SCCP_2000_UDP                                          2000 // Cisco SCCp
-#define INTERNET_SERVICE_DC_2001_TCP                                                  2001 // 
+#define INTERNET_SERVICE_DC_2001_TCP                                                  2001 //
 #define INTERNET_SERVICE_WIZARD_2001_UDP                                              2001 // curry
-#define INTERNET_SERVICE_GLOBE_2002_TCP                                               2002 // 
-#define INTERNET_SERVICE_GLOBE_2002_UDP                                               2002 // 
+#define INTERNET_SERVICE_GLOBE_2002_TCP                                               2002 //
+#define INTERNET_SERVICE_GLOBE_2002_UDP                                               2002 //
 #define INTERNET_SERVICE_BRUTUS_2003_TCP                                              2003 // Brutus Server
 #define INTERNET_SERVICE_BRUTUS_2003_UDP                                              2003 // Brutus Server
-#define INTERNET_SERVICE_MAILBOX_2004_TCP                                             2004 // 
+#define INTERNET_SERVICE_MAILBOX_2004_TCP                                             2004 //
 #define INTERNET_SERVICE_EMCE_2004_UDP                                                2004 // CCWS mm conf
-#define INTERNET_SERVICE_BERKNET_2005_TCP                                             2005 // 
-#define INTERNET_SERVICE_ORACLE_2005_UDP                                              2005 // 
-#define INTERNET_SERVICE_INVOKATOR_2006_TCP                                           2006 // 
+#define INTERNET_SERVICE_BERKNET_2005_TCP                                             2005 //
+#define INTERNET_SERVICE_ORACLE_2005_UDP                                              2005 //
+#define INTERNET_SERVICE_INVOKATOR_2006_TCP                                           2006 //
 #define INTERNET_SERVICE_RAID_CD_2006_UDP                                             2006 // raid
-#define INTERNET_SERVICE_DECTALK_2007_TCP                                             2007 // 
-#define INTERNET_SERVICE_RAID_AM_2007_UDP                                             2007 // 
-#define INTERNET_SERVICE_CONF_2008_TCP                                                2008 // 
-#define INTERNET_SERVICE_TERMINALDB_2008_UDP                                          2008 // 
-#define INTERNET_SERVICE_NEWS_2009_TCP                                                2009 // 
-#define INTERNET_SERVICE_WHOSOCKAMI_2009_UDP                                          2009 // 
-#define INTERNET_SERVICE_SEARCH_2010_TCP                                              2010 // 
+#define INTERNET_SERVICE_DECTALK_2007_TCP                                             2007 //
+#define INTERNET_SERVICE_RAID_AM_2007_UDP                                             2007 //
+#define INTERNET_SERVICE_CONF_2008_TCP                                                2008 //
+#define INTERNET_SERVICE_TERMINALDB_2008_UDP                                          2008 //
+#define INTERNET_SERVICE_NEWS_2009_TCP                                                2009 //
+#define INTERNET_SERVICE_WHOSOCKAMI_2009_UDP                                          2009 //
+#define INTERNET_SERVICE_SEARCH_2010_TCP                                              2010 //
 #define INTERNET_SERVICE_PIPE_SERVER_2010_UDP                                         2010 // "IANA assigned this well-formed service name as a replacement for ""pipe_server""."
-#define INTERNET_SERVICE_PIPE_SERVER_2010_UDP                                         2010 // 
+#define INTERNET_SERVICE_PIPE_SERVER_2010_UDP                                         2010 //
 #define INTERNET_SERVICE_RAID_CC_2011_TCP                                             2011 // raid
-#define INTERNET_SERVICE_SERVSERV_2011_UDP                                            2011 // 
-#define INTERNET_SERVICE_TTYINFO_2012_TCP                                             2012 // 
-#define INTERNET_SERVICE_RAID_AC_2012_UDP                                             2012 // 
-#define INTERNET_SERVICE_RAID_AM_2013_TCP                                             2013 // 
-#define INTERNET_SERVICE_RAID_CD_2013_UDP                                             2013 // 
-#define INTERNET_SERVICE_TROFF_2014_TCP                                               2014 // 
-#define INTERNET_SERVICE_RAID_SF_2014_UDP                                             2014 // 
-#define INTERNET_SERVICE_CYPRESS_2015_TCP                                             2015 // 
-#define INTERNET_SERVICE_RAID_CS_2015_UDP                                             2015 // 
-#define INTERNET_SERVICE_BOOTSERVER_2016_TCP                                          2016 // 
-#define INTERNET_SERVICE_BOOTSERVER_2016_UDP                                          2016 // 
-#define INTERNET_SERVICE_CYPRESS_STAT_2017_TCP                                        2017 // 
-#define INTERNET_SERVICE_BOOTCLIENT_2017_UDP                                          2017 // 
-#define INTERNET_SERVICE_TERMINALDB_2018_TCP                                          2018 // 
-#define INTERNET_SERVICE_RELLPACK_2018_UDP                                            2018 // 
-#define INTERNET_SERVICE_WHOSOCKAMI_2019_TCP                                          2019 // 
-#define INTERNET_SERVICE_ABOUT_2019_UDP                                               2019 // 
-#define INTERNET_SERVICE_XINUPAGESERVER_2020_TCP                                      2020 // 
-#define INTERNET_SERVICE_XINUPAGESERVER_2020_UDP                                      2020 // 
-#define INTERNET_SERVICE_SERVEXEC_2021_TCP                                            2021 // 
-#define INTERNET_SERVICE_XINUEXPANSION1_2021_UDP                                      2021 // 
-#define INTERNET_SERVICE_DOWN_2022_TCP                                                2022 // 
-#define INTERNET_SERVICE_XINUEXPANSION2_2022_UDP                                      2022 // 
-#define INTERNET_SERVICE_XINUEXPANSION3_2023_TCP                                      2023 // 
-#define INTERNET_SERVICE_XINUEXPANSION3_2023_UDP                                      2023 // 
-#define INTERNET_SERVICE_XINUEXPANSION4_2024_TCP                                      2024 // 
-#define INTERNET_SERVICE_XINUEXPANSION4_2024_UDP                                      2024 // 
-#define INTERNET_SERVICE_ELLPACK_2025_TCP                                             2025 // 
-#define INTERNET_SERVICE_XRIBS_2025_UDP                                               2025 // 
-#define INTERNET_SERVICE_SCRABBLE_2026_TCP                                            2026 // 
-#define INTERNET_SERVICE_SCRABBLE_2026_UDP                                            2026 // 
-#define INTERNET_SERVICE_SHADOWSERVER_2027_TCP                                        2027 // 
-#define INTERNET_SERVICE_SHADOWSERVER_2027_UDP                                        2027 // 
-#define INTERNET_SERVICE_SUBMITSERVER_2028_TCP                                        2028 // 
-#define INTERNET_SERVICE_SUBMITSERVER_2028_UDP                                        2028 // 
+#define INTERNET_SERVICE_SERVSERV_2011_UDP                                            2011 //
+#define INTERNET_SERVICE_TTYINFO_2012_TCP                                             2012 //
+#define INTERNET_SERVICE_RAID_AC_2012_UDP                                             2012 //
+#define INTERNET_SERVICE_RAID_AM_2013_TCP                                             2013 //
+#define INTERNET_SERVICE_RAID_CD_2013_UDP                                             2013 //
+#define INTERNET_SERVICE_TROFF_2014_TCP                                               2014 //
+#define INTERNET_SERVICE_RAID_SF_2014_UDP                                             2014 //
+#define INTERNET_SERVICE_CYPRESS_2015_TCP                                             2015 //
+#define INTERNET_SERVICE_RAID_CS_2015_UDP                                             2015 //
+#define INTERNET_SERVICE_BOOTSERVER_2016_TCP                                          2016 //
+#define INTERNET_SERVICE_BOOTSERVER_2016_UDP                                          2016 //
+#define INTERNET_SERVICE_CYPRESS_STAT_2017_TCP                                        2017 //
+#define INTERNET_SERVICE_BOOTCLIENT_2017_UDP                                          2017 //
+#define INTERNET_SERVICE_TERMINALDB_2018_TCP                                          2018 //
+#define INTERNET_SERVICE_RELLPACK_2018_UDP                                            2018 //
+#define INTERNET_SERVICE_WHOSOCKAMI_2019_TCP                                          2019 //
+#define INTERNET_SERVICE_ABOUT_2019_UDP                                               2019 //
+#define INTERNET_SERVICE_XINUPAGESERVER_2020_TCP                                      2020 //
+#define INTERNET_SERVICE_XINUPAGESERVER_2020_UDP                                      2020 //
+#define INTERNET_SERVICE_SERVEXEC_2021_TCP                                            2021 //
+#define INTERNET_SERVICE_XINUEXPANSION1_2021_UDP                                      2021 //
+#define INTERNET_SERVICE_DOWN_2022_TCP                                                2022 //
+#define INTERNET_SERVICE_XINUEXPANSION2_2022_UDP                                      2022 //
+#define INTERNET_SERVICE_XINUEXPANSION3_2023_TCP                                      2023 //
+#define INTERNET_SERVICE_XINUEXPANSION3_2023_UDP                                      2023 //
+#define INTERNET_SERVICE_XINUEXPANSION4_2024_TCP                                      2024 //
+#define INTERNET_SERVICE_XINUEXPANSION4_2024_UDP                                      2024 //
+#define INTERNET_SERVICE_ELLPACK_2025_TCP                                             2025 //
+#define INTERNET_SERVICE_XRIBS_2025_UDP                                               2025 //
+#define INTERNET_SERVICE_SCRABBLE_2026_TCP                                            2026 //
+#define INTERNET_SERVICE_SCRABBLE_2026_UDP                                            2026 //
+#define INTERNET_SERVICE_SHADOWSERVER_2027_TCP                                        2027 //
+#define INTERNET_SERVICE_SHADOWSERVER_2027_UDP                                        2027 //
+#define INTERNET_SERVICE_SUBMITSERVER_2028_TCP                                        2028 //
+#define INTERNET_SERVICE_SUBMITSERVER_2028_UDP                                        2028 //
 #define INTERNET_SERVICE_HSRPV6_2029_TCP                                              2029 // Hot Standby Router Protocol IPv6
 #define INTERNET_SERVICE_HSRPV6_2029_UDP                                              2029 // Hot Standby Router Protocol IPv6
-#define INTERNET_SERVICE_DEVICE2_2030_TCP                                             2030 // 
-#define INTERNET_SERVICE_DEVICE2_2030_UDP                                             2030 // 
+#define INTERNET_SERVICE_DEVICE2_2030_TCP                                             2030 //
+#define INTERNET_SERVICE_DEVICE2_2030_UDP                                             2030 //
 #define INTERNET_SERVICE_MOBRIEN_CHAT_2031_TCP                                        2031 // mobrien-chat
 #define INTERNET_SERVICE_MOBRIEN_CHAT_2031_UDP                                        2031 // mobrien-chat
-#define INTERNET_SERVICE_BLACKBOARD_2032_TCP                                          2032 // 
-#define INTERNET_SERVICE_BLACKBOARD_2032_UDP                                          2032 // 
-#define INTERNET_SERVICE_GLOGGER_2033_TCP                                             2033 // 
-#define INTERNET_SERVICE_GLOGGER_2033_UDP                                             2033 // 
-#define INTERNET_SERVICE_SCOREMGR_2034_TCP                                            2034 // 
-#define INTERNET_SERVICE_SCOREMGR_2034_UDP                                            2034 // 
-#define INTERNET_SERVICE_IMSLDOC_2035_TCP                                             2035 // 
-#define INTERNET_SERVICE_IMSLDOC_2035_UDP                                             2035 // 
+#define INTERNET_SERVICE_BLACKBOARD_2032_TCP                                          2032 //
+#define INTERNET_SERVICE_BLACKBOARD_2032_UDP                                          2032 //
+#define INTERNET_SERVICE_GLOGGER_2033_TCP                                             2033 //
+#define INTERNET_SERVICE_GLOGGER_2033_UDP                                             2033 //
+#define INTERNET_SERVICE_SCOREMGR_2034_TCP                                            2034 //
+#define INTERNET_SERVICE_SCOREMGR_2034_UDP                                            2034 //
+#define INTERNET_SERVICE_IMSLDOC_2035_TCP                                             2035 //
+#define INTERNET_SERVICE_IMSLDOC_2035_UDP                                             2035 //
 #define INTERNET_SERVICE_E_DPNET_2036_TCP                                             2036 // Ethernet WS DP network
 #define INTERNET_SERVICE_E_DPNET_2036_UDP                                             2036 // Ethernet WS DP network
 #define INTERNET_SERVICE_APPLUS_2037_TCP                                              2037 // APplus Application Server
 #define INTERNET_SERVICE_APPLUS_2037_UDP                                              2037 // APplus Application Server
-#define INTERNET_SERVICE_OBJECTMANAGER_2038_TCP                                       2038 // 
-#define INTERNET_SERVICE_OBJECTMANAGER_2038_UDP                                       2038 // 
+#define INTERNET_SERVICE_OBJECTMANAGER_2038_TCP                                       2038 //
+#define INTERNET_SERVICE_OBJECTMANAGER_2038_UDP                                       2038 //
 #define INTERNET_SERVICE_PRIZMA_2039_TCP                                              2039 // Prizma Monitoring Service
 #define INTERNET_SERVICE_PRIZMA_2039_UDP                                              2039 // Prizma Monitoring Service
-#define INTERNET_SERVICE_LAM_2040_TCP                                                 2040 // 
-#define INTERNET_SERVICE_LAM_2040_UDP                                                 2040 // 
-#define INTERNET_SERVICE_INTERBASE_2041_TCP                                           2041 // 
-#define INTERNET_SERVICE_INTERBASE_2041_UDP                                           2041 // 
+#define INTERNET_SERVICE_LAM_2040_TCP                                                 2040 //
+#define INTERNET_SERVICE_LAM_2040_UDP                                                 2040 //
+#define INTERNET_SERVICE_INTERBASE_2041_TCP                                           2041 //
+#define INTERNET_SERVICE_INTERBASE_2041_UDP                                           2041 //
 #define INTERNET_SERVICE_ISIS_2042_TCP                                                2042 // isis
 #define INTERNET_SERVICE_ISIS_2042_UDP                                                2042 // isis
 #define INTERNET_SERVICE_ISIS_BCAST_2043_TCP                                          2043 // isis-bcast
 #define INTERNET_SERVICE_ISIS_BCAST_2043_UDP                                          2043 // isis-bcast
-#define INTERNET_SERVICE_RIMSL_2044_TCP                                               2044 // 
-#define INTERNET_SERVICE_RIMSL_2044_UDP                                               2044 // 
-#define INTERNET_SERVICE_CDFUNC_2045_TCP                                              2045 // 
-#define INTERNET_SERVICE_CDFUNC_2045_UDP                                              2045 // 
-#define INTERNET_SERVICE_SDFUNC_2046_TCP                                              2046 // 
-#define INTERNET_SERVICE_SDFUNC_2046_UDP                                              2046 // 
-#define INTERNET_SERVICE_DLS_2047_TCP                                                 2047 // 
-#define INTERNET_SERVICE_DLS_2047_UDP                                                 2047 // 
-#define INTERNET_SERVICE_DLS_MONITOR_2048_TCP                                         2048 // 
-#define INTERNET_SERVICE_DLS_MONITOR_2048_UDP                                         2048 // 
-#define INTERNET_SERVICE_SHILP_2049_TCP                                               2049 // 
-#define INTERNET_SERVICE_SHILP_2049_UDP                                               2049 // 
+#define INTERNET_SERVICE_RIMSL_2044_TCP                                               2044 //
+#define INTERNET_SERVICE_RIMSL_2044_UDP                                               2044 //
+#define INTERNET_SERVICE_CDFUNC_2045_TCP                                              2045 //
+#define INTERNET_SERVICE_CDFUNC_2045_UDP                                              2045 //
+#define INTERNET_SERVICE_SDFUNC_2046_TCP                                              2046 //
+#define INTERNET_SERVICE_SDFUNC_2046_UDP                                              2046 //
+#define INTERNET_SERVICE_DLS_2047_TCP                                                 2047 //
+#define INTERNET_SERVICE_DLS_2047_UDP                                                 2047 //
+#define INTERNET_SERVICE_DLS_MONITOR_2048_TCP                                         2048 //
+#define INTERNET_SERVICE_DLS_MONITOR_2048_UDP                                         2048 //
+#define INTERNET_SERVICE_SHILP_2049_TCP                                               2049 //
+#define INTERNET_SERVICE_SHILP_2049_UDP                                               2049 //
 #define INTERNET_SERVICE_NFS_2049_TCP                                                 2049 // Network File System - Sun Microsystems
 #define INTERNET_SERVICE_NFS_2049_UDP                                                 2049 // Network File System - Sun Microsystems
 #define INTERNET_SERVICE_NFS_2049_SCTP                                                2049 // Network File System
@@ -4882,16 +4882,16 @@
 #define INTERNET_SERVICE_URBISNET_2745_UDP                                            2745 // URBISNET
 #define INTERNET_SERVICE_CPUDPENCAP_2746_TCP                                          2746 // CPUDPENCAP
 #define INTERNET_SERVICE_CPUDPENCAP_2746_UDP                                          2746 // CPUDPENCAP
-#define INTERNET_SERVICE_FJIPPOL_SWRLY_2747_TCP                                       2747 // 
-#define INTERNET_SERVICE_FJIPPOL_SWRLY_2747_UDP                                       2747 // 
-#define INTERNET_SERVICE_FJIPPOL_POLSVR_2748_TCP                                      2748 // 
-#define INTERNET_SERVICE_FJIPPOL_POLSVR_2748_UDP                                      2748 // 
-#define INTERNET_SERVICE_FJIPPOL_CNSL_2749_TCP                                        2749 // 
-#define INTERNET_SERVICE_FJIPPOL_CNSL_2749_UDP                                        2749 // 
-#define INTERNET_SERVICE_FJIPPOL_PORT1_2750_TCP                                       2750 // 
-#define INTERNET_SERVICE_FJIPPOL_PORT1_2750_UDP                                       2750 // 
-#define INTERNET_SERVICE_FJIPPOL_PORT2_2751_TCP                                       2751 // 
-#define INTERNET_SERVICE_FJIPPOL_PORT2_2751_UDP                                       2751 // 
+#define INTERNET_SERVICE_FJIPPOL_SWRLY_2747_TCP                                       2747 //
+#define INTERNET_SERVICE_FJIPPOL_SWRLY_2747_UDP                                       2747 //
+#define INTERNET_SERVICE_FJIPPOL_POLSVR_2748_TCP                                      2748 //
+#define INTERNET_SERVICE_FJIPPOL_POLSVR_2748_UDP                                      2748 //
+#define INTERNET_SERVICE_FJIPPOL_CNSL_2749_TCP                                        2749 //
+#define INTERNET_SERVICE_FJIPPOL_CNSL_2749_UDP                                        2749 //
+#define INTERNET_SERVICE_FJIPPOL_PORT1_2750_TCP                                       2750 //
+#define INTERNET_SERVICE_FJIPPOL_PORT1_2750_UDP                                       2750 //
+#define INTERNET_SERVICE_FJIPPOL_PORT2_2751_TCP                                       2751 //
+#define INTERNET_SERVICE_FJIPPOL_PORT2_2751_UDP                                       2751 //
 #define INTERNET_SERVICE_RSISYSACCESS_2752_TCP                                        2752 // RSISYS ACCESS
 #define INTERNET_SERVICE_RSISYSACCESS_2752_UDP                                        2752 // RSISYS ACCESS
 #define INTERNET_SERVICE_DE_SPOT_2753_TCP                                             2753 // de-spot
@@ -8330,10 +8330,10 @@
 #define INTERNET_SERVICE_VRT_4991_UDP                                                 4991 // VITA Radio Transport
 #define INTERNET_SERVICE_HFCS_MANAGER_4999_TCP                                        4999 // HFSQL Client/Server Database Engine Manager
 #define INTERNET_SERVICE_HFCS_MANAGER_4999_UDP                                        4999 // HFSQL Client/Server Database Engine Manager
-#define INTERNET_SERVICE_COMMPLEX_MAIN_5000_TCP                                       5000 // 
-#define INTERNET_SERVICE_COMMPLEX_MAIN_5000_UDP                                       5000 // 
-#define INTERNET_SERVICE_COMMPLEX_LINK_5001_TCP                                       5001 // 
-#define INTERNET_SERVICE_COMMPLEX_LINK_5001_UDP                                       5001 // 
+#define INTERNET_SERVICE_COMMPLEX_MAIN_5000_TCP                                       5000 //
+#define INTERNET_SERVICE_COMMPLEX_MAIN_5000_UDP                                       5000 //
+#define INTERNET_SERVICE_COMMPLEX_LINK_5001_TCP                                       5001 //
+#define INTERNET_SERVICE_COMMPLEX_LINK_5001_UDP                                       5001 //
 #define INTERNET_SERVICE_RFE_5002_TCP                                                 5002 // radio free ethernet
 #define INTERNET_SERVICE_RFE_5002_UDP                                                 5002 // radio free ethernet
 #define INTERNET_SERVICE_FMPRO_INTERNAL_5003_TCP                                      5003 // "FileMaker
@@ -8581,8 +8581,8 @@
 #define INTERNET_SERVICE_EENET_5234_UDP                                               5234 // EEnet communications
 #define INTERNET_SERVICE_GALAXY_NETWORK_5235_TCP                                      5235 // Galaxy Network Service
 #define INTERNET_SERVICE_GALAXY_NETWORK_5235_UDP                                      5235 // Galaxy Network Service
-#define INTERNET_SERVICE_PADL2SIM_5236_TCP                                            5236 // 
-#define INTERNET_SERVICE_PADL2SIM_5236_UDP                                            5236 // 
+#define INTERNET_SERVICE_PADL2SIM_5236_TCP                                            5236 //
+#define INTERNET_SERVICE_PADL2SIM_5236_UDP                                            5236 //
 #define INTERNET_SERVICE_MNET_DISCOVERY_5237_TCP                                      5237 // m-net discovery
 #define INTERNET_SERVICE_MNET_DISCOVERY_5237_UDP                                      5237 // m-net discovery
 #define INTERNET_SERVICE_DOWNTOOLS_5245_TCP                                           5245 // DownTools Control Protocol
@@ -9372,8 +9372,8 @@
 #define INTERNET_SERVICE_FG_SYSUPDATE_6550_UDP                                        6550 // fg-sysupdate
 #define INTERNET_SERVICE_SUM_6551_TCP                                                 6551 // Software Update Manager
 #define INTERNET_SERVICE_SUM_6551_UDP                                                 6551 // Software Update Manager
-#define INTERNET_SERVICE_XDSXDM_6558_TCP                                              6558 // 
-#define INTERNET_SERVICE_XDSXDM_6558_UDP                                              6558 // 
+#define INTERNET_SERVICE_XDSXDM_6558_TCP                                              6558 //
+#define INTERNET_SERVICE_XDSXDM_6558_UDP                                              6558 //
 #define INTERNET_SERVICE_SANE_PORT_6566_TCP                                           6566 // SANE Control Port
 #define INTERNET_SERVICE_SANE_PORT_6566_UDP                                           6566 // SANE Control Port
 #define INTERNET_SERVICE_CANIT_STORE_6568_TCP                                         6568 // "CanIt Storage Manager IANA assigned this well-formed service name as a replacement for ""canit_store""."
@@ -10961,8 +10961,8 @@
 #define INTERNET_SERVICE_AMT_REDIR_TCP_16994_UDP                                      16994 // Intel(R) AMT Redirection/TCP
 #define INTERNET_SERVICE_AMT_REDIR_TLS_16995_TCP                                      16995 // Intel(R) AMT Redirection/TLS
 #define INTERNET_SERVICE_AMT_REDIR_TLS_16995_UDP                                      16995 // Intel(R) AMT Redirection/TLS
-#define INTERNET_SERVICE_ISODE_DUA_17007_TCP                                          17007 // 
-#define INTERNET_SERVICE_ISODE_DUA_17007_UDP                                          17007 // 
+#define INTERNET_SERVICE_ISODE_DUA_17007_TCP                                          17007 //
+#define INTERNET_SERVICE_ISODE_DUA_17007_UDP                                          17007 //
 #define INTERNET_SERVICE_VESTASDLP_17184_TCP                                          17184 // Vestas Data Layer Protocol
 #define INTERNET_SERVICE_SOUNDSVIRTUAL_17185_TCP                                      17185 // Sounds Virtual
 #define INTERNET_SERVICE_SOUNDSVIRTUAL_17185_UDP                                      17185 // Sounds Virtual

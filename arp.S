@@ -26,7 +26,6 @@
 
 /* GLOBAL {{{1 ---------------------------------------------------------------*/
 .global ARP_HANDLE_PKT
-.global ARP_REQUEST
 .global ARP_INIT
 .global ARP_GET_MAC_ADDR_PTR
 
@@ -169,8 +168,11 @@ OVERWRITE_LESS_ACCESSED: /* {{{3 */
     sbiw  ZL, ARP_TABLE_LEN
     rjmp  EMPTY_ENTRY_FOUND
 
-/* ARP request {{{2 ----------------------------------------------------------*/
+/* ARP request {{{2 ------------------------------------------------------------
+ * Y: Pointer to Targer Protocol Address (TPA) */
 ARP_REQUEST:
+    push  YL
+    push  YH
     /* Copy default ARP request from EEPROM {{{3
      * default ARP doesn't include TPA */
     ldi   YL, lo8(EEPROM_ARP_REQUEST)
@@ -181,8 +183,8 @@ ARP_REQUEST:
     rcall ES_MEMCPY
 
     /* TPA Copy Target IP Address {{{3 */
-    ldi   YL, lo8(SRAM_COMM_IP_ADDR_DST)
-    ldi   YH, hi8(SRAM_COMM_IP_ADDR_DST)
+    pop   YH
+    pop   YL
     ldi   ARG_REG1, IPV4_ADDR_LEN
     rcall MEMCPY
 
@@ -211,9 +213,9 @@ ARP_SEND_PACKET:
 
 /* ARP Get MAC PTR {{{2 --------------------------------------------------------
  * Look for the IP address pointed by Y
- *   If found, set Y to address of corresponding MAC address and clear SREG(Z)
- *   Else, leave Y unchanged and set SREG(Z)
- * SREG(Z) => 0 if address found, 1 otherwise */
+ *   If found, set Y to address of corresponding MAC address and set SREG(Z)
+ *   Else, Y value is undefined and clear SREG(Z)
+ * SREG(Z) => 1 if address found, 0 otherwise */
 ARP_GET_MAC_ADDR_PTR:
     push  ZL
     push  ZH
@@ -227,6 +229,8 @@ ARP_TABLE_LOOP:
     breq  ARP_ENTRY_FOUND
     dec   COUNTER_REG
     brne  ARP_TABLE_LOOP
+    /* ARP entry not found */
+    rcall ARP_REQUEST
     clz
     rjmp  ARP_GET_MAC_ADDR_EXIT
 ARP_ENTRY_FOUND:

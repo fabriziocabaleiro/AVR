@@ -21,8 +21,8 @@
 #define DHCP_STATE_REBOOTING    7
 
 /* DHCP Packet sizes {{{1 ----------------------------------------------------*/
-#define UDP_DST_PORT INTERNET_SERVICE_BOOTPS_67_UDP
-#define UDP_SRC_PORT INTERNET_SERVICE_BOOTPC_68_UDP
+#define DHCP_UDP_DST_PORT INTERNET_SERVICE_BOOTPS_67_UDP
+#define DHCP_UDP_SRC_PORT INTERNET_SERVICE_BOOTPC_68_UDP
 
 #define DHCP_IP_HEADER_SIZE     20
 #define DHCP_UDP_BASE_PKT_SIZE  (     8 + /* UDP header */          \
@@ -73,10 +73,10 @@
  *     +---------------------------------------------------------------+
  * 236 |                          options (variable)                   |
  *     +---------------------------------------------------------------+
- * 
+ *
  *    FIELD      OCTETS       DESCRIPTION
  *    -----      ------       -----------
- * 
+ *
  *    op            1  Message op code / message type.
  *                     1 = BOOTREQUEST, 2 = BOOTREPLY
  *    htype         1  Hardware address type, see ARP section in "Assigned
@@ -110,21 +110,21 @@
  */
 
 /* DHCP Header data structure {{{1 -------------------------------------------*/
-#define DHCP_OP         0 
+#define DHCP_OP         0
 #define DHCP_HTYPE      1
 #define DHCP_HLEN       2
 #define DHCP_HOPS       3
 #define DHCP_XID        4
 #define DHCP_SECS       8
 #define DHCP_FLAGS     10
-#define DHCP_CIADDR    12 
+#define DHCP_CIADDR    12
 #define DHCP_YIADDR    16
-#define DHCP_SIADDR    20 
-#define DHCP_GIADDR    24 
+#define DHCP_SIADDR    20
+#define DHCP_GIADDR    24
 #define DHCP_CHADDR    28
-#define DHCP_SNAME     44 
-#define DHCP_FILE     108 
-#define DHCP_OPTIONS  236 
+#define DHCP_SNAME     44
+#define DHCP_FILE     108
+#define DHCP_OPTIONS  236
 
 /* DHCP OPCODE VALUES {{{1 ---------------------------------------------------*/
 #define DHCP_OP_BOOTREQUEST 1
@@ -416,7 +416,7 @@
 #define DHCP_OPTION_ISNS_LEN                                    N
 /* Meaning EMPTY. [RFC3679] */
 // #define DHCP_OPTION_REMOVED_UNASSIGNED                          84
-// #define DHCP_OPTION_REMOVED_UNASSIGNED_LEN 
+// #define DHCP_OPTION_REMOVED_UNASSIGNED_LEN
 /* Meaning Novell Directory Services. [RFC2241] */
 #define DHCP_OPTION_NDS_SERVERS                                 85
 #define DHCP_OPTION_NDS_SERVERS_LEN                             N
@@ -428,19 +428,19 @@
 #define DHCP_OPTION_NDS_CONTEXT_LEN                             N
 /* Meaning EMPTY. [RFC4280] */
 #define DHCP_OPTION_BCMCS_CONTROLLER_DOMAIN_NAME_LIST           88
-// #define DHCP_OPTION_BCMCS_CONTROLLER_DOMAIN_NAME_LIST_LEN 
+// #define DHCP_OPTION_BCMCS_CONTROLLER_DOMAIN_NAME_LIST_LEN
 /* Meaning EMPTY. [RFC4280] */
 #define DHCP_OPTION_BCMCS_CONTROLLER_IPV4_ADDRESS_OPTION        89
-// #define DHCP_OPTION_BCMCS_CONTROLLER_IPV4_ADDRESS_OPTION_LEN 
+// #define DHCP_OPTION_BCMCS_CONTROLLER_IPV4_ADDRESS_OPTION_LEN
 /* Meaning Authentication. [RFC3118] */
 #define DHCP_OPTION_AUTHENTICATION                              90
 #define DHCP_OPTION_AUTHENTICATION_LEN                          N
 /* Meaning EMPTY. [RFC4388] */
 #define DHCP_OPTION_CLIENT_LAST_TRANSACTION_TIME_OPTION         91
-// #define DHCP_OPTION_CLIENT_LAST_TRANSACTION_TIME_OPTION_LEN 
+// #define DHCP_OPTION_CLIENT_LAST_TRANSACTION_TIME_OPTION_LEN
 /* Meaning EMPTY. [RFC4388] */
 #define DHCP_OPTION_ASSOCIATED_IP_OPTION                        92
-// #define DHCP_OPTION_ASSOCIATED_IP_OPTION_LEN 
+// #define DHCP_OPTION_ASSOCIATED_IP_OPTION_LEN
 /* Meaning Client System Architecture. [RFC4578] */
 #define DHCP_OPTION_CLIENT_SYSTEM                               93
 #define DHCP_OPTION_CLIENT_SYSTEM_LEN                           N
@@ -452,7 +452,7 @@
 #define DHCP_OPTION_LDAP_LEN                                    N
 /* Meaning EMPTY. [RFC3679] */
 // #define DHCP_OPTION_REMOVED_UNASSIGNED                          96
-// #define DHCP_OPTION_REMOVED_UNASSIGNED_LEN 
+// #define DHCP_OPTION_REMOVED_UNASSIGNED_LEN
 /* Meaning UUID/GUID-based Client Identifier. [RFC4578] */
 #define DHCP_OPTION_UUID_GUID                                   97
 #define DHCP_OPTION_UUID_GUID_LEN                               N
@@ -461,7 +461,7 @@
 #define DHCP_OPTION_USER_AUTH_LEN                               N
 /* Meaning EMPTY. [RFC4776] */
 #define DHCP_OPTION_GEOCONF_CIVIC                               99
-// #define DHCP_OPTION_GEOCONF_CIVIC_LEN 
+// #define DHCP_OPTION_GEOCONF_CIVIC_LEN
 /* Meaning IEEE 1003.1 TZ String. [RFC4833] */
 #define DHCP_OPTION_PCODE                                       100
 #define DHCP_OPTION_PCODE_LEN                                   N
@@ -470,19 +470,19 @@
 #define DHCP_OPTION_TCODE_LEN                                   N
 /* Meaning EMPTY. [RFC3679] */
 // #define DHCP_OPTION_REMOVED_UNASSIGNED                          102-107
-// #define DHCP_OPTION_REMOVED_UNASSIGNED_LEN 
+// #define DHCP_OPTION_REMOVED_UNASSIGNED_LEN
 /* Meaning EMPTY. [RFC3679] */
 // #define DHCP_OPTION_REMOVED_UNASSIGNED                          108
-// #define DHCP_OPTION_REMOVED_UNASSIGNED_LEN 
+// #define DHCP_OPTION_REMOVED_UNASSIGNED_LEN
 /* Meaning DHCPv4 over DHCPv6 Softwire Source Address Option. [RFC-ietf-dhc-dhcp4o6-saddr-opt-08] */
 #define DHCP_OPTION_OPTION_DHCP4O6_S46_SADDR                    109
 #define DHCP_OPTION_OPTION_DHCP4O6_S46_SADDR_LEN                16
 /* Meaning EMPTY. [RFC3679] */
 // #define DHCP_OPTION_REMOVED_UNASSIGNED                          110
-// #define DHCP_OPTION_REMOVED_UNASSIGNED_LEN 
+// #define DHCP_OPTION_REMOVED_UNASSIGNED_LEN
 /* Meaning EMPTY. [RFC3679] */
 // #define DHCP_OPTION_UNASSIGNED                                  111
-// #define DHCP_OPTION_UNASSIGNED_LEN 
+// #define DHCP_OPTION_UNASSIGNED_LEN
 /* Meaning NetInfo Parent Server Address. [RFC3679] */
 #define DHCP_OPTION_NETINFO_ADDRESS                             112
 #define DHCP_OPTION_NETINFO_ADDRESS_LEN                         N
@@ -494,7 +494,7 @@
 #define DHCP_OPTION_URL_LEN                                     N
 /* Meaning EMPTY. [RFC3679] */
 // #define DHCP_OPTION_REMOVED_UNASSIGNED                          115
-// #define DHCP_OPTION_REMOVED_UNASSIGNED_LEN 
+// #define DHCP_OPTION_REMOVED_UNASSIGNED_LEN
 /* Meaning DHCP Auto-Configuration. [RFC2563] */
 #define DHCP_OPTION_AUTO_CONFIG                                 116
 #define DHCP_OPTION_AUTO_CONFIG_LEN                             N
@@ -521,82 +521,82 @@
 #define DHCP_OPTION_GEOCONF_OPTION_LEN                          16
 /* Meaning Vendor-Identifying Vendor Class. [RFC3925] */
 #define DHCP_OPTION_V_I_VENDOR_CLASS                            124
-// #define DHCP_OPTION_V_I_VENDOR_CLASS_LEN 
+// #define DHCP_OPTION_V_I_VENDOR_CLASS_LEN
 /* Meaning Vendor-Identifying Vendor-Specific Information. [RFC3925] */
 #define DHCP_OPTION_V_I_VENDOR_SPECIFIC_INFORMATION             125
-// #define DHCP_OPTION_V_I_VENDOR_SPECIFIC_INFORMATION_LEN 
+// #define DHCP_OPTION_V_I_VENDOR_SPECIFIC_INFORMATION_LEN
 /* Meaning EMPTY. [RFC3679] */
 // #define DHCP_OPTION_REMOVED_UNASSIGNED                          126
-// #define DHCP_OPTION_REMOVED_UNASSIGNED_LEN 
+// #define DHCP_OPTION_REMOVED_UNASSIGNED_LEN
 /* Meaning EMPTY. [RFC3679] */
 // #define DHCP_OPTION_REMOVED_UNASSIGNED                          127
-// #define DHCP_OPTION_REMOVED_UNASSIGNED_LEN 
+// #define DHCP_OPTION_REMOVED_UNASSIGNED_LEN
 /* Meaning EMPTY. [RFC4578] */
 // #define DHCP_OPTION_PXE___UNDEFINED__VENDOR_SPECIFIC            128
-// #define DHCP_OPTION_PXE___UNDEFINED__VENDOR_SPECIFIC_LEN 
+// #define DHCP_OPTION_PXE___UNDEFINED__VENDOR_SPECIFIC_LEN
 /* Meaning EMPTY.  */
 #define DHCP_OPTION_ETHERBOOT_SIGNATURE__6_BYTES__E4_45_74_68_00_00 128
-// #define DHCP_OPTION_ETHERBOOT_SIGNATURE__6_BYTES__E4_45_74_68_00_00_LEN 
+// #define DHCP_OPTION_ETHERBOOT_SIGNATURE__6_BYTES__E4_45_74_68_00_00_LEN
 /* Meaning EMPTY.  */
 #define DHCP_OPTION_DOCSIS___FULL_SECURITY___SERVER_IP_ADDRESS  128
-// #define DHCP_OPTION_DOCSIS___FULL_SECURITY___SERVER_IP_ADDRESS_LEN 
+// #define DHCP_OPTION_DOCSIS___FULL_SECURITY___SERVER_IP_ADDRESS_LEN
 /* Meaning EMPTY.  */
 #define DHCP_OPTION_TFTP_SERVER_IP_ADDRESS__FOR_IP_PHONE_SOFTWARE_LOAD_ 128
-// #define DHCP_OPTION_TFTP_SERVER_IP_ADDRESS__FOR_IP_PHONE_SOFTWARE_LOAD__LEN 
+// #define DHCP_OPTION_TFTP_SERVER_IP_ADDRESS__FOR_IP_PHONE_SOFTWARE_LOAD__LEN
 /* Meaning EMPTY. [RFC4578] */
 // #define DHCP_OPTION_PXE___UNDEFINED__VENDOR_SPECIFIC            129
-// #define DHCP_OPTION_PXE___UNDEFINED__VENDOR_SPECIFIC_LEN 
+// #define DHCP_OPTION_PXE___UNDEFINED__VENDOR_SPECIFIC_LEN
 /* Meaning EMPTY.  */
 #define DHCP_OPTION_KERNEL_OPTIONS__VARIABLE_LENGTH_STRING      129
-// #define DHCP_OPTION_KERNEL_OPTIONS__VARIABLE_LENGTH_STRING_LEN 
+// #define DHCP_OPTION_KERNEL_OPTIONS__VARIABLE_LENGTH_STRING_LEN
 /* Meaning EMPTY.  */
 #define DHCP_OPTION_CALL_SERVER_IP_ADDRESS                      129
-// #define DHCP_OPTION_CALL_SERVER_IP_ADDRESS_LEN 
+// #define DHCP_OPTION_CALL_SERVER_IP_ADDRESS_LEN
 /* Meaning EMPTY. [RFC4578] */
 // #define DHCP_OPTION_PXE___UNDEFINED__VENDOR_SPECIFIC            130
-// #define DHCP_OPTION_PXE___UNDEFINED__VENDOR_SPECIFIC_LEN 
+// #define DHCP_OPTION_PXE___UNDEFINED__VENDOR_SPECIFIC_LEN
 /* Meaning EMPTY.  */
 #define DHCP_OPTION_ETHERNET_INTERFACE__VARIABLE_LENGTH_STRING_ 130
-// #define DHCP_OPTION_ETHERNET_INTERFACE__VARIABLE_LENGTH_STRING__LEN 
+// #define DHCP_OPTION_ETHERNET_INTERFACE__VARIABLE_LENGTH_STRING__LEN
 /* Meaning EMPTY.  */
 #define DHCP_OPTION_DISCRIMINATION_STRING__TO_IDENTIFY_VENDOR_  130
-// #define DHCP_OPTION_DISCRIMINATION_STRING__TO_IDENTIFY_VENDOR__LEN 
+// #define DHCP_OPTION_DISCRIMINATION_STRING__TO_IDENTIFY_VENDOR__LEN
 /* Meaning EMPTY. [RFC4578] */
 // #define DHCP_OPTION_PXE___UNDEFINED__VENDOR_SPECIFIC            131
-// #define DHCP_OPTION_PXE___UNDEFINED__VENDOR_SPECIFIC_LEN 
+// #define DHCP_OPTION_PXE___UNDEFINED__VENDOR_SPECIFIC_LEN
 /* Meaning EMPTY.  */
 #define DHCP_OPTION_REMOTE_STATISTICS_SERVER_IP_ADDRESS         131
-// #define DHCP_OPTION_REMOTE_STATISTICS_SERVER_IP_ADDRESS_LEN 
+// #define DHCP_OPTION_REMOTE_STATISTICS_SERVER_IP_ADDRESS_LEN
 /* Meaning EMPTY. [RFC4578] */
 // #define DHCP_OPTION_PXE___UNDEFINED__VENDOR_SPECIFIC            132
-// #define DHCP_OPTION_PXE___UNDEFINED__VENDOR_SPECIFIC_LEN 
+// #define DHCP_OPTION_PXE___UNDEFINED__VENDOR_SPECIFIC_LEN
 /* Meaning EMPTY.  */
 #define DHCP_OPTION_IEEE_802_1Q_VLAN_ID                         132
-// #define DHCP_OPTION_IEEE_802_1Q_VLAN_ID_LEN 
+// #define DHCP_OPTION_IEEE_802_1Q_VLAN_ID_LEN
 /* Meaning EMPTY. [RFC4578] */
 // #define DHCP_OPTION_PXE___UNDEFINED__VENDOR_SPECIFIC            133
-// #define DHCP_OPTION_PXE___UNDEFINED__VENDOR_SPECIFIC_LEN 
+// #define DHCP_OPTION_PXE___UNDEFINED__VENDOR_SPECIFIC_LEN
 /* Meaning EMPTY.  */
 #define DHCP_OPTION_IEEE_802_1D_P_LAYER_2_PRIORITY              133
-// #define DHCP_OPTION_IEEE_802_1D_P_LAYER_2_PRIORITY_LEN 
+// #define DHCP_OPTION_IEEE_802_1D_P_LAYER_2_PRIORITY_LEN
 /* Meaning EMPTY. [RFC4578] */
 // #define DHCP_OPTION_PXE___UNDEFINED__VENDOR_SPECIFIC            134
-// #define DHCP_OPTION_PXE___UNDEFINED__VENDOR_SPECIFIC_LEN 
+// #define DHCP_OPTION_PXE___UNDEFINED__VENDOR_SPECIFIC_LEN
 /* Meaning EMPTY.  */
 #define DHCP_OPTION_DIFFSERV_CODE_POINT__DSCP__FOR_VOIP_SIGNALLING_AND_MEDIA_STREAMS 134
-// #define DHCP_OPTION_DIFFSERV_CODE_POINT__DSCP__FOR_VOIP_SIGNALLING_AND_MEDIA_STREAMS_LEN 
+// #define DHCP_OPTION_DIFFSERV_CODE_POINT__DSCP__FOR_VOIP_SIGNALLING_AND_MEDIA_STREAMS_LEN
 /* Meaning EMPTY. [RFC4578] */
 // #define DHCP_OPTION_PXE___UNDEFINED__VENDOR_SPECIFIC            135
-// #define DHCP_OPTION_PXE___UNDEFINED__VENDOR_SPECIFIC_LEN 
+// #define DHCP_OPTION_PXE___UNDEFINED__VENDOR_SPECIFIC_LEN
 /* Meaning EMPTY.  */
 #define DHCP_OPTION_HTTP_PROXY_FOR_PHONE_SPECIFIC_APPLICATIONS  135
-// #define DHCP_OPTION_HTTP_PROXY_FOR_PHONE_SPECIFIC_APPLICATIONS_LEN 
+// #define DHCP_OPTION_HTTP_PROXY_FOR_PHONE_SPECIFIC_APPLICATIONS_LEN
 /* Meaning EMPTY. [RFC5192] */
 #define DHCP_OPTION_OPTION_PANA_AGENT                           136
-// #define DHCP_OPTION_OPTION_PANA_AGENT_LEN 
+// #define DHCP_OPTION_OPTION_PANA_AGENT_LEN
 /* Meaning EMPTY. [RFC5223] */
 #define DHCP_OPTION_OPTION_V4_LOST                              137
-// #define DHCP_OPTION_OPTION_V4_LOST_LEN 
+// #define DHCP_OPTION_OPTION_V4_LOST_LEN
 /* Meaning CAPWAP Access Controller addresses. [RFC5417] */
 #define DHCP_OPTION_OPTION_CAPWAP_AC_V4                         138
 #define DHCP_OPTION_OPTION_CAPWAP_AC_V4_LEN                     N
@@ -626,16 +626,16 @@
 #define DHCP_OPTION_RDNSS_SELECTION_LEN                         N
 /* Meaning EMPTY. [RFC3942] */
 // #define DHCP_OPTION_UNASSIGNED                                  147-149
-// #define DHCP_OPTION_UNASSIGNED_LEN 
+// #define DHCP_OPTION_UNASSIGNED_LEN
 /* Meaning EMPTY. [RFC5859] */
 #define DHCP_OPTION_TFTP_SERVER_ADDRESS                         150
-// #define DHCP_OPTION_TFTP_SERVER_ADDRESS_LEN 
+// #define DHCP_OPTION_TFTP_SERVER_ADDRESS_LEN
 /* Meaning EMPTY.  */
 #define DHCP_OPTION_ETHERBOOT                                   150
-// #define DHCP_OPTION_ETHERBOOT_LEN 
+// #define DHCP_OPTION_ETHERBOOT_LEN
 /* Meaning EMPTY.  */
 #define DHCP_OPTION_GRUB_CONFIGURATION_PATH_NAME                150
-// #define DHCP_OPTION_GRUB_CONFIGURATION_PATH_NAME_LEN 
+// #define DHCP_OPTION_GRUB_CONFIGURATION_PATH_NAME_LEN
 /* Meaning Status code and optional N byte text message describing status.. [RFC6926] */
 #define DHCP_OPTION_STATUS_CODE                                 151
 #define DHCP_OPTION_STATUS_CODE_LEN                             N+1
@@ -671,22 +671,22 @@
 #define DHCP_OPTION_OPTION_MUD_URL_V4_LEN                       N (variable)
 /* Meaning EMPTY. [RFC3942] */
 // #define DHCP_OPTION_UNASSIGNED                                  162-174
-// #define DHCP_OPTION_UNASSIGNED_LEN 
+// #define DHCP_OPTION_UNASSIGNED_LEN
 /* Meaning EMPTY.  */
 // #define DHCP_OPTION_ETHERBOOT__TENTATIVELY_ASSIGNED___2005_06_23_ 175
-// #define DHCP_OPTION_ETHERBOOT__TENTATIVELY_ASSIGNED___2005_06_23__LEN 
+// #define DHCP_OPTION_ETHERBOOT__TENTATIVELY_ASSIGNED___2005_06_23__LEN
 /* Meaning EMPTY.  */
 #define DHCP_OPTION_IP_TELEPHONE__TENTATIVELY_ASSIGNED___2005_06_23_ 176
-// #define DHCP_OPTION_IP_TELEPHONE__TENTATIVELY_ASSIGNED___2005_06_23__LEN 
+// #define DHCP_OPTION_IP_TELEPHONE__TENTATIVELY_ASSIGNED___2005_06_23__LEN
 /* Meaning EMPTY.  */
 // #define DHCP_OPTION_ETHERBOOT__TENTATIVELY_ASSIGNED___2005_06_23_ 177
-// #define DHCP_OPTION_ETHERBOOT__TENTATIVELY_ASSIGNED___2005_06_23__LEN 
+// #define DHCP_OPTION_ETHERBOOT__TENTATIVELY_ASSIGNED___2005_06_23__LEN
 /* Meaning EMPTY.  */
 #define DHCP_OPTION_PACKETCABLE_AND_CABLEHOME__REPLACED_BY_122_ 177
-// #define DHCP_OPTION_PACKETCABLE_AND_CABLEHOME__REPLACED_BY_122__LEN 
+// #define DHCP_OPTION_PACKETCABLE_AND_CABLEHOME__REPLACED_BY_122__LEN
 /* Meaning EMPTY. [RFC3942] */
 // #define DHCP_OPTION_UNASSIGNED                                  178-207
-// #define DHCP_OPTION_UNASSIGNED_LEN 
+// #define DHCP_OPTION_UNASSIGNED_LEN
 /* Meaning magic string = F1:00:74:7E. [RFC5071][Deprecated] */
 #define DHCP_OPTION_PXELINUX_MAGIC                              208
 #define DHCP_OPTION_PXELINUX_MAGIC_LEN                          4
@@ -707,19 +707,19 @@
 #define DHCP_OPTION_OPTION_V4_ACCESS_DOMAIN_LEN                 N
 /* Meaning EMPTY.  */
 // #define DHCP_OPTION_UNASSIGNED                                  214-219
-// #define DHCP_OPTION_UNASSIGNED_LEN 
+// #define DHCP_OPTION_UNASSIGNED_LEN
 /* Meaning Subnet Allocation Option. [RFC6656] */
 #define DHCP_OPTION_SUBNET_ALLOCATION_OPTION                    220
 #define DHCP_OPTION_SUBNET_ALLOCATION_OPTION_LEN                N
 /* Meaning EMPTY. [RFC6607] */
 #define DHCP_OPTION_VIRTUAL_SUBNET_SELECTION__VSS__OPTION       221
-// #define DHCP_OPTION_VIRTUAL_SUBNET_SELECTION__VSS__OPTION_LEN 
+// #define DHCP_OPTION_VIRTUAL_SUBNET_SELECTION__VSS__OPTION_LEN
 /* Meaning EMPTY. [RFC3942] */
 // #define DHCP_OPTION_UNASSIGNED                                  222-223
-// #define DHCP_OPTION_UNASSIGNED_LEN 
+// #define DHCP_OPTION_UNASSIGNED_LEN
 /* Meaning EMPTY.  */
 #define DHCP_OPTION_RESERVED__PRIVATE_USE                       224-254
-// #define DHCP_OPTION_RESERVED__PRIVATE_USE_LEN 
+// #define DHCP_OPTION_RESERVED__PRIVATE_USE_LEN
 /* Meaning None. [RFC2132] */
 #define DHCP_OPTION_END                                         255
 #define DHCP_OPTION_END_LEN                                     0

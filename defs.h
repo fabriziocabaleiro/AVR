@@ -8,6 +8,7 @@
 #define USE_DHT11
 
 /* Registers {{{1 -------------------------------------------------------------*/
+#define ZERO_REG         R10
 #define ETH_INT_RQST     R15
 /* Register used for temporary values, they may be change after any rcall */
 #define TMP_REG1         R16
@@ -23,6 +24,7 @@
 /* Counter */
 #define COUNTER_REG      R22
 
+#pragma GCC poison R10
 #pragma GCC poison R15
 #pragma GCC poison R16
 #pragma GCC poison R17
@@ -66,8 +68,8 @@
 #define ETHER_TYPE_WAKE_ON_LAN 0x0842
 #define ETHER_TYPE_IPV6        0x86DD
 
-/**************** 
- * Error macros * 
+/****************
+ * Error macros *
  ****************/
 #define ERR_BIT                                PB0
 #define ERR_SET_DDR   sbi _SFR_IO_ADDR(DDRB),  ERR_BIT

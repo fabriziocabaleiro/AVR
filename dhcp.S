@@ -12,7 +12,7 @@
 .LIST
 
 /* MACORS {{{1 ---------------------------------------------------------------*/
-#define DHCP_TIMER_ANDI         0x03
+#define DHCP_TIMER_ANDI         0x01 /* TODO: set back to 7 ? */
 #define DHCP_DOMAIN_SERVER_LEN  8
 #define DHCP_STATE_R            R23
 #define DHCP_PKT_SIZE_L         R24
@@ -334,11 +334,11 @@ CIADDR_TO_ZERO_OR_MY_IP:
     /* if the code reduction optimization is off, then, optimize power by
      * skipping eeprom read, else, do eeprom read to increment Y as required by
      * CHADDR */
-    sbrs  DHCP_STATE_R, DHCP_STATE_REQUESTING /* right after DHCPOFFER */  
+    sbrs  DHCP_STATE_R, DHCP_STATE_REQUESTING /* right after DHCPOFFER */
     rcall EEPROM_READ_N_INC
 #else
     rcall EEPROM_READ_N_INC
-    sbrs  DHCP_STATE_R, DHCP_STATE_REQUESTING /* right after DHCPOFFER */  
+    sbrs  DHCP_STATE_R, DHCP_STATE_REQUESTING /* right after DHCPOFFER */
 #endif
     mov   ARG_REG1, RTV_L_REG
     rcall SPI_MASTER_TRANSMIT

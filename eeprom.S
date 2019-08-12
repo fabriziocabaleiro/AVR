@@ -10,7 +10,6 @@
 .global EEPROM_READ_N_INC
 .global EEPROM_WRITE_N_INC
 .global EEPROM_COREDUMP
-.global EEPROM_SRAM_CMP
 
 .global SRAM_EEPROM_TMP_REG1_SAVE
 .global SRAM_EEPROM_SREG
@@ -62,37 +61,6 @@ EEPROM_WRITE_N_INC:
     adiw  YL, 1
     ret
 
-/* Compare the content of the EEPROM against the SRAM {{{2 ---------------------
- * Return 0 if equal.
- * Z, SRAM ADDRESS
- * Y, EEPROM ADDRESS
- * ARG_REG1, number of bytes to compare */
-EEPROM_SRAM_CMP:
-    push  YL
-    push  YH
-    push  ZL
-    push  ZH
-
-    mov   COUNTER_REG, ARG_REG1
-EEPROM_SRAM_CMP_LOOP:
-    rcall EEPROM_READ_N_INC
-    ld    TMP_REG1, Z+
-    cp    RTV_L_REG, TMP_REG1
-    brne  EEPROM_NOT_EQUAL_SRAM
-    dec   COUNTER_REG
-    brne  EEPROM_SRAM_CMP_LOOP
-    ldi   RTV_L_REG, 0
-    rjmp  EEPROM_SRAM_CMP_EXIT
-EEPROM_NOT_EQUAL_SRAM:
-    ldi   RTV_L_REG, 0xFF
-
-EEPROM_SRAM_CMP_EXIT:
-    pop   ZH
-    pop   ZL
-    pop   YH
-    pop   YL
-    ret
-
 /* Coredump into EEPROM {{{2 -------------------------------------------------*/
 EEPROM_COREDUMP:
     /* Using YH as tmp reg */
@@ -113,7 +81,7 @@ EEPROM_COREDUMP:
                2 + /* Return address of EEPROM_COREDUMP */  \
                2   /* Push during INT1_vect */              \
               )
-               
+
     ld    YH, Z+
     sts   SRAM_EEPROM_PCH, YH
     ld    YH, Z+

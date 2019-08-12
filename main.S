@@ -10,6 +10,7 @@
 #include "enc28j60.h"
 #include "timer.h"
 #include "eeprom_data.h"
+#include "dht11.h"
 .LIST
 
 /* GLOBAL {{{1 ---------------------------------------------------------------*/
@@ -29,6 +30,8 @@ BIT_FIELD_1: .skip 1
 
 /* main, initialize everything {{{2 ------------------------------------------*/
 main:
+    /* Keep register with zero value to avoid using clr over and over */
+    clr   ZERO_REG
     /* Interrupt on INT0: low level, which is the default
      * ISC00 = ISC01 = 0
      */
@@ -116,7 +119,21 @@ LOOP:
     rcall ADC_ENABLE_N_START
     sleep
     rcall ADC_DISABLE
+
+    ldi   YH, hi8(SRAM_DHT11_PAYLOAD)
+    ldi   YL, lo8(SRAM_DHT11_PAYLOAD)
+    ldi   ZL, lo8(SRAM_COMM_PAYLOAD)
+    ldi   ZH, hi8(SRAM_COMM_PAYLOAD)
+    ldi   ARG_REG1, DHT11_PAYLOAD_LEN
+    rcall MEMCPY
+
+    ldi   YH, hi8(SRAM_MQ135_PAYLOAD)
+    ldi   YL, lo8(SRAM_MQ135_PAYLOAD)
+    ldi   ARG_REG1, MQ135_PAYLOAD_LEN
+    rcall MEMCPY
+
     /* Send data */
+    ldi   ARG_REG1, (DHT11_PAYLOAD_LEN + MQ135_PAYLOAD_LEN)
     rcall SEND_PACKET
 
     rjmp  LOOP

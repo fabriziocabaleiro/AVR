@@ -267,7 +267,7 @@ ETH_READ_RECEIVE_HEADER_LOOP:
     st    Z+, RTV_L_REG
     dec   COUNTER_REG
     brne  ETH_READ_RECEIVE_HEADER_LOOP
-    
+
     SPI_END_ETH
     pop   ZH
     pop   ZL
@@ -629,7 +629,7 @@ ETH_GET_EWRPT_BANK0_TO_Z:
 
 /* Move the RDPT {{{2 ----------------------------------------------------------
  *
- * Increment/Decrement value in [ARG_REG1:ARG_REG2] 
+ * Increment/Decrement value in [ARG_REG1:ARG_REG2]
  *
  * ERDPT is 13 bits long
  *

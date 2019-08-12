@@ -99,10 +99,10 @@ EEPROM_IP_HEADER_END:
 EEPROM_UDP_DHCP_PORT: /* {{{2 */
     /* Must be next to EEPROM_IP_HEADER_END because we used in DHCP_SEND as a
      * continuous array of data */
-    .byte hi8(UDP_SRC_PORT)
-    .byte lo8(UDP_SRC_PORT)
-    .byte hi8(UDP_DST_PORT)
-    .byte lo8(UDP_DST_PORT)
+    .byte hi8(DHCP_UDP_SRC_PORT)
+    .byte lo8(DHCP_UDP_SRC_PORT)
+    .byte hi8(DHCP_UDP_DST_PORT)
+    .byte lo8(DHCP_UDP_DST_PORT)
 EEPROM_UDP_DHCP_PORT_END:
 EEPROM_DHCP_HEADER: /* {{{2 */
     /* OP, BOOTREQUEST */

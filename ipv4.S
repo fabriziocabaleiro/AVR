@@ -202,7 +202,6 @@ IPV4_PING_CHECKSUM_END:
     ret
 
 /* Prepare IPv4 header {{{2 ----------------------------------------------------
- * This routine returns the size of the header
  * ARG_REG1 total size */
 IPV4_PREPARE_DEFAULT_HEADER_20_40_BYTES:
     push  YH
@@ -258,8 +257,6 @@ IPV4_PREPARE_HEADER_GET_IP_FROM_EEPROM_DST:
     rcall INTERNET_CHECKSUM_RFC1071
     std   Z + (IPV4_H_CHECKSUM + 0), RTV_H_REG
     std   Z + (IPV4_H_CHECKSUM + 1), RTV_L_REG
-
-    ldi   RTV_L_REG, IPV4_DEFAULT_HEADER_LEN
 
     pop   ZL
     pop   ZH
