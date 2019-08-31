@@ -9,8 +9,6 @@
 .LIST
 
 /* MACORS {{{1 ---------------------------------------------------------------*/
-#define UDP_SRC_PORT 7070
-#define UDP_DST_PORT 7070
 #define UDP_PKT_LEN    14
 #define UDP_HEADER_LEN  8
 

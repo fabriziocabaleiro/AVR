@@ -8,6 +8,8 @@
 #define USE_DHT11
 
 /* Registers {{{1 -------------------------------------------------------------*/
+#define XMULX_RTV_L_REG  R0
+#define XMULX_RTV_H_REG  R1
 #define ZERO_REG         R10
 #define ETH_INT_RQST     R15
 /* Register used for temporary values, they may be change after any rcall */
@@ -24,6 +26,10 @@
 /* Counter */
 #define COUNTER_REG      R22
 
+/* When multiplying two registers, the results is store in R1:R0, therefore
+ * avoid using them */
+#pragma GCC poison R0
+#pragma GCC poison R1
 #pragma GCC poison R10
 #pragma GCC poison R15
 #pragma GCC poison R16

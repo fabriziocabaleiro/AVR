@@ -12,7 +12,7 @@
 .LIST
 
 /* MACORS {{{1 ---------------------------------------------------------------*/
-#define DHCP_TIMER_ANDI         0x01 /* TODO: set back to 7 ? */
+#define DHCP_TIMER_ANDI         0x03 /* TODO: set back to 7 ? */
 #define DHCP_DOMAIN_SERVER_LEN  8
 #define DHCP_STATE_R            R23
 #define DHCP_PKT_SIZE_L         R24

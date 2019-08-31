@@ -212,9 +212,9 @@ ARP_SEND_PACKET:
 
 /* ARP Get MAC PTR {{{2 --------------------------------------------------------
  * Look for the IP address pointed by Y
- *   If found, set Y to address of corresponding MAC address and set SREG(Z)
- *   Else, Y value is undefined and clear SREG(Z)
- * SREG(Z) => 1 if address found, 0 otherwise */
+ *   If found, set [RTV_H_REG:RTV_L_REG] to address of corresponding MAC address
+ *   and set SREG(Z). Else, [RTV_H_REG:RTV_L_REG] is unchanged and clear SREG(Z)
+ */
 ARP_GET_MAC_ADDR_PTR:
     push  ZL
     push  ZH
@@ -226,6 +226,7 @@ ARP_GET_MAC_ADDR_PTR:
 ARP_TABLE_LOOP:
     rcall MEMCMP
     breq  ARP_ENTRY_FOUND
+    adiw  ZL, ARP_TABLE_ENTRY_LEN
     dec   COUNTER_REG
     brne  ARP_TABLE_LOOP
     /* ARP entry not found */
@@ -233,8 +234,9 @@ ARP_TABLE_LOOP:
     clz
     rjmp  ARP_GET_MAC_ADDR_EXIT
 ARP_ENTRY_FOUND:
-    movw  YL, ZL
-    adiw  YL, (ARP_TABLE_MAC - ARP_TABLE_IPV4)
+    movw  RTV_L_REG, ZL
+    subi  RTV_L_REG, lo8(-(ARP_TABLE_MAC - ARP_TABLE_IPV4))
+    sbci  RTV_H_REG, hi8(-(ARP_TABLE_MAC - ARP_TABLE_IPV4))
     sez
 
 ARP_GET_MAC_ADDR_EXIT:

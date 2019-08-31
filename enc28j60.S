@@ -642,6 +642,8 @@ ETH_GET_EWRPT_BANK0_TO_Z:
 #define RDPT_L R24
 #define TMP_REG3 RTV_L_REG
 ETH_MOVE_READ_POINTER:
+    push  RDPT_H
+    push  RDPT_L
     /* Save ARG_REG[12] to be used later */
     push  ARG_REG1
     push  ARG_REG2
@@ -720,6 +722,8 @@ UPDATE_ERDPT:
     mov   ARG_REG2, RDPT_H
     rcall ETH_WRITE_CONTROL_REGISTER
 
+    pop   RDPT_L
+    pop   RDPT_H
     ret
 #undef RDPT_H
 #undef RDPT_L

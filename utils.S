@@ -15,6 +15,7 @@
 /* GLOBAL {{{1 ---------------------------------------------------------------*/
 .global MEMCMP
 .global MEMCPY
+.global MEMCMP_ZERO
 .global ES_MEMCMP
 .global ES_MEMCPY
 
@@ -70,6 +71,30 @@ MEMCPY_END:
     pop   ARG_REG1
     ret
 
+/* MEMCMP_ZERO {{{2 ------------------------------------------------------------
+ * Check if memory pointed by Y across ARG_REG1 bytes is zero
+ * Z => 0 if memory is zero */
+MEMCMP_ZERO:
+    push  YL
+    push  YH
+    push  ARG_REG1
+
+MEMCMP_ZERO_LOOP:
+    dec   ARG_REG1
+    brmi  MEMCMP_ZERO_END
+    ld    TMP_REG1, Y+
+    cp    ZERO_REG, TMP_REG1
+    breq  MEMCMP_ZERO_LOOP
+    /* If falling here from line above, then ARG_REG1 didn't reach -1, then
+     * after the inc below, it will have a value greater than Zero, setting the
+     * Zero flag to 0 */
+MEMCMP_ZERO_END:
+    inc   ARG_REG1
+    pop   ARG_REG1
+    pop   YH
+    pop   YL
+    ret
+
 /* ES_MEMCMP {{{2 --------------------------------------------------------------
  * Same as MEMCMP, but Y from EEPROM */
 ES_MEMCMP:
@@ -112,29 +137,6 @@ ES_MEMCPY_LOOP:
 
 ES_MEMCPY_END:
     pop   ARG_REG1
-    ret
-
-/* MEMCMP_ZERO {{{2 ------------------------------------------------------------
- * Check if memory pointed by Y across ARG_REG1 bytes is zero */
-MEMCMP_ZERO:
-    push  YL
-    push  YH
-    push  ARG_REG1
-
-MEMCMP_ZERO_LOOP:
-    dec   ARG_REG1
-    brmi  MEMCMP_ZERO_END
-    ld    TMP_REG2, Y+
-    cp    ZERO_REG, TMP_REG2
-    breq  MEMCMP_ZERO_LOOP
-    /* If falling here from line above, then ARG_REG1 didn't reach -1, then
-     * after the inc below, it will have a value greater than Zero, setting the
-     * Zero flag to 0 */
-MEMCMP_ZERO_END:
-    inc   ARG_REG1
-    pop   ARG_REG1
-    pop   YH
-    pop   YL
     ret
 
 .end
