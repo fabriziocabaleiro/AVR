@@ -32,9 +32,6 @@ BIT_FIELD_1: .skip 1
 main:
     /* Keep register with zero value to avoid using clr over and over */
     clr   ZERO_REG
-    /* Interrupt on INT0: low level, which is the default
-     * ISC00 = ISC01 = 0
-     */
 
     /* Set LED errors */
     ERR_SET_DDR
@@ -46,10 +43,14 @@ main:
     /* Zero out SRAM */
     rcall ZERO_OUT_SRAM
 
-    /* Set global interrupt enable, sleep mode and sleep enable */
+    /* Set global interrupt enable, sleep mode and sleep enable
+     * Interrupt on INT0: falling edge */
     in    TMP_REG1, _SFR_IO_ADDR(MCUCR)
-    sbr   TMP_REG1, (1 << SE)
+    sbr   TMP_REG1, ((1 << SE)|(1 << ISC01))
     out   _SFR_IO_ADDR(MCUCR), TMP_REG1
+
+    /* Init eth register */
+    mov   ENC_INT_RQST_REG, ZERO_REG
 
     /* INT1 will receive interrupt while reading DHT11, but, also will receive
      * interrupt if we want to generate a COREDUMP, so, using upper nibble of
@@ -77,29 +78,13 @@ main:
 
 /* LOOP {{{2 -----------------------------------------------------------------*/
 LOOP:
-    /* Enable INT0, {{{3 */
-    in    TMP_REG1, _SFR_IO_ADDR(GICR)
-    sbr   TMP_REG1, (1 << INT0)
-    out   _SFR_IO_ADDR(GICR), TMP_REG1
-
-    /* Enable timer interrupt {{{3 */
-    in    TMP_REG1, _SFR_IO_ADDR(TIMSK)
-    sbr   TMP_REG1, (1 << OCIE1A)
-    out   _SFR_IO_ADDR(TIMSK), TMP_REG1
-    /* }}}3 */
+    sbis  _SFR_IO_ADDR(PIND), PD2
     sleep
     CLR_LED0
     CLR_LED1
-    /* Disable INT0, because can interfere with code using ENC28J60 {{{3 */
-    in    TMP_REG1, _SFR_IO_ADDR(GICR)
-    cbr   TMP_REG1, (1 << INT0)
-    out   _SFR_IO_ADDR(GICR), TMP_REG1
-
-    /* Disable Timer interrupt {{{3 */
-    in    TMP_REG1, _SFR_IO_ADDR(TIMSK)
-    cbr   TMP_REG1, (1 << OCIE1A)
-    out   _SFR_IO_ADDR(TIMSK), TMP_REG1
-    /* }}}3 */
+    sbis  _SFR_IO_ADDR(PIND), PD2
+    rcall ENC_INTERRUPT_HANDLE
+    /* Event triggered by timer {{{ */
     lds   TMP_REG1, SRAM_TIMER1_EVENTS
     sbrs  TMP_REG1, TIMER1_EVENTS_SECOND
     rjmp  LOOP
@@ -135,63 +120,46 @@ LOOP:
     /* Send data */
     ldi   ARG_REG1, (DHT11_PAYLOAD_LEN + MQ135_PAYLOAD_LEN)
     rcall SEND_PACKET
-
+    /* }}} */
     rjmp  LOOP
 
-/* INT0 handle. Received packet interrupt routine {{{2 -------------------------
- * Within INT0 handle, INT0 is disable, interrupts are re-enabled */
+/* INT0 handle. {{{2 ----------------------------------------------------------
+ * Don't do anything within the routine, we want the system to wake up and
+ * within LOOP to do everything */
 INT0_vect:
-    push  TMP_REG1
-    in    TMP_REG1, _SFR_IO_ADDR(SREG)
-    push  TMP_REG1
+    reti
 
-    /* Disable INT0 */
-    in    TMP_REG1, _SFR_IO_ADDR(GICR)
-    cbr   TMP_REG1, (1 << INT0)
-    out   _SFR_IO_ADDR(GICR), TMP_REG1
-
-    /* Re-enable interrupt within interrupt */
-    sei
-
+/* ENC28J60 INTERRUPT HANDLE {{{2  ---------------------------------------------
+ * ENC28J60 has multiple sources of interrupt, but only one output pin, this pin
+ * will be held down until all sources of interrupts are cleared */
+ENC_INTERRUPT_HANDLE:
     /* Read Global interrupt register from ENC28J60 and execute routines
      * accordingly */
-READ_ETHERNET_INTERRUPT_REQUEST:
-    ldi   ARG_REG1, ENC_COMMON_EIR
+0:  ldi   ARG_REG1, ENC_COMMON_EIR
     rcall ETH_READ_CONTROL_REGISTER
-    mov   ETH_INT_RQST, RTV_L_REG
+    mov   ENC_INT_RQST_REG, RTV_L_REG
 
-    sbrc  ETH_INT_RQST, ENC_COMMON_EIR_PKTIF
-    rcall HANDLE_PACKET
-    sbrc  ETH_INT_RQST, ENC_COMMON_EIE_DMAIE
+    /* First check for errors */
+    sbrc  ENC_INT_RQST_REG, ENC_COMMON_EIE_DMAIE
     rcall COREDUMP_N_CONTINUE
-    sbrc  ETH_INT_RQST, ENC_COMMON_EIE_LINKIE
+    sbrc  ENC_INT_RQST_REG, ENC_COMMON_EIE_LINKIE
     rcall COREDUMP_N_CONTINUE
-    sbrc  ETH_INT_RQST, ENC_COMMON_EIE_TXIE
+    sbrc  ENC_INT_RQST_REG, ENC_COMMON_EIE_TXIE
     rcall COREDUMP_N_CONTINUE
-    sbrc  ETH_INT_RQST, ENC_COMMON_EIE_TXERIE
+    sbrc  ENC_INT_RQST_REG, ENC_COMMON_EIE_TXERIE
     rcall COREDUMP_N_CONTINUE
-    sbrc  ETH_INT_RQST, ENC_COMMON_EIE_RXERIE
+    sbrc  ENC_INT_RQST_REG, ENC_COMMON_EIE_RXERIE
     rcall HANDLE_RECEIVE_ERROR
+
+    sbrc  ENC_INT_RQST_REG, ENC_COMMON_EIR_PKTIF
+    rcall HANDLE_PACKET
 
     /* Check if still pending interrupts */
     sbis  _SFR_IO_ADDR(PIND), PD2
-    rjmp  READ_ETHERNET_INTERRUPT_REQUEST
+    rjmp  0b
+    clr   ENC_INT_RQST_REG
 
-#if 1
-    in    TMP_REG2, _SFR_IO_ADDR(GIFR)
-    sbr   TMP_REG2, (1 << INTF0)
-    out   _SFR_IO_ADDR(GIFR), TMP_REG2
-#endif
-
-    /* Enable INT0 */
-    in    TMP_REG1, _SFR_IO_ADDR(GICR)
-    sbr   TMP_REG1, (1 << INT0)
-    out   _SFR_IO_ADDR(GICR), TMP_REG1
-
-    pop   TMP_REG1
-    out   _SFR_IO_ADDR(SREG), TMP_REG1
-    pop   TMP_REG1
-    reti
+    ret
 
 /* Handle received packet {{{2 -------------------------------------------------
  * enc28j60 will trigger an interrupt whenever a packet is received. */

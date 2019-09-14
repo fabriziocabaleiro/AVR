@@ -161,7 +161,7 @@ SEND_PACKET_EXIT:
 #undef ENTRY_IT_REG
 
 /* Register an IP to send packages to {{{2 -------------------------------------
- * TODO: */
+ * Use Round Robin to write destination entries into the table */
 COMM_REGISTER_IP:
     /* Select the entry on the table to register using ROUND ROBIN */
     lds   TMP_REG1, SRAM_COMM_RR_ITERATOR

@@ -11,7 +11,7 @@
 #define XMULX_RTV_L_REG  R0
 #define XMULX_RTV_H_REG  R1
 #define ZERO_REG         R10
-#define ETH_INT_RQST     R15
+#define ENC_INT_RQST_REG R15
 /* Register used for temporary values, they may be change after any rcall */
 #define TMP_REG1         R16
 #define TMP_REG2         R17

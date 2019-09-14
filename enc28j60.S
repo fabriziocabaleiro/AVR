@@ -147,7 +147,9 @@ ETH_ENABLE_RECEIVE:
  * - Transmit Interrupt (TXIF)
  * - Link Change Interrupt (LINKIF)
  * - DMA Interrupt (DMAIF)
- * - Receive Packet Pending Interrupt (PKTIF) */
+ * - Receive Packet Pending Interrupt (PKTIF)
+ * We are going to ignore some interrupts that we cannot do much about
+ * - RXERIF trigger when received packed is full... not much that we can do */
 ETH_ENABLE_RECEIVE_INTERRUPT:
     ldi   ARG_REG1, ENC_COMMON_EIE
     ldi   ARG_REG2, (1 << ENC_COMMON_EIE_INTIE)  | \
@@ -156,7 +158,7 @@ ETH_ENABLE_RECEIVE_INTERRUPT:
                     (1 << ENC_COMMON_EIE_LINKIE) | \
                     (1 << ENC_COMMON_EIE_TXIE)   | \
                     (1 << ENC_COMMON_EIE_TXERIE) | \
-                    (1 << ENC_COMMON_EIE_RXERIE)
+                    (0 << ENC_COMMON_EIE_RXERIE)     /* Ignore */
     rcall ETH_BIT_FIELD_SET
     ret
 
