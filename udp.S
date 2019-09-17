@@ -36,7 +36,7 @@ UDP_HANDLE_PKT:
     push  YH
 
     rcall ETH_READ_BUFFER_START
-    /* Read UDP header {{{3 */
+    /* Read UDP header */
     ldi   COUNTER_REG, UDP_HEADER_LEN
     ldi   ZL, lo8(SRAM_UDP_HEADER)
     ldi   ZH, hi8(SRAM_UDP_HEADER)
@@ -46,12 +46,12 @@ READ_HEADER:
     dec   COUNTER_REG
     brne  READ_HEADER
 
-    /* Set common argument for ES_MEMCMP {{{3 */
+    /* Set common argument for ES_MEMCMP */
     ldi   ZL, lo8(SRAM_UDP_HEADER)
     ldi   ZH, hi8(SRAM_UDP_HEADER)
     ldi   ARG_REG1, 4
 
-    /* DHCP {{{3 */
+    /* DHCP */
     ldi   YL, lo8(EEPROM_DHCP_SRC_DST_PORT)
     ldi   YH, hi8(EEPROM_DHCP_SRC_DST_PORT)
     rcall ES_MEMCMP
@@ -59,13 +59,13 @@ READ_HEADER:
     rcall DHCP_HANDLE_PKT
     rjmp  UDP_HANDLE_PKT_END
 
-    /* Register a device IP to send messages to {{{3 */
+    /* COMM */
 TRY_COMM:
     ldi   YL, lo8(EEPROM_COMM_SRC_DST_PORT)
     ldi   YH, hi8(EEPROM_COMM_SRC_DST_PORT)
     rcall ES_MEMCMP
     brne  UDP_HANDLE_PKT_END
-    rcall COMM_REGISTER_IP /* }}}3 */
+    rcall COMM_REGISTER_IP
 
 UDP_HANDLE_PKT_END:
     ETH_READ_BUFFER_END
