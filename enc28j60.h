@@ -2,6 +2,41 @@
 #ifndef _ENC28J60_H_
 #define _ENC28J60_H_
 
+/* MACROS {{{1 */
+/* Choose what interrupts to use */
+/* This interrupt is triggered when a packet is received, but there is no space
+ * left or the packet counter reached its maximum, therefore discarding the
+ * packet. We always try to reply as fast as possible, there is nothing else
+ * that we are going to do under this event, so ignore it */
+#define USE_RXERIF 0
+
+/* To many conditions can trigger this interrupt, we are going to ignore it for
+ * the moment.
+ * TODO: take action upon this event */
+#define USE_TXERIF 0
+
+/* This interrupt should be trigger when the host cancels or abort a packet
+ * transmission. Cancellation or abort of transmission by host is not
+ * implemented at the moment, so ignore this event */
+#define USE_TXIF   0
+
+/* To receive it, the host controller must set the PHIE.PLNKIE and PGEIE bits,
+ * which we don't do at the moment, so ignore it */
+#define USE_LINKIF 0
+
+/* We don't have DMA support at the moment.
+ * TODO: add DMA support? */
+#define USE_DMAIF  0
+
+/* The Receive Packet Pending Interrupt Flag (PKTIF) is used to indicate the
+ * presence of one or more data packets in the receive buffer and to provide a
+ * notification means for the arrival of new packets. */
+#define USE_PKTIF  1
+
+/* If any of the interrupt sources is being used, then set this bit */
+#define USE_INTIE  (USE_RXERIF | USE_TXERIF | USE_TXIF | USE_LINKIF | \
+                    USE_DMAIF | USE_PKTIF)
+
 /* Addresses in SRAM are 11 bits long, first MSB of the MAC Dst pointer set to
  * one means broadcast */
 #define ENC_MAC_DST_PTR_BROADCAST_BIT        7

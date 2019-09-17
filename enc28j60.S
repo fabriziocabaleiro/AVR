@@ -62,7 +62,9 @@ ETH_INIT:
     rcall ETH_BUFFER_INIT
     rcall ETH_MAC_INIT
     rcall ETH_ENABLE_RECEIVE
+#if USE_INTIE
     rcall ETH_ENABLE_RECEIVE_INTERRUPT
+#endif
     ret
 
 /* Read Control Register {{{2 --------------------------------------------------
@@ -150,17 +152,19 @@ ETH_ENABLE_RECEIVE:
  * - Receive Packet Pending Interrupt (PKTIF)
  * We are going to ignore some interrupts that we cannot do much about
  * - RXERIF trigger when received packed is full... not much that we can do */
+#if USE_INTIE
 ETH_ENABLE_RECEIVE_INTERRUPT:
     ldi   ARG_REG1, ENC_COMMON_EIE
     ldi   ARG_REG2, (1 << ENC_COMMON_EIE_INTIE)  | \
-                    (1 << ENC_COMMON_EIE_PKTIE)  | \
-                    (1 << ENC_COMMON_EIE_DMAIE)  | \
-                    (1 << ENC_COMMON_EIE_LINKIE) | \
-                    (1 << ENC_COMMON_EIE_TXIE)   | \
-                    (1 << ENC_COMMON_EIE_TXERIE) | \
-                    (0 << ENC_COMMON_EIE_RXERIE)     /* Ignore */
+                    (USE_PKTIF  << ENC_COMMON_EIE_PKTIE)  | \
+                    (USE_DMAIF  << ENC_COMMON_EIE_DMAIE)  | \
+                    (USE_LINKIF << ENC_COMMON_EIE_LINKIE) | \
+                    (USE_TXIF   << ENC_COMMON_EIE_TXIE)   | \
+                    (USE_TXERIF << ENC_COMMON_EIE_TXERIE) | \
+                    (USE_RXERIF << ENC_COMMON_EIE_RXERIE)
     rcall ETH_BIT_FIELD_SET
     ret
+#endif
 
 /* Software reset {{{2 -------------------------------------------------------*/
 ETH_SOFTWARE_RESET:
