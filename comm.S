@@ -82,7 +82,7 @@ SEND_PACKET_FOR_ALL_ENTRIES:
     push  YH
     /* Set MAC Dst pointer {{{3 */
     rcall ARP_GET_MAC_ADDR_PTR
-    brne  SEND_PACKET_EXIT
+    brne  IP_NOT_IN_ARP_TABLE
     sts   SRAM_ENC_MAC_DST_PTR + 0, RTV_H_REG
     sts   SRAM_ENC_MAC_DST_PTR + 1, RTV_L_REG
 
@@ -140,6 +140,7 @@ SEND_PACKET_FOR_ALL_ENTRIES:
     /* Send the packet */
     rcall ETH_WRITE_BUFFER_PACKET_PAYLOAD_FINISH
 
+IP_NOT_IN_ARP_TABLE:
     pop   YH
     pop   YL
 SEND_PACKET_NEXT_ENTRY:
