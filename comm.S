@@ -76,7 +76,8 @@ SEND_PACKET:
     /* For all entries of the COMM table */
 SEND_PACKET_FOR_ALL_ENTRIES:
     ldi   ARG_REG1, IPV4_ADDR_LEN
-    rcall MEMCMP_ZERO
+    clr   ARG_REG2
+    rcall REG_MEMCMP
     breq  SEND_PACKET_NEXT_ENTRY
     push  YL
     push  YH

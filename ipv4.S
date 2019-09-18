@@ -20,12 +20,13 @@
 
 /* DATA  {{{1 ----------------------------------------------------------------*/
 .section .data
+SRAM_IPV4_FLAGS:        .skip   1
 SRAM_IPV4_HEADER:       .skip   IPV4_MAX_HEADER_LEN
 SRAM_IPV4_PAYLOAD:      .skip   IPV4_PAYLOAD_LEN
+/* Internet Header Length in bytes */
 SRAM_IPV4_IHL_IN_BYTES: .skip   1
-/* This is the default IP address to send packages to,
- * it should be set by password authentication or something else, but, for now,
- * just assigning it through ping request */
+/* Destination IP Address, when sending an IP packet, caller routine should set
+ * the DST IP address here */
 SRAM_IP_ADDR_DST:       .skip   IPV4_ADDR_LEN
 
 /* TEXT {{{1 -----------------------------------------------------------------*/
@@ -34,9 +35,13 @@ SRAM_IP_ADDR_DST:       .skip   IPV4_ADDR_LEN
 /* Handle IPv4 packet {{{2 -----------------------------------------------------
  * Check protocol (tcp, udp, etc) and port to deliver to corresponding routine
  * IP version != 4 will be ignore */
+#define IPV4_HEADER_FLAGS_REG R23
+#define RECEIVED_IP_IS_MINE_BIT      3
+#define RECEIVED_IP_IS_BROADCAST_BIT 7
 IPV4_HANDLE_PKT:
     push  ZH
     push  ZL
+    push  IPV4_HEADER_FLAGS_REG
 
     /* Read IPv4 Header {{{3 */
     ldi   ZL, lo8(SRAM_IPV4_HEADER)
@@ -53,7 +58,7 @@ IPV4_HANDLE_PKT:
     cpi   RTV_L_REG, 0x40
     /* Only IPv4 will be handle, other versions will be ignore */
     breq  PACKET_IS_IPV4
-    rjmp  IPV4_HANDLE_EXIT_SUCCESS
+    rjmp  IPV4_HANDLE_EXIT
 PACKET_IS_IPV4:
     andi  COUNTER_REG, 0x0F
     /* Length is in 32bits words, as reading bytes, then IHL * 4, then subtract
@@ -72,70 +77,54 @@ READ_HEADER:
     brne  READ_HEADER
     ETH_READ_BUFFER_END
 
-    /* Check if IPv4 packet is for me, set IPV4_PACKET_FOR_ME {{{3
-     * Beware EEPROM_READ_N_INC does not modify TMP_REG[123]
-     * DHCP may have an IPv4 Dst address different than mine... */
     push  YL
     push  YH
-
-/* Setting RECEIVED_IP* bits at the beginning, then subtracting, if 4
- * subtractions, then the MSB of the nibble will be zero */
-#define RECEIVED_IP_IS_MINE_BIT      3
-#define RECEIVED_IP_IS_BROADCAST_BIT 7
-    clr   TMP_REG2 /* Using nibble to check My IP addr or Broadcast */
+    /* Check if Dst IP Address is ours, if not, then stop processing package */
+    clr   IPV4_HEADER_FLAGS_REG
     ldi   YH, hi8(EEPROM_IP_ADDR)
     ldi   YL, lo8(EEPROM_IP_ADDR)
-    ldi   ZL, lo8(SRAM_IPV4_HEADER)
-    ldi   ZH, hi8(SRAM_IPV4_HEADER)
-    ldi   COUNTER_REG, IPV4_ADDR_LEN
-CHECK_IP_ADDR:
-    rcall EEPROM_READ_N_INC
-    ldd   TMP_REG1, Z + IPV4_DST_ADDR
-    cp    TMP_REG1, RTV_L_REG
-    brne  NOT_MY_IP
-    subi  TMP_REG2, -0x01
-NOT_MY_IP:
-    cpi   TMP_REG1, 0xFF
-    brne  NOT_BROADCAST
-    subi  TMP_REG2, -0x10
-NOT_BROADCAST:
-    adiw  ZL, 1
-    dec   COUNTER_REG
-    brne  CHECK_IP_ADDR
+    ldi   ZL, lo8(SRAM_IPV4_HEADER + IPV4_DST_ADDR)
+    ldi   ZH, hi8(SRAM_IPV4_HEADER + IPV4_DST_ADDR)
+    ldi   ARG_REG1, IPV4_ADDR_LEN
+    rcall ES_MEMCMP
+    brne  0f
+    sbr   IPV4_HEADER_FLAGS_REG, (1 << RECEIVED_IP_IS_MINE_BIT)
+0:
 
+    /* Check if Dst IP Address is broadcast */
+    movw  YL, ZL
+    ldi   ARG_REG2, 0xFF
+    rcall REG_MEMCMP
+    brne  0f
+    sbr   IPV4_HEADER_FLAGS_REG, (1 << RECEIVED_IP_IS_BROADCAST_BIT)
+0:
     pop   YH
     pop   YL
 
-#if 0 // debug
-    ldi   YL, lo8(EEPROM_DEBUG)
-    ldi   YH, hi8(EEPROM_DEBUG)
-    mov   ARG_REG1, TMP_REG2
-    rcall EEPROM_WRITE_N_INC
-    ERR_SET
-#endif
+    sts   SRAM_IPV4_FLAGS, IPV4_HEADER_FLAGS_REG
 
     /* Deliver packet using IPv4 protocol {{{3 */
-    /* Faster than setting ZH:ZL, just subtract... previously added value */
-    sbiw  ZL, IPV4_ADDR_LEN
+    sbiw  ZL, IPV4_DST_ADDR
     /* Load Internet protocol number */
     ldd   TMP_REG1, Z + IPV4_PROTOCOL
 
     /* We may receive a DHCP packet that doesn't have our current IP address,
-     * therefore we ignore IPV4_PACKET_FOR_ME for the moment */
+     * therefore we don't check if Dst IP Addr is ours */
     cpi   TMP_REG1, INTERNET_PROTOCOL_NUMBER_USER_DATAGRAM
     brne  RETURN_IF_IP_PACKET_NOT_FOR_ME
     rcall UDP_HANDLE_PKT
-    rjmp  IPV4_HANDLE_EXIT_SUCCESS
+    rjmp  IPV4_HANDLE_EXIT
 
+    /* Stop processing IP packet if Dst IP address is not mine */
 RETURN_IF_IP_PACKET_NOT_FOR_ME:
-    sbrc  TMP_REG2, RECEIVED_IP_IS_MINE_BIT
-    rjmp  IPV4_HANDLE_EXIT_SUCCESS
+    sbrs  IPV4_HEADER_FLAGS_REG, RECEIVED_IP_IS_MINE_BIT
+    rjmp  IPV4_HANDLE_EXIT
 
 TRY_PROTOCOL_ICMP:
     cpi   TMP_REG1, INTERNET_PROTOCOL_NUMBER_ICMP
     brne  TRY_PROTOCOL_TCP
     rcall ICMP_HANDLE_PKT
-    rjmp  IPV4_HANDLE_EXIT_SUCCESS
+    rjmp  IPV4_HANDLE_EXIT
 
 TRY_PROTOCOL_TCP:
 #if 0
@@ -143,13 +132,12 @@ TRY_PROTOCOL_TCP:
     brne  TRY_PROTOCOL_UDP
     /* TCP not implemented yet */
     rcall TCP_HANDLE_PKT
-    rjmp  IPV4_HANDLE_EXIT_SUCCESS
+    rjmp  IPV4_HANDLE_EXIT
 #endif
     /* }}}3 */
 
-IPV4_HANDLE_EXIT_SUCCESS:
-    ldi   RTV_L_REG, 0
-IPV4_HANDLE_END:
+IPV4_HANDLE_EXIT:
+    pop   IPV4_HEADER_FLAGS_REG
     pop   ZL
     pop   ZH
     ret

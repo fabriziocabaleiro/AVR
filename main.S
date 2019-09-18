@@ -78,7 +78,7 @@ main:
 
 /* LOOP {{{2 -----------------------------------------------------------------*/
 LOOP:
-    sbis  _SFR_IO_ADDR(PIND), PD2
+    sbic  _SFR_IO_ADDR(PIND), PD2
     sleep
     CLR_LED0
     CLR_LED1
@@ -135,29 +135,34 @@ INT0_vect:
 ENC_INTERRUPT_HANDLE:
     /* Read Global interrupt register from ENC28J60 and execute routines
      * accordingly */
-0:  ldi   ARG_REG1, ENC_COMMON_EIR
+    ldi   ARG_REG1, ENC_COMMON_EIR
     rcall ETH_READ_CONTROL_REGISTER
     mov   ENC_INT_RQST_REG, RTV_L_REG
 
     /* First check for errors */
+#if USE_DMAIF
     sbrc  ENC_INT_RQST_REG, ENC_COMMON_EIE_DMAIE
     rcall COREDUMP_N_CONTINUE
+#endif
+#if USE_LINKIF
     sbrc  ENC_INT_RQST_REG, ENC_COMMON_EIE_LINKIE
     rcall COREDUMP_N_CONTINUE
+#endif
+#if USE_TXIF
     sbrc  ENC_INT_RQST_REG, ENC_COMMON_EIE_TXIE
     rcall COREDUMP_N_CONTINUE
+#endif
+#if USE_TXERIF
     sbrc  ENC_INT_RQST_REG, ENC_COMMON_EIE_TXERIE
     rcall COREDUMP_N_CONTINUE
+#endif
+#if USE_RXERIF
     sbrc  ENC_INT_RQST_REG, ENC_COMMON_EIE_RXERIE
     rcall HANDLE_RECEIVE_ERROR
-
+#endif
+    /* The system would be useless if this is not in use */
     sbrc  ENC_INT_RQST_REG, ENC_COMMON_EIR_PKTIF
     rcall HANDLE_PACKET
-
-    /* Check if still pending interrupts */
-    sbis  _SFR_IO_ADDR(PIND), PD2
-    rjmp  0b
-    clr   ENC_INT_RQST_REG
 
     ret
 
@@ -176,28 +181,23 @@ HANDLE_PACKET:
     lds   TMP_REG2, SRAM_RPKT_STATUS3
     sbrs  TMP_REG2, RPKT_STATUS3_RECEIVE_BROADCAST_PACKET
     rjmp  CHK_RPKT_STATUS2
-    /* Check if broadcast was sent by me {{{4 */
+
+    /* Check if broadcast was sent by me */
     ldi   YH, hi8(EEPROM_MAC_ADDR)
     ldi   YL, lo8(EEPROM_MAC_ADDR)
     ldi   ZH, hi8(SRAM_MAC_ADDR_OTHER)
     ldi   ZL, lo8(SRAM_MAC_ADDR_OTHER)
-    ldi   TMP_REG1, MAC_ADDR_LEN
-CHECK_BROADCAST_MAC_ADDR: /* TODO: ES_MEMCPY */
-    rcall EEPROM_READ_N_INC
-    ld    TMP_REG2, Z+
-    cp    TMP_REG2, RTV_L_REG
+    ldi   ARG_REG1, MAC_ADDR_LEN
+    rcall ES_MEMCMP
     brne  CHK_RPKT_STATUS2
-    dec   TMP_REG1
-    brne  CHECK_BROADCAST_MAC_ADDR
-    /* Src MAC addr from broadcast is mine, skip packet */
-    rjmp  SKIP_ETH_PKT /* }}}4 */
+    rjmp  SKIP_ETH_PKT
 
 CHK_RPKT_STATUS2:
     lds   TMP_REG2, SRAM_RPKT_STATUS2
     sbrc  TMP_REG2, RPKT_STATUS2_LENGTH_OUT_OF_RANGE
     rjmp  TYPE_LEN_TYPE
     rjmp  SKIP_ETH_PKT /* no support for type/length = length packets */
-    /* }}}3 */
+
 TYPE_LEN_TYPE: /* {{{3 */
     lds   ZH, SRAM_TYPE_LEN_H
     lds   ZL, SRAM_TYPE_LEN_L
@@ -209,8 +209,6 @@ TYPE_LEN_IPV4: /* {{{4 */
     brne  TYPE_LEN_ARP
 
     rcall IPV4_HANDLE_PKT
-    cpi   RTV_L_REG, 0
-    brne  ERROR
     rjmp  PACKET_END
 
 TYPE_LEN_ARP: /* {{{4 */
@@ -282,12 +280,14 @@ COREDUMP_N_CONTINUE:
     ret
 
 /* Error handling {{{2 -------------------------------------------------------*/
+#if USE_RXERIF
 HANDLE_RECEIVE_ERROR:
     //ERR_SET
     ldi   ARG_REG1, ENC_COMMON_EIR
     ldi   ARG_REG2, (1 << ENC_COMMON_EIR_RXERIF)
     rcall ETH_BIT_FIELD_CLEAR
     ret
+#endif
 
 /* Error handling {{{2 -------------------------------------------------------*/
 TIMER0_OVF_vect:
