@@ -14,6 +14,7 @@
 .global IPV4_PREPARE_DEFAULT_HEADER_20_40_BYTES
 
 .global SRAM_IPV4_IHL_IN_BYTES
+.global SRAM_IPV4_PAYLOAD_LENGTH_IN_BYTES
 .global SRAM_IPV4_HEADER
 .global SRAM_IPV4_PAYLOAD
 .global SRAM_IP_ADDR_DST
@@ -22,12 +23,14 @@
 .section .data
 SRAM_IPV4_FLAGS:        .skip   1
 SRAM_IPV4_HEADER:       .skip   IPV4_MAX_HEADER_LEN
-SRAM_IPV4_PAYLOAD:      .skip   IPV4_PAYLOAD_LEN
 /* Internet Header Length in bytes */
 SRAM_IPV4_IHL_IN_BYTES: .skip   1
+/* Internet Payload Length in bytes */
+SRAM_IPV4_PAYLOAD_LENGTH_IN_BYTES: .skip 2
 /* Destination IP Address, when sending an IP packet, caller routine should set
  * the DST IP address here */
 SRAM_IP_ADDR_DST:       .skip   IPV4_ADDR_LEN
+SRAM_IPV4_PAYLOAD:      .skip   IPV4_PAYLOAD_LEN
 
 /* TEXT {{{1 -----------------------------------------------------------------*/
 .section .text
@@ -43,7 +46,7 @@ IPV4_HANDLE_PKT:
     push  ZL
     push  IPV4_HEADER_FLAGS_REG
 
-    /* Read IPv4 Header {{{3 */
+    /* Read IPv4 Header */
     ldi   ZL, lo8(SRAM_IPV4_HEADER)
     ldi   ZH, hi8(SRAM_IPV4_HEADER)
     rcall ETH_READ_BUFFER_START
@@ -54,6 +57,7 @@ IPV4_HANDLE_PKT:
     ETH_READ_NEXT_BYTE
     st    Z+, RTV_L_REG
     mov   COUNTER_REG, RTV_L_REG
+    /* Check if IPv4 */
     andi  RTV_L_REG, 0xF0
     cpi   RTV_L_REG, 0x40
     /* Only IPv4 will be handle, other versions will be ignore */
@@ -79,7 +83,7 @@ READ_HEADER:
 
     push  YL
     push  YH
-    /* Check if Dst IP Address is ours, if not, then stop processing package */
+    /* Check if Dst IP Address is ours */
     clr   IPV4_HEADER_FLAGS_REG
     ldi   YH, hi8(EEPROM_IP_ADDR)
     ldi   YL, lo8(EEPROM_IP_ADDR)
@@ -98,12 +102,24 @@ READ_HEADER:
     brne  0f
     sbr   IPV4_HEADER_FLAGS_REG, (1 << RECEIVED_IP_IS_BROADCAST_BIT)
 0:
+
+    /* Get and store IPv4 Payload length in bytes */
+    sbiw  YL, (IPV4_DST_ADDR - IPV4_TOTAL_LENGTH - 1)
+    ld    TMP_REG1, Y
+    lds   TMP_REG2, SRAM_IPV4_IHL_IN_BYTES
+    sub   TMP_REG1, TMP_REG2 /* total length - header */
+    /* TODO: use STD which is lighter than STS */
+    sts   SRAM_IPV4_PAYLOAD_LENGTH_IN_BYTES + 1, TMP_REG1
+    ld    TMP_REG1, -Y
+    sbc   TMP_REG1, ZERO_REG
+    sts   SRAM_IPV4_PAYLOAD_LENGTH_IN_BYTES, TMP_REG1
+
     pop   YH
     pop   YL
 
     sts   SRAM_IPV4_FLAGS, IPV4_HEADER_FLAGS_REG
 
-    /* Deliver packet using IPv4 protocol {{{3 */
+    /* Deliver packet using IPv4 protocol {{{ */
     sbiw  ZL, IPV4_DST_ADDR
     /* Load Internet protocol number */
     ldd   TMP_REG1, Z + IPV4_PROTOCOL
@@ -127,14 +143,12 @@ TRY_PROTOCOL_ICMP:
     rjmp  IPV4_HANDLE_EXIT
 
 TRY_PROTOCOL_TCP:
-#if 0
-    cpi   TMP_REG2, INTERNET_PROTOCOL_NUMBER_TCP
-    brne  TRY_PROTOCOL_UDP
+    cpi   TMP_REG1, INTERNET_PROTOCOL_NUMBER_TCP
+    brne  IPV4_HANDLE_EXIT
     /* TCP not implemented yet */
     rcall TCP_HANDLE_PKT
     rjmp  IPV4_HANDLE_EXIT
-#endif
-    /* }}}3 */
+    /* }}} */
 
 IPV4_HANDLE_EXIT:
     pop   IPV4_HEADER_FLAGS_REG
@@ -147,6 +161,7 @@ IPV4_HANDLE_EXIT:
  *
  * Input:
  *   ZH:ZL     Address to start reading from
+ *   TODO: do not round down, use all given bytes.
  *   ARG_REG1  Bytes to read, if odd, then, rounded down.
  *
  * Return value (checksum) in [RTV_H_REG:RTV_L_REG]
@@ -197,6 +212,7 @@ IPV4_PREPARE_DEFAULT_HEADER_20_40_BYTES:
     push  ZL
 
     /* Read from */
+    /* TODO: ES_MEMCMP */
     ldi   YL, lo8(EEPROM_IP_HEADER)
     ldi   YH, hi8(EEPROM_IP_HEADER)
     ldi   COUNTER_REG, (EEPROM_IP_HEADER_TIL_CHK_SUM - EEPROM_IP_HEADER)
@@ -225,6 +241,7 @@ IPV4_PREPARE_HEADER_GET_IP_FROM_EEPROM:
     brne  IPV4_PREPARE_HEADER_GET_IP_FROM_EEPROM
 
     /* DST IP Address */
+    /* TODO: MEMCPY */
     ldi   YL, lo8(SRAM_IP_ADDR_DST)
     ldi   YH, hi8(SRAM_IP_ADDR_DST)
     ldi   COUNTER_REG, IPV4_ADDR_LEN

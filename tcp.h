@@ -3,25 +3,80 @@
 
 #include "services.h"
 
+#define TCP_HEADER_SRC_PORT   0
+#define TCP_HEADER_DST_PORT   2
+#define TCP_HEADER_SQNC_N     4
+#define TCP_HEADER_ACK_N      8
+#define TCP_HEADER_DO_FLAGS  12
+#define TCP_HEADER_WINDOW    14
+#define TCP_HEADER_CHKSUM    16
+#define TCP_HEADER_URGENT_P  18
+#define TCP_HEADER_OPTIONS   20
+//#define TCP_HEADER_PADDING   23
+//#define TCP_HEADER_DATA      24
+
+/* Bit location */
+#define TCP_HEADER_FLAG_CWR 7 /* Congestion Window Reduced */
+#define TCP_HEADER_FLAG_ECE 6 /* ECN Echo */
+#define TCP_HEADER_FLAG_URG 5 /* Urgent */
+#define TCP_HEADER_FLAG_ACK 4 /* Ack */
+#define TCP_HEADER_FLAG_PSH 3 /* Push */
+#define TCP_HEADER_FLAG_RST 2 /* Reset */
+#define TCP_HEADER_FLAG_SYN 1 /* Syn */
+#define TCP_HEADER_FLAG_FIN 0 /* Fin */
+/* Bit mask */
+#define TCP_HEADER_DO_FLAGS_H_DATA_OFFSET  0xF0
+#define TCP_HEADER_DO_FLAGS_H_RSRVD        0x0E
+#define TCP_HEADER_DO_FLAGS_H_FLAG_NS      0x01 /* ECN-nonce - concealment protection */
+#define TCP_HEADER_DO_FLAGS_H_FLAG_CWR     0x80 /* Congestion Window Reduced */
+#define TCP_HEADER_DO_FLAGS_H_FLAG_ECE     0x40 /* ECN Echo */
+#define TCP_HEADER_DO_FLAGS_H_FLAG_URG     0x20 /* Urgent */
+#define TCP_HEADER_DO_FLAGS_H_FLAG_ACK     0x10 /* Ack */
+#define TCP_HEADER_DO_FLAGS_H_FLAG_PSH     0x08 /* Push */
+#define TCP_HEADER_DO_FLAGS_H_FLAG_RST     0x04 /* Reset */
+#define TCP_HEADER_DO_FLAGS_H_FLAG_SYN     0x02 /* Syn */
+#define TCP_HEADER_DO_FLAGS_H_FLAG_FIN     0x01 /* Fin */
+
 /*
-    0                   1                   2                   3
+ * http://www.networksorcery.com/enp/rfc/rfc2018.txt
+      Kind     Length    Meaning
+      ----     ------    -------
+       0         -       End of option list.
+       1         -       No-Operation.
+       2         4       Maximum Segment Size.
+       3         3       Window scale factor
+       4         2       SACK permitted
+       8        10       Timestamp
+*/
+#define TCP_OPT_END      0
+#define TCP_OPT_NOP      1
+#define TCP_OPT_MSS      2
+#define TCP_OPT_MSS_LEN  4
+#define TCP_OPT_WSF      3
+#define TCP_OPT_WSF_LEN  3
+#define TCP_OPT_SACK     4
+#define TCP_OPT_SACK_LEN 2
+#define TCP_OPT_TTP      8
+#define TCP_OPT_TTP_LEN 10
+/*
+    0               1               2               3
     0 1 2 3 4 5 6 7 0 1 2 3 4 5 6 7 0 1 2 3 4 5 6 7 0 1 2 3 4 5 6 7
    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-   |          Source Port          |       Destination Port        |
+ 0 |          Source Port          |       Destination Port        |
    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-   |                        Sequence Number                        |
+ 4 |                        Sequence Number                        |
    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-   |                    Acknowledgment Number                      |
+ 8 |                    Acknowledgment Number                      |
    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-   |  Data |Rsrvd|N|C|E|U|A|P|R|S|F|                               |
+12 |  Data |Rsrvd|N|C|E|U|A|P|R|S|F|                               |
    | Offset|0 0 0|S|W|C|R|C|S|S|Y|I|            Window             |
    |       |     | |R|E|G|K|H|T|N|N|                               |
    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-   |           Checksum            |         Urgent Pointer        |
+16 |           Checksum            |         Urgent Pointer        |
    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-   |                    Options                    |    Padding    |
+20 |                    Options                    |    Padding    |
    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-   |                             data                              |
+24 |                             data                              |
    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 
   Source Port:  16 bits
@@ -133,6 +188,8 @@
        0         -       End of option list.
        1         -       No-Operation.
        2         4       Maximum Segment Size.
+       3         3       Window scale factor
+       8        10       Timestamp
 
 
     Specific Option Definitions

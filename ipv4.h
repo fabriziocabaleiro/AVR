@@ -28,7 +28,7 @@
 #define IPV4_VERSION          0
 #define IPV4_IHL              0 /* Internet Header Length in words of 4 bytes */
 #define IPV4_TOS              1
-#define IPV4_TOTAL_LENGTH     2 /* In bytes */
+#define IPV4_TOTAL_LENGTH     2 /* In bytes, including header and payload */
 #define IPV4_IDENTIFICATION   4
 #define IPV4_FLAGS            6
 #define IPV4_FRAG_OFFSET      6

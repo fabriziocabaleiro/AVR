@@ -61,6 +61,7 @@ READ_HEADER:
 
     /* COMM */
 TRY_COMM:
+    /* TODO: ADIW instead of 2 x LDI */
     ldi   YL, lo8(EEPROM_COMM_SRC_DST_PORT)
     ldi   YH, hi8(EEPROM_COMM_SRC_DST_PORT)
     rcall ES_MEMCMP

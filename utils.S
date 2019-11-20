@@ -18,6 +18,8 @@
 .global REG_MEMCMP
 .global ES_MEMCMP
 .global ES_MEMCPY
+.global MEMSWAP
+.global ADD_32b
 
 /* TEXT {{{1 -----------------------------------------------------------------*/
 .section .text
@@ -138,4 +140,29 @@ ES_MEMCPY_END:
     pop   ARG_REG1
     ret
 
+/* MEMSWAP {{{2  ---------------------------------------------------------------
+ * Swap the memory pointed by Y and Z across ARG_REG1 bytes */
+MEMSWAP:
+    ld   TMP_REG1, Y
+    ld   TMP_REG2, Z
+    st   Y+, TMP_REG2
+    st   Z+, TMP_REG1
+    dec  ARG_REG1
+    brne MEMSWAP
+    ret
+
+/* ADD_32b {{{2 ----------------------------------------------------------------
+ * 32bits addition, Big endian
+ * Y points to 32b number*/
+ADD_32b:
+    adiw  YL, 4
+    clc
+0:
+    ld    TMP_REG1, -Y
+    adc   TMP_REG1, ARG_REG1
+    clr   ARG_REG1
+    st    Y, TMP_REG1
+    dec   TMP_REG2
+    brne  0b
+    ret
 .end

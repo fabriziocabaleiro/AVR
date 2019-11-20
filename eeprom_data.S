@@ -265,6 +265,10 @@ EEPROM_COMM_SRC_DST_PORT: /* {{{2 */
     .byte hi8(COMM_DST_PORT)
     .byte lo8(COMM_DST_PORT)
 EEPROM_COMM_SRC_DST_PORT_END:
+EEPROM_HTTP_DST_PORT: /* {{{2 */
+    .byte hi8(INTERNET_SERVICE_HTTP_80_TCP)
+    .byte lo8(INTERNET_SERVICE_HTTP_80_TCP)
+EEPROM_HTTP_DST_PORT_END:
 EEPROM_ARP_REQUEST: /* {{{2 */
     /* HTYPE 0x0001 for Ethernet */
     .byte 0x00
@@ -291,6 +295,9 @@ EEPROM_ARP_REQUEST: /* {{{2 */
     /* THA Target hardware address, all zeros as unknown */
     .skip MAC_ADDR_LEN, 0
 EEPROM_ARP_REQUEST_END:
+EEPROM_HTTP_TEST: /* {{{2 */
+    .string "HTTP/1.1 200 OK\r\n\r\nfabrizio "
+EEPROM_HTTP_TEST_END:
 EEPROM_DEBUG_PREFIX: /* {{{2 */
     .byte 0xAB
     .byte 0xAB
