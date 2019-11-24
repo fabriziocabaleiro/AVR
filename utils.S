@@ -20,6 +20,8 @@
 .global ES_MEMCPY
 .global MEMSWAP
 .global ADD_32b
+.global NUMBER_TO_ASCII
+.global SDIV
 
 /* TEXT {{{1 -----------------------------------------------------------------*/
 .section .text
@@ -157,12 +159,37 @@ MEMSWAP:
 ADD_32b:
     adiw  YL, 4
     clc
-0:
-    ld    TMP_REG1, -Y
+0:  ld    TMP_REG1, -Y
     adc   TMP_REG1, ARG_REG1
     clr   ARG_REG1
     st    Y, TMP_REG1
     dec   TMP_REG2
     brne  0b
     ret
+
+/* Single  division {{{2  -------------------------------------------------------
+ * Do one division iteration, return one digit of the quotient and the remainder
+ * Divide 1 byte by another byte
+ * ARG_REG1: Numerator
+ * ARG_REG2: Denominator
+ * RTV_L_REG: Quotient
+ * RTV_H_REG: Remainder
+ */
+SDIV:
+    clr   RTV_L_REG
+0:  sub   ARG_REG1, ARG_REG2
+    brcs  1f /* Break loop if carrier set */
+    inc   RTV_L_REG /* Quotient++ */
+    rjmp  0b /* Jump to the beginning of the loop */
+1:  mov   RTV_H_REG, ARG_REG1
+    add   RTV_H_REG, ARG_REG2
+    ret
+
+/* Byte to ASCII {{{2  ---------------------------------------------------------
+*/
+NUMBER_TO_ASCII:
+    ldi   RTV_L_REG, '0'
+    add   RTV_L_REG, ARG_REG1
+    ret
+
 .end

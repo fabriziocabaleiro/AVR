@@ -7,6 +7,7 @@
 #include "enc28j60.h"
 #include "eeprom_data.h"
 #include "ipv4.h"
+#include "dht11.h"
 .LIST
 
 /* MACORS {{{1 ---------------------------------------------------------------*/
@@ -34,6 +35,7 @@
 
 /* DATA  {{{1 ----------------------------------------------------------------*/
 .section .data
+/* TODO: split pseudo header into corresponding fields */
 SRAM_TCP_PSEUDO_HEADER: .skip 12
 SRAM_TCP_HEADER:
 SRAM_TCP_SRC_PORT: .skip 2
@@ -452,10 +454,58 @@ TCP_TMP_END_OF_OPTIONS: /* }}} */
 
     ETH_READ_BUFFER_END
 
+    /* HTTP response payload */
     ldi   YL, lo8(EEPROM_HTTP_TEST)
     ldi   YH, hi8(EEPROM_HTTP_TEST)
-    ldi   ARG_REG1, (EEPROM_HTTP_TEST_END - EEPROM_HTTP_TEST - 1)
+    ldi   ARG_REG1, (EEPROM_HTTP_TEST_END - EEPROM_HTTP_TEST)
     rcall ES_MEMCPY
+    /* Set back Z to beginning of HTTP payload */
+    sbiw  ZL, (EEPROM_HTTP_TEST_END - EEPROM_HTTP_RH_OFFSET)
+
+    /* RH */
+    ldi   YL, lo8(SRAM_DHT11_PAYLOAD)
+    ldi   YH, hi8(SRAM_DHT11_PAYLOAD)
+    ld    ARG_REG1, Y+
+    ldi   ARG_REG2, 10
+    rcall SDIV
+    subi  RTV_L_REG, -48 /* + '0' */
+    subi  RTV_H_REG, -48 /* + '0' */
+    st    Z+, RTV_L_REG
+    st    Z+, RTV_H_REG
+
+    adiw  ZL, 1
+
+    ld    ARG_REG1, Y+
+    ldi   TMP_REG2, 48
+    ldi   TMP_REG1, 10
+    mul   ARG_REG1, TMP_REG1
+    add   XMULX_RTV_H_REG, TMP_REG2 /* + '0' */
+    st    Z+, XMULX_RTV_H_REG
+    mul   XMULX_RTV_L_REG, TMP_REG1
+    add   XMULX_RTV_H_REG, TMP_REG2 /* + '0' */
+    st    Z+, XMULX_RTV_H_REG
+
+    /* Temperature */
+    adiw  ZL, 4
+    ld    ARG_REG1, Y+
+    ldi   ARG_REG2, 10
+    rcall SDIV
+    subi  RTV_L_REG, -48 /* + '0' */
+    subi  RTV_H_REG, -48 /* + '0' */
+    st    Z+, RTV_L_REG
+    st    Z+, RTV_H_REG
+
+    adiw  ZL, 1
+
+    ld    ARG_REG1, Y+
+    ldi   TMP_REG2, 48
+    ldi   TMP_REG1, 10
+    mul   ARG_REG1, TMP_REG1
+    add   XMULX_RTV_H_REG, TMP_REG2 /* + '0' */
+    st    Z+, XMULX_RTV_H_REG
+    mul   XMULX_RTV_L_REG, TMP_REG1
+    add   XMULX_RTV_H_REG, TMP_REG2 /* + '0' */
+    st    Z+, XMULX_RTV_H_REG
 
     /* TCP checksum */
     /* TCP pseudo header */
@@ -477,7 +527,7 @@ TCP_TMP_END_OF_OPTIONS: /* }}} */
     /* Length, this length does NOT include the pseudo header length */
     st    Z+, ZERO_REG
     mov   TMP_REG1, TCP_HEADER_LEN_REG
-    subi  TMP_REG1, -(EEPROM_HTTP_TEST_END - EEPROM_HTTP_TEST - 1)
+    subi  TMP_REG1, -(EEPROM_HTTP_TEST_END - EEPROM_HTTP_TEST)
     st    Z+, TMP_REG1
 
     /* Calculate TCP checksum */
@@ -485,7 +535,7 @@ TCP_TMP_END_OF_OPTIONS: /* }}} */
     ldi   ZH, hi8(SRAM_TCP_PSEUDO_HEADER)
     mov   ARG_REG1, TCP_HEADER_LEN_REG
     subi  ARG_REG1, -12 /* 12 = pseudo header length */
-    subi  ARG_REG1, -(EEPROM_HTTP_TEST_END - EEPROM_HTTP_TEST - 1)
+    subi  ARG_REG1, -(EEPROM_HTTP_TEST_END - EEPROM_HTTP_TEST)
     rcall INTERNET_CHECKSUM_RFC1071
     ldi   ZL, lo8(SRAM_TCP_HEADER)
     ldi   ZH, hi8(SRAM_TCP_HEADER)
@@ -503,11 +553,12 @@ TCP_TMP_END_OF_OPTIONS: /* }}} */
     ldi   ARG_REG1, IPV4_ADDR_LEN
     rcall MEMSWAP
 
-    /* IPv4 payload */
+    /* IPv4 payload length */
     lds   TMP_REG1, SRAM_IPV4_IHL_IN_BYTES
     add   TMP_REG1, TCP_HEADER_LEN_REG
-    subi  TMP_REG1, -(EEPROM_HTTP_TEST_END - EEPROM_HTTP_TEST - 1)
+    subi  TMP_REG1, -(EEPROM_HTTP_TEST_END - EEPROM_HTTP_TEST)
     sts   (SRAM_IPV4_HEADER + IPV4_TOTAL_LENGTH + 1), TMP_REG1
+    sts   (SRAM_IPV4_HEADER + IPV4_TOTAL_LENGTH + 0), ZERO_REG
 
     /* ipv4 checksum */
     /* Write IPv4 header into ENC buffer */
@@ -532,10 +583,76 @@ TCP_TMP_END_OF_OPTIONS: /* }}} */
     ldi   ZL, lo8(SRAM_TCP_HEADER)
     ldi   ZH, hi8(SRAM_TCP_HEADER)
     mov   ARG_REG1, TCP_HEADER_LEN_REG
-    subi  ARG_REG1, -(EEPROM_HTTP_TEST_END - EEPROM_HTTP_TEST - 1)
+    subi  ARG_REG1, -(EEPROM_HTTP_TEST_END - EEPROM_HTTP_TEST)
     rcall ETH_WRITE_Z_TO_TRANSMIT_BUFFER
     rcall ETH_WRITE_BUFFER_PACKET_PAYLOAD_FINISH
 
+#if 0
+    /* Fin packet */
+    /* TCP sequence number */
+    ldi   YL, lo8(SRAM_TCP_SEQ_N)
+    ldi   YH, hi8(SRAM_TCP_SEQ_N)
+    ldi   ARG_REG1, (EEPROM_HTTP_TEST_END - EEPROM_HTTP_TEST)
+    rcall ADD_32b
+    /* TCP pseudo header */
+    /* set length */
+    ldi   ZL, lo8(SRAM_TCP_PSEUDO_HEADER + 2 * IPV4_ADDR_LEN + 2)
+    ldi   ZH, hi8(SRAM_TCP_PSEUDO_HEADER + 2 * IPV4_ADDR_LEN + 2)
+    st    Z+, ZERO_REG
+    st    Z, TCP_HEADER_LEN_REG
+    /* Calculate TCP checksum */
+    ldi   ZL, lo8(SRAM_TCP_PSEUDO_HEADER)
+    ldi   ZH, hi8(SRAM_TCP_PSEUDO_HEADER)
+    mov   ARG_REG1, TCP_HEADER_LEN_REG
+    subi  ARG_REG1, -12 /* 12 = pseudo header length */
+    rcall INTERNET_CHECKSUM_RFC1071
+    ldi   ZL, lo8(SRAM_TCP_HEADER)
+    ldi   ZH, hi8(SRAM_TCP_HEADER)
+    std   Z + (TCP_HEADER_CHKSUM + 0), RTV_H_REG
+    std   Z + (TCP_HEADER_CHKSUM + 1), RTV_L_REG
+
+    /* Ethernet header */
+    rcall ETH_WRITE_BUFFER_PACKET_HEADER
+    /* IP header */
+    ldi   ZL, lo8(SRAM_IPV4_HEADER + IPV4_SRC_ADDR)
+    ldi   ZH, hi8(SRAM_IPV4_HEADER + IPV4_SRC_ADDR)
+    /* IPv4 payload */
+    lds   TMP_REG1, SRAM_IPV4_IHL_IN_BYTES
+    add   TMP_REG1, TCP_HEADER_LEN_REG
+    sts   (SRAM_IPV4_HEADER + IPV4_TOTAL_LENGTH + 1), TMP_REG1
+
+    /* ipv4 checksum */
+    /* Write IPv4 header into ENC buffer */
+    /* Zero out checksum */
+    ldi   ZL, lo8(SRAM_IPV4_HEADER + IPV4_H_CHECKSUM)
+    ldi   ZH, hi8(SRAM_IPV4_HEADER + IPV4_H_CHECKSUM)
+    st    Z+, ZERO_REG
+    st    Z+, ZERO_REG
+    sbiw  ZL, (IPV4_H_CHECKSUM + 2) /* set Z to IPv4 header */
+    /* TODO: handle better identification */
+    std   Z + IPV4_IDENTIFICATION + 0, ZERO_REG
+    std   Z + IPV4_IDENTIFICATION + 1, ZERO_REG
+    lds   ARG_REG1, SRAM_IPV4_IHL_IN_BYTES
+    add   ARG_REG1, TCP_HEADER_LEN_REG
+    rcall INTERNET_CHECKSUM_RFC1071
+    std   Z + IPV4_H_CHECKSUM + 0, RTV_H_REG
+    std   Z + IPV4_H_CHECKSUM + 1, RTV_L_REG
+
+    /* Write IPv4 header into ENC buffer */
+    lds   ARG_REG1, SRAM_IPV4_IHL_IN_BYTES
+    rcall ETH_WRITE_Z_TO_TRANSMIT_BUFFER
+
+    /* TCP header */
+    ldi   ZL, lo8(SRAM_TCP_HEADER)
+    ldi   ZH, hi8(SRAM_TCP_HEADER)
+    ldd   TMP_REG1, Z + (TCP_HEADER_DO_FLAGS + 1)
+    sbr   TMP_REG1, (1 << TCP_HEADER_FLAG_FIN)
+    cbr   TMP_REG1, (1 << TCP_HEADER_FLAG_PSH)
+    std   Z + (TCP_HEADER_DO_FLAGS + 1), TMP_REG1
+    mov   ARG_REG1, TCP_HEADER_LEN_REG
+    rcall ETH_WRITE_Z_TO_TRANSMIT_BUFFER
+    rcall ETH_WRITE_BUFFER_PACKET_PAYLOAD_FINISH
+#endif
     ret
 
 .end

@@ -173,28 +173,27 @@ INTERNET_CHECKSUM_RFC1071:
 
     clr   RTV_L_REG
     clr   RTV_H_REG
+    clr   TMP_REG2
 
-    lsr   ARG_REG1 /* adding by word */
     clc   /* Clear any carry from before */
 
 IPV4_PING_CHECKSUM_LOOP:
     ld    TMP_REG1, Z+
+    sbrs  TMP_REG2, 0
     adc   RTV_H_REG, TMP_REG1
-    ld    TMP_REG1, Z+
+    sbrc  TMP_REG2, 0
     adc   RTV_L_REG, TMP_REG1
+    inc   TMP_REG2
     dec   ARG_REG1
     brne  IPV4_PING_CHECKSUM_LOOP
 
-    brcc  IPV4_PING_CHECKSUM_END
     /* If the last addition generated a Carry, then add zero with carry, which
      * could also generate a Carry into RTV_H_REG, so, add zero with carry as
      * well */
-IPV4_PING_CHECKSUM_REMAINING_CARRY:
     adc   RTV_H_REG, ZERO_REG
     adc   RTV_L_REG, ZERO_REG
-    brcs  IPV4_PING_CHECKSUM_REMAINING_CARRY
+    adc   RTV_H_REG, ZERO_REG
 
-IPV4_PING_CHECKSUM_END:
     com   RTV_L_REG
     com   RTV_H_REG
 
