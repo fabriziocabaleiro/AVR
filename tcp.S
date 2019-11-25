@@ -11,7 +11,7 @@
 .LIST
 
 /* MACORS {{{1 ---------------------------------------------------------------*/
-#define TCP_HEADER_LEN_REG R3
+#define TCP_HEADER_LEN_REG SAVED1_REG
 #define SEQ_N_LEN       4
 /* Maximum number of concurrent connections */
 #define TCP_MAX_CONNS   4
@@ -261,33 +261,13 @@ TCP_END_OF_OPTIONS: /* }}} */
     /* TCP checksum */
     /* TCP pseudo header */
     /* Copy SRC and DST IP Addresses */
-    ldi   ZL, lo8(SRAM_TCP_PSEUDO_HEADER)
-    ldi   ZH, hi8(SRAM_TCP_PSEUDO_HEADER)
-    ldi   YL, lo8(SRAM_IPV4_HEADER + IPV4_SRC_ADDR)
-    ldi   YH, hi8(SRAM_IPV4_HEADER + IPV4_SRC_ADDR)
-    ldi   ARG_REG1, IPV4_ADDR_LEN * 2
-    rcall MEMCPY
-
-    /* Reserve byte and IPv4 Protocol */
-    st    Z+, ZERO_REG
-    ldi   YL, lo8(SRAM_IPV4_HEADER + IPV4_PROTOCOL)
-    ldi   YH, hi8(SRAM_IPV4_HEADER + IPV4_PROTOCOL)
-    ld    TMP_REG1, Y
-    st    Z+, TMP_REG1
-
-    /* Length, this length does NOT include the pseudo header length */
-    st    Z+, ZERO_REG
-    mov   TMP_REG1, TCP_HEADER_LEN_REG
-    st    Z+, TMP_REG1
 
     /* Calculate TCP checksum */
-    ldi   ZL, lo8(SRAM_TCP_PSEUDO_HEADER)
-    ldi   ZH, hi8(SRAM_TCP_PSEUDO_HEADER)
-    mov   ARG_REG1, TCP_HEADER_LEN_REG
-    subi  ARG_REG1, -12 /* 12 = pseudo header length */
-    rcall INTERNET_CHECKSUM_RFC1071
     ldi   ZL, lo8(SRAM_TCP_HEADER)
     ldi   ZH, hi8(SRAM_TCP_HEADER)
+    mov   ARG_REG1, TCP_HEADER_LEN_REG
+    ldi   ARG_REG2, 1
+    rcall INTERNET_CHECKSUM_RFC1071
     std   Z + (TCP_HEADER_CHKSUM + 0), RTV_H_REG
     std   Z + (TCP_HEADER_CHKSUM + 1), RTV_L_REG
 
@@ -313,6 +293,7 @@ TCP_END_OF_OPTIONS: /* }}} */
     std   Z + IPV4_IDENTIFICATION + 0, ZERO_REG
     std   Z + IPV4_IDENTIFICATION + 1, ZERO_REG
     lds   ARG_REG1, SRAM_IPV4_IHL_IN_BYTES
+    ldi   ARG_REG2, 0
     rcall INTERNET_CHECKSUM_RFC1071
     std   Z + IPV4_H_CHECKSUM + 0, RTV_H_REG
     std   Z + IPV4_H_CHECKSUM + 1, RTV_L_REG
@@ -348,17 +329,6 @@ TCP_PAYLOAD_HANDLE:
     ldi   ZH, hi8(SRAM_TCP_CONNS + TCP_CONN_TBL_REMOTE_SEQ_N)
     ldi   ARG_REG1, SEQ_N_LEN * 2
     rcall MEMCPY
-
-    /* TODO: this is handling final ack of 3 way handshake, should go somewhere
-     * else */
-#if 0
-    lds   TMP_REG1, SRAM_IPV4_PAYLOAD_LENGTH_IN_BYTES
-    cpi   TMP_REG1, 0
-    brne  XXX
-    ETH_READ_BUFFER_END
-    ret
-XXX:
-#endif
 
     /* Set Sequence Number from connection table */
     ldi   ZL, lo8(SRAM_TCP_HEADER + TCP_HEADER_SQNC_N)
@@ -508,37 +478,12 @@ TCP_TMP_END_OF_OPTIONS: /* }}} */
     st    Z+, XMULX_RTV_H_REG
 
     /* TCP checksum */
-    /* TCP pseudo header */
-    /* Copy SRC and DST IP Addresses */
-    ldi   ZL, lo8(SRAM_TCP_PSEUDO_HEADER)
-    ldi   ZH, hi8(SRAM_TCP_PSEUDO_HEADER)
-    ldi   YL, lo8(SRAM_IPV4_HEADER + IPV4_SRC_ADDR)
-    ldi   YH, hi8(SRAM_IPV4_HEADER + IPV4_SRC_ADDR)
-    ldi   ARG_REG1, IPV4_ADDR_LEN * 2
-    rcall MEMCPY
-
-    /* Reserve byte and IPv4 Protocol */
-    st    Z+, ZERO_REG
-    ldi   YL, lo8(SRAM_IPV4_HEADER + IPV4_PROTOCOL)
-    ldi   YH, hi8(SRAM_IPV4_HEADER + IPV4_PROTOCOL)
-    ld    TMP_REG1, Y
-    st    Z+, TMP_REG1
-
-    /* Length, this length does NOT include the pseudo header length */
-    st    Z+, ZERO_REG
-    mov   TMP_REG1, TCP_HEADER_LEN_REG
-    subi  TMP_REG1, -(EEPROM_HTTP_TEST_END - EEPROM_HTTP_TEST)
-    st    Z+, TMP_REG1
-
-    /* Calculate TCP checksum */
-    ldi   ZL, lo8(SRAM_TCP_PSEUDO_HEADER)
-    ldi   ZH, hi8(SRAM_TCP_PSEUDO_HEADER)
-    mov   ARG_REG1, TCP_HEADER_LEN_REG
-    subi  ARG_REG1, -12 /* 12 = pseudo header length */
-    subi  ARG_REG1, -(EEPROM_HTTP_TEST_END - EEPROM_HTTP_TEST)
-    rcall INTERNET_CHECKSUM_RFC1071
     ldi   ZL, lo8(SRAM_TCP_HEADER)
     ldi   ZH, hi8(SRAM_TCP_HEADER)
+    mov   ARG_REG1, TCP_HEADER_LEN_REG
+    subi  ARG_REG1, -(EEPROM_HTTP_TEST_END - EEPROM_HTTP_TEST)
+    ldi   ARG_REG2, 1
+    rcall INTERNET_CHECKSUM_RFC1071
     std   Z + (TCP_HEADER_CHKSUM + 0), RTV_H_REG
     std   Z + (TCP_HEADER_CHKSUM + 1), RTV_L_REG
 
@@ -571,6 +516,7 @@ TCP_TMP_END_OF_OPTIONS: /* }}} */
     std   Z + IPV4_IDENTIFICATION + 0, ZERO_REG
     std   Z + IPV4_IDENTIFICATION + 1, ZERO_REG
     lds   ARG_REG1, SRAM_IPV4_IHL_IN_BYTES
+    ldi   ARG_REG2, 0
     rcall INTERNET_CHECKSUM_RFC1071
     std   Z + IPV4_H_CHECKSUM + 0, RTV_H_REG
     std   Z + IPV4_H_CHECKSUM + 1, RTV_L_REG
@@ -587,72 +533,6 @@ TCP_TMP_END_OF_OPTIONS: /* }}} */
     rcall ETH_WRITE_Z_TO_TRANSMIT_BUFFER
     rcall ETH_WRITE_BUFFER_PACKET_PAYLOAD_FINISH
 
-#if 0
-    /* Fin packet */
-    /* TCP sequence number */
-    ldi   YL, lo8(SRAM_TCP_SEQ_N)
-    ldi   YH, hi8(SRAM_TCP_SEQ_N)
-    ldi   ARG_REG1, (EEPROM_HTTP_TEST_END - EEPROM_HTTP_TEST)
-    rcall ADD_32b
-    /* TCP pseudo header */
-    /* set length */
-    ldi   ZL, lo8(SRAM_TCP_PSEUDO_HEADER + 2 * IPV4_ADDR_LEN + 2)
-    ldi   ZH, hi8(SRAM_TCP_PSEUDO_HEADER + 2 * IPV4_ADDR_LEN + 2)
-    st    Z+, ZERO_REG
-    st    Z, TCP_HEADER_LEN_REG
-    /* Calculate TCP checksum */
-    ldi   ZL, lo8(SRAM_TCP_PSEUDO_HEADER)
-    ldi   ZH, hi8(SRAM_TCP_PSEUDO_HEADER)
-    mov   ARG_REG1, TCP_HEADER_LEN_REG
-    subi  ARG_REG1, -12 /* 12 = pseudo header length */
-    rcall INTERNET_CHECKSUM_RFC1071
-    ldi   ZL, lo8(SRAM_TCP_HEADER)
-    ldi   ZH, hi8(SRAM_TCP_HEADER)
-    std   Z + (TCP_HEADER_CHKSUM + 0), RTV_H_REG
-    std   Z + (TCP_HEADER_CHKSUM + 1), RTV_L_REG
-
-    /* Ethernet header */
-    rcall ETH_WRITE_BUFFER_PACKET_HEADER
-    /* IP header */
-    ldi   ZL, lo8(SRAM_IPV4_HEADER + IPV4_SRC_ADDR)
-    ldi   ZH, hi8(SRAM_IPV4_HEADER + IPV4_SRC_ADDR)
-    /* IPv4 payload */
-    lds   TMP_REG1, SRAM_IPV4_IHL_IN_BYTES
-    add   TMP_REG1, TCP_HEADER_LEN_REG
-    sts   (SRAM_IPV4_HEADER + IPV4_TOTAL_LENGTH + 1), TMP_REG1
-
-    /* ipv4 checksum */
-    /* Write IPv4 header into ENC buffer */
-    /* Zero out checksum */
-    ldi   ZL, lo8(SRAM_IPV4_HEADER + IPV4_H_CHECKSUM)
-    ldi   ZH, hi8(SRAM_IPV4_HEADER + IPV4_H_CHECKSUM)
-    st    Z+, ZERO_REG
-    st    Z+, ZERO_REG
-    sbiw  ZL, (IPV4_H_CHECKSUM + 2) /* set Z to IPv4 header */
-    /* TODO: handle better identification */
-    std   Z + IPV4_IDENTIFICATION + 0, ZERO_REG
-    std   Z + IPV4_IDENTIFICATION + 1, ZERO_REG
-    lds   ARG_REG1, SRAM_IPV4_IHL_IN_BYTES
-    add   ARG_REG1, TCP_HEADER_LEN_REG
-    rcall INTERNET_CHECKSUM_RFC1071
-    std   Z + IPV4_H_CHECKSUM + 0, RTV_H_REG
-    std   Z + IPV4_H_CHECKSUM + 1, RTV_L_REG
-
-    /* Write IPv4 header into ENC buffer */
-    lds   ARG_REG1, SRAM_IPV4_IHL_IN_BYTES
-    rcall ETH_WRITE_Z_TO_TRANSMIT_BUFFER
-
-    /* TCP header */
-    ldi   ZL, lo8(SRAM_TCP_HEADER)
-    ldi   ZH, hi8(SRAM_TCP_HEADER)
-    ldd   TMP_REG1, Z + (TCP_HEADER_DO_FLAGS + 1)
-    sbr   TMP_REG1, (1 << TCP_HEADER_FLAG_FIN)
-    cbr   TMP_REG1, (1 << TCP_HEADER_FLAG_PSH)
-    std   Z + (TCP_HEADER_DO_FLAGS + 1), TMP_REG1
-    mov   ARG_REG1, TCP_HEADER_LEN_REG
-    rcall ETH_WRITE_Z_TO_TRANSMIT_BUFFER
-    rcall ETH_WRITE_BUFFER_PACKET_PAYLOAD_FINISH
-#endif
     ret
 
 .end

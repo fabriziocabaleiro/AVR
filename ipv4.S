@@ -8,6 +8,9 @@
 #include "eeprom_data.h"
 .LIST
 
+/* MACORS {{{1 ---------------------------------------------------------------*/
+#define IPV4_PSEUDO_HEADER_LEN (IPV4_ADDR_LEN * 2 + 1 + 1 + 2) /* 12 */
+
 /* GLOBAL {{{1 ---------------------------------------------------------------*/
 .global IPV4_HANDLE_PKT
 .global INTERNET_CHECKSUM_RFC1071
@@ -18,9 +21,16 @@
 .global SRAM_IPV4_HEADER
 .global SRAM_IPV4_PAYLOAD
 .global SRAM_IP_ADDR_DST
+.global IPV4_PSEUDO_HEADER_SUM
 
 /* DATA  {{{1 ----------------------------------------------------------------*/
 .section .data
+SRAM_IPV4_PSEUDO_HEADER:
+SRAM_IPV4_PSEUDO_HEADER_SRC_ADDR: .skip IPV4_ADDR_LEN
+SRAM_IPV4_PSEUDO_HEADER_DST_ADDR: .skip IPV4_ADDR_LEN
+SRAM_IPV4_PSEUDO_HEADER_ZEROS:    .skip 1
+SRAM_IPV4_PSEUDO_HEADER_PROTOCOL: .skip 1
+SRAM_IPV4_PSEUDO_HEADER_LENGTH:   .skip 2
 SRAM_IPV4_FLAGS:        .skip   1
 SRAM_IPV4_HEADER:       .skip   IPV4_MAX_HEADER_LEN
 /* Internet Header Length in bytes */
@@ -161,16 +171,21 @@ IPV4_HANDLE_EXIT:
  *
  * Input:
  *   ZH:ZL     Address to start reading from
- *   TODO: do not round down, use all given bytes.
  *   ARG_REG1  Bytes to read, if odd, then, rounded down.
+ *   ARG_REG2[0] == 1 ? Include Pseudo header.
  *
  * Return value (checksum) in [RTV_H_REG:RTV_L_REG]
  * previous value of Y is lost, caller must take care of it. */
 INTERNET_CHECKSUM_RFC1071:
     push  ZL
     push  ZH
+    push  YL
+    push  YH
+    push  SAVED1_REG
+    push  SAVED2_REG
     push  ARG_REG1
 
+    mov   SAVED2_REG, ARG_REG1
     clr   RTV_L_REG
     clr   RTV_H_REG
     clr   TMP_REG2
@@ -187,17 +202,53 @@ IPV4_PING_CHECKSUM_LOOP:
     dec   ARG_REG1
     brne  IPV4_PING_CHECKSUM_LOOP
 
+    /* pseudo header */
+    sbrs  ARG_REG2, 0
+    rjmp  INTERNET_CHECKSUM_LOOP_END
+
+    /* Save Status Register to continue summation with pseudo header */
+    in    SAVED1_REG, _SFR_IO_ADDR(SREG)
+
+    /* Copy src/dst IP addresses */
+    ldi   YL, lo8(SRAM_IPV4_HEADER + IPV4_SRC_ADDR)
+    ldi   YH, hi8(SRAM_IPV4_HEADER + IPV4_SRC_ADDR)
+    ldi   ZL, lo8(SRAM_IPV4_PSEUDO_HEADER)
+    ldi   ZH, hi8(SRAM_IPV4_PSEUDO_HEADER)
+    ldi   ARG_REG1, IPV4_ADDR_LEN * 2
+    rcall MEMCPY
+
+    /* Reserve byte and IPv4 Protocol */
+    st    Z+, ZERO_REG
+    lds   TMP_REG1, (SRAM_IPV4_HEADER + IPV4_PROTOCOL)
+    st    Z+, TMP_REG1
+
+    /* Length, this length does NOT include the pseudo header length */
+    st    Z+, ZERO_REG
+    st    Z+, SAVED2_REG
+    
+    cbr   ARG_REG2, 1
+    clr   TMP_REG2
+    ldi   ZL, lo8(SRAM_IPV4_PSEUDO_HEADER)
+    ldi   ZH, hi8(SRAM_IPV4_PSEUDO_HEADER)
+    ldi   ARG_REG1, IPV4_PSEUDO_HEADER_LEN
+    out   _SFR_IO_ADDR(SREG), SAVED1_REG
+    rjmp  IPV4_PING_CHECKSUM_LOOP
+
+INTERNET_CHECKSUM_LOOP_END:
     /* If the last addition generated a Carry, then add zero with carry, which
      * could also generate a Carry into RTV_H_REG, so, add zero with carry as
      * well */
     adc   RTV_H_REG, ZERO_REG
     adc   RTV_L_REG, ZERO_REG
-    adc   RTV_H_REG, ZERO_REG
 
     com   RTV_L_REG
     com   RTV_H_REG
 
     pop   ARG_REG1
+    pop   SAVED2_REG
+    pop   SAVED1_REG
+    pop   YH
+    pop   YL
     pop   ZH
     pop   ZL
     ret
@@ -256,6 +307,7 @@ IPV4_PREPARE_HEADER_GET_IP_FROM_EEPROM_DST:
     std   Z + (IPV4_TOTAL_LENGTH + 1), ARG_REG1
 
     ldi   ARG_REG1, IPV4_DEFAULT_HEADER_LEN
+    ldi   ARG_REG2, 0
     rcall INTERNET_CHECKSUM_RFC1071
     std   Z + (IPV4_H_CHECKSUM + 0), RTV_H_REG
     std   Z + (IPV4_H_CHECKSUM + 1), RTV_L_REG

@@ -296,7 +296,6 @@ EEPROM_ARP_REQUEST: /* {{{2 */
     .skip MAC_ADDR_LEN, 0
 EEPROM_ARP_REQUEST_END:
 EEPROM_HTTP_TEST: /* {{{2 */
-    // .string "HTTP/1.1 200 OK\r\n\r\nfabrizio "
     .byte 'H','T','T','P','/','1','.','1',' ','2','0','0',' ','O','K','\r','\n'
     .byte 'c','o','n','t','e','n','t','-','l','e','n','g','t','h',':','1','8','\r','\n'
     .byte '\r','\n'

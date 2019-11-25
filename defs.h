@@ -10,6 +10,8 @@
 /* Registers {{{1 -------------------------------------------------------------*/
 #define XMULX_RTV_L_REG  R0
 #define XMULX_RTV_H_REG  R1
+#define SAVED1_REG       R2
+#define SAVED2_REG       R3
 #define ZERO_REG         R10
 #define ENC_INT_RQST_REG R15
 /* Register used for temporary values, they may be change after any rcall */

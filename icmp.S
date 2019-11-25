@@ -90,6 +90,7 @@ READ_PAYLOAD:
     std   Z + IPV4_ICMP_CHECKSUM + 0, ZERO_REG
     std   Z + IPV4_ICMP_CHECKSUM + 1, ZERO_REG
     /* ARG_REG1 & Z must be not changed by INTERNET_CHECKSUM_RFC1071 */
+    ldi   ARG_REG2, 0
     rcall INTERNET_CHECKSUM_RFC1071
     std   Z + IPV4_ICMP_CHECKSUM + 0, RTV_H_REG
     std   Z + IPV4_ICMP_CHECKSUM + 1, RTV_L_REG

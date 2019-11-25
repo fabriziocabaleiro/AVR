@@ -260,6 +260,7 @@ DEFAULT_SRC_DST_ADDRESSES:
 
     /* Internet Checksum {{{5 */
     ldi   ARG_REG1, (EEPROM_IP_HEADER_END - EEPROM_IP_HEADER)
+    ldi   ARG_REG2, 0
     rcall INTERNET_CHECKSUM_RFC1071
     std   Z + (IPV4_H_CHECKSUM + 0), RTV_H_REG
     std   Z + (IPV4_H_CHECKSUM + 1), RTV_L_REG

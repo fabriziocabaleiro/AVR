@@ -20,7 +20,6 @@
 .global ES_MEMCPY
 .global MEMSWAP
 .global ADD_32b
-.global NUMBER_TO_ASCII
 .global SDIV
 
 /* TEXT {{{1 -----------------------------------------------------------------*/
@@ -183,13 +182,6 @@ SDIV:
     rjmp  0b /* Jump to the beginning of the loop */
 1:  mov   RTV_H_REG, ARG_REG1
     add   RTV_H_REG, ARG_REG2
-    ret
-
-/* Byte to ASCII {{{2  ---------------------------------------------------------
-*/
-NUMBER_TO_ASCII:
-    ldi   RTV_L_REG, '0'
-    add   RTV_L_REG, ARG_REG1
     ret
 
 .end
