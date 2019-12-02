@@ -15,13 +15,13 @@
 .global IPV4_HANDLE_PKT
 .global INTERNET_CHECKSUM_RFC1071
 .global IPV4_PREPARE_DEFAULT_HEADER_20_40_BYTES
+.global IPV4_PREPARE_INCOMING_HEADER_FOR_RESPONSE
 
 .global SRAM_IPV4_IHL_IN_BYTES
 .global SRAM_IPV4_PAYLOAD_LENGTH_IN_BYTES
 .global SRAM_IPV4_HEADER
 .global SRAM_IPV4_PAYLOAD
 .global SRAM_IP_ADDR_DST
-.global IPV4_PSEUDO_HEADER_SUM
 
 /* DATA  {{{1 ----------------------------------------------------------------*/
 .section .data
@@ -316,6 +316,44 @@ IPV4_PREPARE_HEADER_GET_IP_FROM_EEPROM_DST:
     pop   ZH
     pop   YL
     pop   YH
+    ret
+
+/* Using incoming IPv4 header for outgoing IPv4 header {{{2 --------------------
+   ARG_REG1: IPv4 Total Length in bytes
+   Z will be left pointing to SRAM_IPV4_HEADER
+   */
+IPV4_PREPARE_INCOMING_HEADER_FOR_RESPONSE:
+    push  YL
+    push  YH
+
+    /* IPv4 payload length */
+    ldi   ZL, lo8(SRAM_IPV4_HEADER)
+    ldi   ZH, hi8(SRAM_IPV4_HEADER)
+    std   Z + (IPV4_TOTAL_LENGTH + 0), ZERO_REG
+    std   Z + (IPV4_TOTAL_LENGTH + 1), ARG_REG1
+
+    /* Swap SRC/DST IP Addresses */
+    adiw  ZL, IPV4_SRC_ADDR
+    ldi   YL, lo8(SRAM_IPV4_HEADER + IPV4_DST_ADDR)
+    ldi   YH, hi8(SRAM_IPV4_HEADER + IPV4_DST_ADDR)
+    ldi   ARG_REG1, IPV4_ADDR_LEN
+    rcall MEMSWAP
+
+    /* ipv4 checksum */
+    /* Zero out checksum */
+    sbiw  ZL, (IPV4_SRC_ADDR + IPV4_ADDR_LEN - IPV4_H_CHECKSUM)
+    st    Z+, ZERO_REG
+    st    Z+, ZERO_REG
+    sbiw  ZL, (IPV4_H_CHECKSUM + 2) /* set Z to IPv4 header */
+    /* TODO: handle identification ? */
+    lds   ARG_REG1, SRAM_IPV4_IHL_IN_BYTES
+    ldi   ARG_REG2, 0
+    rcall INTERNET_CHECKSUM_RFC1071
+    std   Z + IPV4_H_CHECKSUM + 0, RTV_H_REG
+    std   Z + IPV4_H_CHECKSUM + 1, RTV_L_REG
+
+    pop   YH
+    pop   YL
     ret
 
 .end

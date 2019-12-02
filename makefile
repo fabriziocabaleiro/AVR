@@ -16,6 +16,7 @@ OBJS = main.o         \
        icmp.o         \
        division.o     \
        utils.o        \
+       http.o         \
        comm.o
 
 DEPDIR = Deps
@@ -27,6 +28,7 @@ DEPOPTS = -MP -MD -MF ${DEPDIR}/$(notdir $@).d
 
 main.elf: $(addprefix ${OBJDIR}/, ${OBJS})
 	avr-gcc ${GCCOPT} $^ -o $@
+	./post_checks.sh
 	avr-objcopy -O ihex -R .data -R .eeprom -R .fuse -R .lock -R .signature $@ main.hex
 	@echo Sizes:
 	@avr-size -B $@

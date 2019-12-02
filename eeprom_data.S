@@ -295,7 +295,7 @@ EEPROM_ARP_REQUEST: /* {{{2 */
     /* THA Target hardware address, all zeros as unknown */
     .skip MAC_ADDR_LEN, 0
 EEPROM_ARP_REQUEST_END:
-EEPROM_HTTP_TEST: /* {{{2 */
+EEPROM_HTTP_RESPONSE: /* {{{2 */
     .byte 'H','T','T','P','/','1','.','1',' ','2','0','0',' ','O','K','\r','\n'
     .byte 'c','o','n','t','e','n','t','-','l','e','n','g','t','h',':','1','8','\r','\n'
     .byte '\r','\n'
@@ -308,7 +308,7 @@ EEPROM_HTTP_RH_OFFSET:
     .byte '0','0','.','0','0'
     .byte '\n'
 EEPROM_HTTP_BODY_END:
-EEPROM_HTTP_TEST_END:
+EEPROM_HTTP_RESPONSE_END:
 EEPROM_DEBUG_PREFIX: /* {{{2 */
     .byte 0xAB
     .byte 0xAB
