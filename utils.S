@@ -3,6 +3,7 @@
 .NOLIST
 #include <avr/io.h>
 #include "defs.h"
+#include "enc28j60.h"
 .LIST
 
 /*******************************************************************************
@@ -18,6 +19,7 @@
 .global REG_MEMCMP
 .global ES_MEMCMP
 .global ES_MEMCPY
+.global EN_MEMCMP
 .global MEMSWAP
 .global ADD_32b
 .global SDIV
@@ -98,6 +100,7 @@ REG_MEMCMP_END:
     ret
 
 /* ES_MEMCMP {{{2 --------------------------------------------------------------
+ * EEPROM SRAM Compare
  * Same as MEMCMP, but Y from EEPROM */
 ES_MEMCMP:
     push  YL
@@ -124,6 +127,23 @@ ES_MEMCPY_EXIT:
     pop   ZL
     pop   YH
     pop   YL
+    ret
+
+/* EN_MEMCMP {{{2 --------------------------------------------------------------
+ * EEPROM NETWORK Compare
+ * Y from EEPROM. */
+EN_MEMCMP:
+0:  dec   ARG_REG1
+    brmi  0f
+    rcall EEPROM_READ_N_INC
+    mov   TMP_REG1, RTV_L_REG
+    ETH_READ_NEXT_BYTE
+    cp    TMP_REG1, RTV_L_REG
+    breq  0b
+    /* If falling here from line above, then ARG_REG1 didn't reach -1, then
+     * after the inc below, it will have a value greater than Zero, setting the
+     * Zero flag to 0 */
+0:  inc   ARG_REG1
     ret
 
 /* ES_MEMCPY {{{2 --------------------------------------------------------------

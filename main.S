@@ -11,14 +11,12 @@
 #include "timer.h"
 #include "eeprom_data.h"
 #include "dht11.h"
+#include "macros.S"
 .LIST
 
 /* GLOBAL {{{1 ---------------------------------------------------------------*/
 .global main
 .global INT0_vect
-//.global INT1_vect
-.global TIMER0_OVF_vect
-
 .global BIT_FIELD_1
 
 /* DATA  {{{1 ----------------------------------------------------------------*/
@@ -35,13 +33,6 @@ main:
 
     /* Set LED errors */
     ERR_SET_DDR
-    DDR_LED0
-    DDR_LED1
-    CLR_LED0
-    CLR_LED1
-
-    /* Zero out SRAM */
-    rcall ZERO_OUT_SRAM
 
     /* Set global interrupt enable, sleep mode and sleep enable
      * Interrupt on INT0: falling edge */
@@ -49,27 +40,22 @@ main:
     sbr   TMP_REG1, ((1 << SE)|(1 << ISC01))
     out   _SFR_IO_ADDR(MCUCR), TMP_REG1
 
-    /* Init eth register */
-    mov   ENC_INT_RQST_REG, ZERO_REG
-
-    /* INT1 will receive interrupt while reading DHT11, but, also will receive
-     * interrupt if we want to generate a COREDUMP, so, using upper nibble of
-     * port D to know what to do when INT1 triggered */
-    cbi   _SFR_IO_ADDR(DDRD), PD4
-
     /* Enable timer and have initial delay */
     rcall TIMER_INIT
     sei
     sleep
 
 #ifdef USE_DHT11
-    rcall DHT11_SETUP
+    rcall DHT11_INIT
 #endif
     rcall ARP_INIT
     rcall COMM_INIT
     rcall DHCP_INIT
     rcall SPI_MASTER_INIT
     rcall ETH_INIT
+    DEBUG(rcall UART_INIT)
+
+    DEBUG(PRINT_STR STR_START)
 
     /* Enable external interrupt 0 and 1 */
     in    TMP_REG1, _SFR_IO_ADDR(GICR)
@@ -80,8 +66,6 @@ main:
 LOOP:
     sbic  _SFR_IO_ADDR(PIND), PD2
     sleep
-    CLR_LED0
-    CLR_LED1
     sbis  _SFR_IO_ADDR(PIND), PD2
     rcall ENC_INTERRUPT_HANDLE
     /* Event triggered by timer {{{ */
@@ -101,6 +85,7 @@ LOOP:
 
     /* Collect data */
     rcall DHT11_READ
+
     rcall ADC_ENABLE_N_START
     sleep
     rcall ADC_DISABLE
@@ -142,23 +127,23 @@ ENC_INTERRUPT_HANDLE:
     /* First check for errors */
 #if USE_DMAIF
     sbrc  ENC_INT_RQST_REG, ENC_COMMON_EIE_DMAIE
-    rcall COREDUMP_N_CONTINUE
+    TODO
 #endif
 #if USE_LINKIF
     sbrc  ENC_INT_RQST_REG, ENC_COMMON_EIE_LINKIE
-    rcall COREDUMP_N_CONTINUE
+    TODO
 #endif
 #if USE_TXIF
     sbrc  ENC_INT_RQST_REG, ENC_COMMON_EIE_TXIE
-    rcall COREDUMP_N_CONTINUE
+    TODO
 #endif
 #if USE_TXERIF
     sbrc  ENC_INT_RQST_REG, ENC_COMMON_EIE_TXERIE
-    rcall COREDUMP_N_CONTINUE
+    TODO
 #endif
 #if USE_RXERIF
     sbrc  ENC_INT_RQST_REG, ENC_COMMON_EIE_RXERIE
-    rcall HANDLE_RECEIVE_ERROR
+    TODO
 #endif
     /* The system would be useless if this is not in use */
     sbrc  ENC_INT_RQST_REG, ENC_COMMON_EIR_PKTIF
@@ -169,11 +154,12 @@ ENC_INTERRUPT_HANDLE:
 /* Handle received packet {{{2 -------------------------------------------------
  * enc28j60 will trigger an interrupt whenever a packet is received. */
 HANDLE_PACKET:
-    /* Packet and Ethernet headers {{{3 */
+    /* Packet and Ethernet headers */
+    /* TODO: merge ETH_READ_RECEIVE_HEADER and ETH_READ_MAC_ADDRS_N_LEN_TYPE */
     rcall ETH_READ_RECEIVE_HEADER
     rcall ETH_CHECK_RECEIVE_STATUS_VECTOR
     cpi   RTV_L_REG, 0
-    /* TODO: improve action upon this error */
+    /* Error seen commonly after programming */
     brne  RESET_ETH
 
     rcall ETH_READ_MAC_ADDRS_N_LEN_TYPE
@@ -198,111 +184,39 @@ CHK_RPKT_STATUS2:
     rjmp  TYPE_LEN_TYPE
     rjmp  SKIP_ETH_PKT /* no support for type/length = length packets */
 
-TYPE_LEN_TYPE: /* {{{3 */
-    lds   ZH, SRAM_TYPE_LEN_H
-    lds   ZL, SRAM_TYPE_LEN_L
-TYPE_LEN_IPV4: /* {{{4 */
+TYPE_LEN_TYPE: /* Call handler based on TYPE */
+    lds   TMP_REG1, SRAM_TYPE_LEN_H
+    lds   TMP_REG2, SRAM_TYPE_LEN_L
+TYPE_LEN_IPV4:
     /* Check Type/Len is IPv4 or jump to next type/len */
-    cpi   ZH, hi8(ETHER_TYPE_IPV4)
+    cpi   TMP_REG1, hi8(ETHER_TYPE_IPV4)
     brne  TYPE_LEN_ARP
-    cpi   ZL, lo8(ETHER_TYPE_IPV4)
+    cpi   TMP_REG2, lo8(ETHER_TYPE_IPV4)
     brne  TYPE_LEN_ARP
 
     rcall IPV4_HANDLE_PKT
     rjmp  PACKET_END
 
-TYPE_LEN_ARP: /* {{{4 */
+TYPE_LEN_ARP:
     /* Check Type/Len is ARP or jump to next type/len */
-    cpi   ZH, hi8(ETHER_TYPE_ARP)
+    cpi   TMP_REG1, hi8(ETHER_TYPE_ARP)
     brne  TYPE_LEN_UNKNOWN
-    cpi   ZL, lo8(ETHER_TYPE_ARP)
+    cpi   TMP_REG2, lo8(ETHER_TYPE_ARP)
     brne  TYPE_LEN_UNKNOWN
 
     rcall ARP_HANDLE_PKT
-    rjmp  PACKET_END
 
-TYPE_LEN_UNKNOWN: /* }}}3 */
+TYPE_LEN_UNKNOWN:
 PACKET_END:
 SKIP_ETH_PKT:
     rcall ETH_PKT_PROCESSED
     ret
 
-ERROR:
-    rjmp  SKIP_ETH_PKT
 RESET_ETH:
+    DEBUG(PRINT_STR STR_ENC_STATUS_VECTOR_ERROR)
+    DEBUG(PRINT_REG RTV_L_REG)
+    DEBUG(PRINT_NEWLINE)
     rcall ETH_INIT
-    ret
-
-/* INT1 handle {{{2 ----------------------------------------------------------*/
-#if 0
-INT1_vect:
-    /* Save and restore TMP_REG1 for EEPROM_COREDUMP */
-    sts   SRAM_EEPROM_TMP_REG1_SAVE, TMP_REG1
-    push  TMP_REG1
-    in    TMP_REG1, _SFR_IO_ADDR(SREG)
-    sts   SRAM_EEPROM_SREG, TMP_REG1
-    push  TMP_REG1
-    lds   TMP_REG1, SRAM_EEPROM_TMP_REG1_SAVE
-
-/* TODO: Fix connections in breadboard */
-//    /* Deliver interrupt to corresponding routine */
-//    sbic  _SFR_IO_ADDR(PIND), PD4
-//    rjmp  COREDUMP
-//
-//    sbic  _SFR_IO_ADDR(PIND), PD5
-//    rjmp  SEND_DHCP_DISCOVER
-
-#ifdef USE_DHT11
-    //lds   TMP_REG1, BIT_FIELD_1
-    //sbrc  TMP_REG1, BIT_FIELD_1_INT1_DHT11
-    rcall DHT11_INT1_vect
-#endif
-INT1_vect_EXIT:
-    pop   TMP_REG1
-    out   _SFR_IO_ADDR(SREG), TMP_REG1
-    pop   TMP_REG1
-    reti
-
-COREDUMP:
-    rcall EEPROM_COREDUMP
-    //ERR_SET
-    rjmp  INT1_vect_EXIT
-
-SEND_DHCP_DISCOVER:
-    rcall DHCP
-    rjmp  INT1_vect_EXIT -------------------------------------------------------
-#endif
-
-/* Testing at the moment other interrupts {{{2 -------------------------------*/
-COREDUMP_N_CONTINUE:
-    //rcall EEPROM_COREDUMP
-    ERR_SET
-    ret
-
-/* Error handling {{{2 -------------------------------------------------------*/
-#if USE_RXERIF
-HANDLE_RECEIVE_ERROR:
-    //ERR_SET
-    ldi   ARG_REG1, ENC_COMMON_EIR
-    ldi   ARG_REG2, (1 << ENC_COMMON_EIR_RXERIF)
-    rcall ETH_BIT_FIELD_CLEAR
-    ret
-#endif
-
-/* Error handling {{{2 -------------------------------------------------------*/
-TIMER0_OVF_vect:
-   reti
-
-/* Zero out SRAM {{{2 --------------------------------------------------------*/
-ZERO_OUT_SRAM:
-    ldi   ZL, lo8(RAMSTART)
-    ldi   ZH, hi8(RAMSTART)
-ZERO_OUT_SRAM_LOOP:
-    st    Z+, ZERO_REG
-    cpi   ZL, lo8(RAMEND - 2)
-    brne  ZERO_OUT_SRAM_LOOP
-    cpi   ZH, hi8(RAMEND - 2)
-    brne  ZERO_OUT_SRAM_LOOP
     ret
 
 .end

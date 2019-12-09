@@ -9,6 +9,7 @@
 #include "enc28j60.h"
 #include "timer.h"
 #include "eeprom_data.h"
+#include "macros.S"
 .LIST
 
 /* MACORS {{{1 ---------------------------------------------------------------*/
@@ -187,18 +188,16 @@ DHCP_EXIT_SUCCESS:
 /* DHCP_INIT {{{2 --------------------------------------------------------------
  * This routine initialize DHCP */
 DHCP_INIT:
-    /* Should I initialize to ZERO ? */
-    // sts   SRAM_DHCP_XID_LAST_BYTE, TMP_REG1
+    /* SRAM_DHCP_XID_LAST_BYTE will have random initial value */
     /* Check if our current IP in the EEPROM was set */
     ldi   YL, lo8(EEPROM_IP_ADDR)
     ldi   YH, hi8(EEPROM_IP_ADDR)
     ldi   COUNTER_REG, IPV4_ADDR_LEN
-CHECK_IF_VALID_IP:
-    rcall EEPROM_READ_N_INC
+0:  rcall EEPROM_READ_N_INC
     tst   RTV_L_REG
     brne  VALID_IP
     dec   COUNTER_REG
-    brne  CHECK_IF_VALID_IP
+    brne  0b
     /* IP address is 0.0.0.0 (invalid IP) */
     ldi   TMP_REG1, (1 << DHCP_STATE_INIT)
     rjmp  STORE_STATE
@@ -210,6 +209,8 @@ STORE_STATE:
 
 /* DHCP SEND packet {{{2 -----------------------------------------------------*/
 DHCP_SEND:
+    DEBUG(PRINT_STR STR_DHCP_SEND_START)
+    DEBUG(rcall PRINT_STATE)
     /* Ethernet Header {{{3 */
     ldi   TMP_REG2, (1 << ENC_MAC_DST_PTR_BROADCAST_BIT)
     sts   SRAM_ENC_MAC_DST_PTR, TMP_REG2
@@ -303,6 +304,7 @@ DHCP_HEADER_FROM_EEPROM_LOOP:
 
     /* Last byte of XID {{{4 */
     lds   ARG_REG1, SRAM_DHCP_XID_LAST_BYTE
+    DEBUG(rcall PRINT_CURRENT_XID)
     rcall SPI_MASTER_TRANSMIT
 
     /* set SECS and FLAGS to Zero {{{4 */
@@ -457,26 +459,23 @@ DHCP_HANDLE_PKT:
     push YL
     push YH
 
+    DEBUG(PRINT_STR_SAFE STR_DHCP_HANDLE_START)
     /* Check OP, HTYPE, HLEN, HOPS and XID  {{{3 */
     ETH_READ_NEXT_BYTE
     cpi   RTV_L_REG, DHCP_OP_BOOTREPLY
     brne  DHCP_HANDLE_EXIT_SUCCESS
 
+    /* Compare beginning of header */
     ldi   YL, lo8(EEPROM_DHCP_HEADER + 1)
     ldi   YH, hi8(EEPROM_DHCP_HEADER + 1)
-    ldi   COUNTER_REG, 6
-CHECK_DHCP_HEADER:
-    rcall EEPROM_READ_N_INC
-    mov   TMP_REG1, RTV_L_REG
-    ETH_READ_NEXT_BYTE
-    cp    TMP_REG1, RTV_L_REG
+    ldi   ARG_REG1, 6
+    rcall EN_MEMCMP
     brne  DHCP_HANDLE_EXIT_SUCCESS
-    dec   COUNTER_REG
-    brne  CHECK_DHCP_HEADER
 
     /* Check last byte of the XID */
     ETH_READ_NEXT_BYTE
     lds   TMP_REG1, SRAM_DHCP_XID_LAST_BYTE
+    DEBUG(rcall PRINT_INCOMING_N_EXPECTED_XID)
     cp    TMP_REG1, RTV_L_REG
     brne  DHCP_HANDLE_EXIT_SUCCESS
 
@@ -508,15 +507,9 @@ UPDATE_EEPROM_IP_ADDR:
     /* Check magic cookie {{{3 */
     ldi   YL, lo8(EEPROM_DHCP_MAGIC_COOKIE)
     ldi   YH, hi8(EEPROM_DHCP_MAGIC_COOKIE)
-    ldi   COUNTER_REG, (EEPROM_DHCP_MAGIC_COOKIE_END - EEPROM_DHCP_MAGIC_COOKIE)
-CHECK_MAGIC_COOKIE:
-    rcall EEPROM_READ_N_INC
-    mov   TMP_REG1, RTV_L_REG
-    ETH_READ_NEXT_BYTE
-    cp    TMP_REG1, RTV_L_REG
+    ldi   ARG_REG1, (EEPROM_DHCP_MAGIC_COOKIE_END - EEPROM_DHCP_MAGIC_COOKIE)
+    rcall EN_MEMCMP
     brne  DHCP_HANDLE_EXIT_FAILURE
-    dec   COUNTER_REG
-    brne  CHECK_MAGIC_COOKIE
     /* Jump to start reading options (skipping exit block) */
     rjmp  START_READING_DHCP_OPTIONS
 
@@ -529,6 +522,7 @@ DHCP_HANDLE_EXIT:
     pop  YL
     ret
 DHCP_HANDLE_EXIT_FAILURE:
+    DEBUG(PRINT_STR_SAFE STR_FAILURE)
     ldi  RTV_L_REG, 1
     rjmp DHCP_HANDLE_EXIT
 
@@ -555,6 +549,7 @@ KEEP_READING_DHCP_OPTIONS:
 TRY_DHCP_ACK:
     cpi   RTV_L_REG, DHCP_OPTION_DHCP_MSG_TYPE_DHCP_ACK
     brne  KEEP_READING_DHCP_OPTIONS
+    DEBUG(PRINT_STR_SAFE STR_OPT_ACK)
     /* Set states {{{5 */
     ldi   TMP_REG1, (1 << DHCP_STATE_BOUND)
     sts   SRAM_DHCP_STATE, TMP_REG1
@@ -701,5 +696,36 @@ DHCP_XID_INCREMENT:
     inc   TMP_REG1
     sts   SRAM_DHCP_XID_LAST_BYTE, TMP_REG1
     ret
+
+/* Debugging functionality {{{2 ----------------------------------------------*/
+#ifndef NDEBUG
+PRINT_CURRENT_XID:
+    DEBUG_PUSH
+    PRINT_STR STR_LOCAL_XID
+    PRINT_REG ARG_REG1
+    PRINT_NEWLINE
+    DEBUG_POP
+    ret
+
+PRINT_INCOMING_N_EXPECTED_XID:
+    DEBUG_PUSH
+    PRINT_STR STR_LOCAL_XID
+    PRINT_REG TMP_REG1
+    PRINT_NEWLINE
+    PRINT_STR STR_INCOMING_XID
+    PRINT_REG RTV_L_REG
+    PRINT_NEWLINE
+    DEBUG_POP
+    ret
+
+PRINT_STATE:
+    DEBUG_PUSH
+    PRINT_STR STR_STATE
+    lds   ARG_REG1, SRAM_DHCP_STATE
+    PRINT_REG ARG_REG1
+    PRINT_NEWLINE
+    DEBUG_POP
+    ret
+#endif
 
 .end

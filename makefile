@@ -1,6 +1,7 @@
 ################################################################################
 #                          ATmega8 + ENC28J60 + DHT11                          #
 ################################################################################
+DEBUG = 0
 OBJS = main.o         \
        eeprom.o       \
        spi.o          \
@@ -23,6 +24,13 @@ DEPDIR = Deps
 OBJDIR = Objs
 GCCOPT = -mmcu=atmega8 -std=gnu99 -g -Wall
 
+ifeq (${DEBUG}, 1)
+    GCCOPT += -DUSE_UART
+    OBJS   += uart.o strings.o
+else
+    GCCOPT += -DNDEBUG
+endif
+
 # GCC flags for dependencies auto generation
 DEPOPTS = -MP -MD -MF ${DEPDIR}/$(notdir $@).d
 
@@ -42,7 +50,7 @@ main.elf: $(addprefix ${OBJDIR}/, ${OBJS})
 # Implicit rules with pattern rules
 # On the first go, without dependencies in ./${DEPDIR}, this implicit rule will apply
 # and dependency file will be generated.
-${OBJDIR}/%.o: %.S | eeprom_data.h ${DEPDIR} ${OBJDIR}
+${OBJDIR}/%.o: %.S makefile | eeprom_data.h ${DEPDIR} ${OBJDIR}
 	avr-gcc ${DEPOPTS} ${GCCOPT} -c -o $@ $<
 
 install:

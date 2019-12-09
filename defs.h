@@ -84,23 +84,19 @@
 #define ERR_SET       sbi _SFR_IO_ADDR(PORTB), ERR_BIT
 #define ERR_CLR       cbi _SFR_IO_ADDR(PORTB), ERR_BIT
 
-/**************
- * LED macros *
- **************/
-#define PIN_LED0      PD0
-#define DDR_LED0      sbi _SFR_IO_ADDR(DDRD),  PIN_LED0
-#define SET_LED0      cbi _SFR_IO_ADDR(PORTD), PIN_LED0
-#define CLR_LED0      sbi _SFR_IO_ADDR(PORTD), PIN_LED0
-
-#define PIN_LED1      PD1
-#define DDR_LED1      sbi _SFR_IO_ADDR(DDRD),  PIN_LED1
-#define SET_LED1      cbi _SFR_IO_ADDR(PORTD), PIN_LED1
-#define CLR_LED1      sbi _SFR_IO_ADDR(PORTD), PIN_LED1
-
 /********************
  * IP address sizes *
  *******************/
 #define MAC_ADDR_LEN       6
+
+/*************
+ * Debugging *
+ ************/
+#ifndef NDEBUG
+#   define DEBUG(x) x
+#else
+#   define DEBUG(x)
+#endif
 
 /* }}} */
 

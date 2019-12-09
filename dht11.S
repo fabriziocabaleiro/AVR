@@ -47,7 +47,7 @@
 #define TCNT2_TMP_REG RTV_L_REG
 
 /* GLOBAL {{{1 ---------------------------------------------------------------*/
-.global DHT11_SETUP
+.global DHT11_INIT
 .global DHT11_READ
 .global INT1_vect
 .global TIMER2_OVF_vect
@@ -62,7 +62,7 @@ SRAM_DHT11_PAYLOAD: .skip DHT11_PAYLOAD_LEN
 /* DHT11 setup {{{2 ------------------------------------------------------------
  * Setup interrupt in falling edge
  * Setup interrupt port as Input with value Zero */
-DHT11_SETUP:
+DHT11_INIT:
     /* Disable interrupt */
     in    TMP_REG1, _SFR_IO_ADDR(TIMSK)
     cbr   TMP_REG1, (1 << TOIE2)

@@ -265,6 +265,7 @@ ETH_READ_RECEIVE_HEADER:
     rcall SPI_MASTER_TRANSMIT
 
     /* Read the whole receive status vector */
+    /* TODO: NS_MEMCPY */
     ldi   COUNTER_REG, RPKT_STATUS_VECTOR_LEN
     ldi   ZH, hi8(SRAM_RPKT_N_PKT_L)
     ldi   ZL, lo8(SRAM_RPKT_N_PKT_L)
@@ -282,18 +283,18 @@ ETH_READ_RECEIVE_HEADER_LOOP:
 /* Check receive status vector {{{2 --------------------------------------------
  * Returns Zero if packet is good to be processed, else, != 0 */
 ETH_CHECK_RECEIVE_STATUS_VECTOR:
-    /* Check Received packet status 3 {{{3 */
+    /* Check Received packet status 3 */
     lds  RTV_L_REG, SRAM_RPKT_STATUS3
     /* Discard VLAN, Unknown Opcode, Pause Control Frame, Control Frame */
     andi RTV_L_REG, ~((1 << RPKT_STATUS3_RECEIVE_BROADCAST_PACKET) | \
                       (1 << RPKT_STATUS3_RECEIVE_MULTICAST_PACKET) | \
                       (1 << RPKT_STATUS3_DRIBBLE_NIBBLE))
 
-    /* Check Received packet status 2 {{{3 */
+    /* Check Received packet status 2 */
     lds  TMP_REG1, SRAM_RPKT_STATUS2
     /* If OK bit is not set, then, set MSB bit on RTV_L_REG */
     sbrs TMP_REG1, RPKT_STATUS2_RECEIVED_OK
-    sbr  RTV_L_REG, 0x80 /* }}}3 */
+    sbr  RTV_L_REG, 0x80
     ret
 
 /* Read Ethernet header (Mac addresses and Type/Len {{{2 -----------------------
