@@ -8,6 +8,9 @@
 #include "eeprom_data.h"
 .LIST
 
+/* MACORS {{{1 ---------------------------------------------------------------*/
+#define FLAG_KEEP_OPEN_AFTER_WRITE 0
+
 /* GLOBAL {{{1 ---------------------------------------------------------------*/
 .global ETH_INIT
 .global ETH_READ_CONTROL_REGISTER
@@ -23,8 +26,10 @@
 .global ETH_WRITE_Z_TO_TRANSMIT_BUFFER
 .global ETH_WRITE_BUFFER_PACKET_PAYLOAD_FINISH
 .global ETH_MOVE_READ_POINTER
+.global ETH_UNSET_FLAG_KEEP_OPEN_AFTER_WRITE
+.global ETH_SET_FLAG_KEEP_OPEN_AFTER_WRITE
 
-.global SRAM_MAC_ADDR_OTHER
+.global SRAM_ENC_SRC_ADDR
 .global SRAM_TYPE_LEN_H
 .global SRAM_TYPE_LEN_L
 .global SRAM_RPKT_STATUS2
@@ -44,8 +49,8 @@ SRAM_RPKT_STATUS3:      .skip 1
 /* Ethernet header, this fields are updated every time we start processing a
  * packet */
 SRAM_ENC_HEADER:
-MAC_ADDR_MYSELF:        .skip 6
-SRAM_MAC_ADDR_OTHER:    .skip 6
+SRAM_ENC_DST_ADDR:      .skip 6
+SRAM_ENC_SRC_ADDR:      .skip 6
 SRAM_TYPE_LEN_H:        .skip 1
 SRAM_TYPE_LEN_L:        .skip 1
 /* Pointer to Dst MAC address */
@@ -53,11 +58,15 @@ SRAM_ENC_MAC_DST_PTR:   .skip 2
 /* Pointer to TYPE/LEN value */
 SRAM_ENC_TYPE_LEN_PTR:  .skip 2
 
+/* Flags to modify behavior of routines */
+SRAM_ENC_FLAGS:         .skip 1
+
 /* TEXT {{{1 -----------------------------------------------------------------*/
 .section .text
 
 /* Initialize everything {{{2 ------------------------------------------------*/
 ETH_INIT:
+    sts   SRAM_ENC_FLAGS, ZERO_REG
     rcall ETH_SOFTWARE_RESET
     rcall ETH_BUFFER_INIT
     rcall ETH_MAC_INIT
@@ -327,9 +336,9 @@ ETH_READ_MAC_ADDRS_N_LEN_TYPE_KEEP_READING:
 
     /* Update Mac Addr Dst & Type/Len ptr */
     /* TODO: Could be done in other way */
-    ldi   TMP_REG1, hi8(SRAM_MAC_ADDR_OTHER)
+    ldi   TMP_REG1, hi8(SRAM_ENC_SRC_ADDR)
     sts   SRAM_ENC_MAC_DST_PTR + 0, TMP_REG1
-    ldi   TMP_REG1, lo8(SRAM_MAC_ADDR_OTHER)
+    ldi   TMP_REG1, lo8(SRAM_ENC_SRC_ADDR)
     sts   SRAM_ENC_MAC_DST_PTR + 1, TMP_REG1
 
     ldi   TMP_REG1, hi8(SRAM_TYPE_LEN_H)
@@ -476,15 +485,10 @@ ETH_WRITE_BUFFER_MAC_DST_BROADCAST_LOOP:
 
     /* Write Src Mac address */
 ETH_WRITE_BUFFER_MAC_SRC:
-    ldi   COUNTER, MAC_ADDR_LEN
     ldi   YL, lo8(EEPROM_MAC_ADDR)
     ldi   YH, hi8(EEPROM_MAC_ADDR)
-ETH_WRITE_BUFFER_PACKET_HEADER_WRITE_SRC_MAC:
-    rcall EEPROM_READ_N_INC
-    mov   ARG_REG1, RTV_L_REG
-    rcall SPI_MASTER_TRANSMIT
-    dec   COUNTER
-    brne  ETH_WRITE_BUFFER_PACKET_HEADER_WRITE_SRC_MAC
+    ldi   ARG_REG1, MAC_ADDR_LEN
+    rcall SPI_EEPROM_TRANSMIT
 
     /* Write Type/Len */
     ldi   YH, hi8(SRAM_ENC_TYPE_LEN_PTR)
@@ -540,24 +544,36 @@ ETH_SET_LISTEN_ON_SPI:
     rcall SPI_MASTER_TRANSMIT
     ret
 
-/* Write Payload {{{2 ----------------------------------------------------------
+/* Write Z to transmit buffer {{{2 ---------------------------------------------
  * Z is a pointer to memory to where start writing from
  * ARG_REG1 is number of byte to write */
 ETH_WRITE_Z_TO_TRANSMIT_BUFFER:
     /* Send write command */
-    push  TMP_REG2
-    mov   TMP_REG2, ARG_REG1
-    ldi   ARG_REG1, ETH_SPI_CMD_WBM
-    SPI_SELECT_ETH
-    rcall SPI_MASTER_TRANSMIT
+    mov   TMP_REG1, ARG_REG1
+    SPI_SKIP_IF_SELECTED_ETH
+    rcall ETH_SET_LISTEN_ON_SPI
 
-ETH_WRITE_BUFFER_PACKET_PAYLOAD_KEEP_WRITING:
-    ld    ARG_REG1, Z+
+0:  ld    ARG_REG1, Z+
     rcall SPI_MASTER_TRANSMIT
-    dec   TMP_REG2
-    brne  ETH_WRITE_BUFFER_PACKET_PAYLOAD_KEEP_WRITING
-    pop   TMP_REG2
+    dec   TMP_REG1
+    brne  0b
+    lds   TMP_REG1, SRAM_ENC_FLAGS
+    sbrs  TMP_REG1, FLAG_KEEP_OPEN_AFTER_WRITE
     SPI_END_ETH
+    ret
+
+/* ETH_UNSET_FLAG_KEEP_OPEN_AFTER_WRITE {{{2 ---------------------------------*/
+ETH_UNSET_FLAG_KEEP_OPEN_AFTER_WRITE:
+    lds   TMP_REG1, SRAM_ENC_FLAGS
+    cbr   TMP_REG1, (1 << FLAG_KEEP_OPEN_AFTER_WRITE)
+    sts   SRAM_ENC_FLAGS, TMP_REG1
+    ret
+
+/* ETH_SET_FLAG_KEEP_OPEN_AFTER_WRITE {{{2 -----------------------------------*/
+ETH_SET_FLAG_KEEP_OPEN_AFTER_WRITE:
+    lds   TMP_REG1, SRAM_ENC_FLAGS
+    sbr   TMP_REG1, (1 << FLAG_KEEP_OPEN_AFTER_WRITE)
+    sts   SRAM_ENC_FLAGS, TMP_REG1
     ret
 
 /* Finish Write Payload {{{2 -------------------------------------------------*/

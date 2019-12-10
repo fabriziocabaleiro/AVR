@@ -22,10 +22,7 @@ EEPROM_DHCP_REQUEST_OPS: /* {{{2 */
     /* Name of the device */
     .byte DHCP_OPTION_HOSTNAME
     .byte 4
-    .byte 'C'
-    .byte 'o'
-    .byte 't'
-    .byte 'e'
+    .byte 'C', 'o', 't', 'e'
     /* We set the Option and length here and the code is going to write the IP
      * address */
     .byte DHCP_OPTION_ADDRESS_REQUEST
@@ -34,15 +31,9 @@ EEPROM_DHCP_REQUEST_OPS_END:
 EEPROM_IP_ADDR: /* {{{2 */
     /* Initial IP address, this one gets overwritten by DHCP */
 #if 0
-    .byte 192
-    .byte 168
-    .byte   2
-    .byte   4
+    .byte 192, 168, 2, 4
 #else
-    .byte   0
-    .byte   0
-    .byte   0
-    .byte   0
+    .byte   0,   0, 0, 0
 #endif
 EEPROM_IP_ADDR_END:
 EEPROM_MAC_ADDR: /* {{{2 */
@@ -53,15 +44,6 @@ EEPROM_MAC_ADDR: /* {{{2 */
     .byte MAC_ADDR_4
     .byte MAC_ADDR_5
 EEPROM_MAC_ADDR_END:
-EEPROM_MAC_DEBUG: /* {{{2 */
-    /* TODO: remove? */
-    .byte 0xF0
-    .byte 0x1F
-    .byte 0xAF
-    .byte 0x4C
-    .byte 0x19
-    .byte 0x15
-EEPROM_MAC_DEBUG_END:
 EEPROM_IP_HEADER: /* {{{2 */
     /* Default header for UDP packages */
     /* Version 4, IHL 5 */

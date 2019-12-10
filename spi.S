@@ -17,6 +17,7 @@
 /* GLOBAL {{{1 ---------------------------------------------------------------*/
 .global SPI_MASTER_INIT
 .global SPI_MASTER_TRANSMIT
+.global SPI_EEPROM_TRANSMIT
 
 /* TEXT {{{1 -----------------------------------------------------------------*/
 .section .text
@@ -51,15 +52,23 @@ SPI_MASTER_INIT:
  ******************************************************************************/
 SPI_MASTER_TRANSMIT:
     /* Start transmission of data on (ARG_REG1) */
-    out _SFR_IO_ADDR(SPDR), ARG_REG1
-
+    out   _SFR_IO_ADDR(SPDR), ARG_REG1
     /* Wait for transmission complete */
-SPI_WAIT_TRANSMIT:
-    sbis _SFR_IO_ADDR(SPSR), SPIF
-    rjmp SPI_WAIT_TRANSMIT
-
+0:  sbis  _SFR_IO_ADDR(SPSR), SPIF
+    rjmp  0b
     /* Get received message */
-    in RTV_L_REG, _SFR_IO_ADDR(SPDR)
+    in    RTV_L_REG, _SFR_IO_ADDR(SPDR)
+    ret
+
+/* Write ARG_REG1 bytes from Y (EEPROM) to SPI {{{2 ----------------------------
+   */
+SPI_EEPROM_TRANSMIT:
+    mov   COUNTER_REG, ARG_REG1
+0:  rcall EEPROM_READ_N_INC
+    mov   ARG_REG1, RTV_L_REG
+    rcall SPI_MASTER_TRANSMIT
+    dec   COUNTER_REG
+    brne  0b
     ret
 
 .end

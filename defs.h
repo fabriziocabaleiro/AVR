@@ -50,9 +50,10 @@
 #pragma GCC poison R31
 
 /* SPI Slave selection {{{1 ---------------------------------------------------*/
-#define SPI_SS_ETH       PB2
-#define SPI_SELECT_ETH   cbi _SFR_IO_ADDR(PORTB), SPI_SS_ETH
-#define SPI_END_ETH      sbi _SFR_IO_ADDR(PORTB), SPI_SS_ETH
+#define SPI_SS_ETH                PB2
+#define SPI_SELECT_ETH            cbi   _SFR_IO_ADDR(PORTB), SPI_SS_ETH
+#define SPI_SKIP_IF_SELECTED_ETH  sbic  _SFR_IO_ADDR(PORTB), SPI_SS_ETH
+#define SPI_END_ETH               sbi   _SFR_IO_ADDR(PORTB), SPI_SS_ETH
 
 /* Miscellaneous {{{1 ---------------------------------------------------------*/
 /* ADC reading MQ135 */

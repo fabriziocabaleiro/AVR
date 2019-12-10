@@ -171,8 +171,8 @@ HANDLE_PACKET:
     /* Check if broadcast was sent by me */
     ldi   YH, hi8(EEPROM_MAC_ADDR)
     ldi   YL, lo8(EEPROM_MAC_ADDR)
-    ldi   ZH, hi8(SRAM_MAC_ADDR_OTHER)
-    ldi   ZL, lo8(SRAM_MAC_ADDR_OTHER)
+    ldi   ZH, hi8(SRAM_ENC_SRC_ADDR)
+    ldi   ZL, lo8(SRAM_ENC_SRC_ADDR)
     ldi   ARG_REG1, MAC_ADDR_LEN
     rcall ES_MEMCMP
     brne  CHK_RPKT_STATUS2

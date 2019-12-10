@@ -54,7 +54,7 @@ COMM_INIT:
     sts   SRAM_COMM_TYPE_LEN + 1, TMP_REG2
     ret
 
-/* Send a packet to the MAC Address in SRAM_MAC_ADDR_OTHER {{{2 ----------------
+/* Send a packet to IP registered in COMM table {{{2 ---------------------------
  * Z points to the data
  * ARG_REG1 is the length */
 #define ENTRY_IT_REG        R23

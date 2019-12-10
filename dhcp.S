@@ -219,6 +219,7 @@ DHCP_SEND:
     rcall ETH_WRITE_BUFFER_PACKET_HEADER
     /* }}}3 */
     rcall ETH_SET_LISTEN_ON_SPI
+    rcall ETH_SET_FLAG_KEEP_OPEN_AFTER_WRITE
     /* IPv4 Header {{{3
      * This header has src as 0.0.0.0, dst as 255.255.255.255, checksum and
      * total length have to be setup
@@ -267,12 +268,8 @@ DEFAULT_SRC_DST_ADDRESSES:
     std   Z + (IPV4_H_CHECKSUM + 1), RTV_L_REG
 
     /* Transmit IPv4 Header plus part of UDP {{{4 */
-    ldi   COUNTER_REG, (EEPROM_UDP_DHCP_PORT_END - EEPROM_IP_HEADER)
-DHCP_WRITE_IP_HEADER:
-    ld    ARG_REG1, Z+
-    rcall SPI_MASTER_TRANSMIT
-    dec   COUNTER_REG
-    brne  DHCP_WRITE_IP_HEADER
+    ldi   ARG_REG1, (EEPROM_UDP_DHCP_PORT_END - EEPROM_IP_HEADER)
+    rcall ETH_WRITE_Z_TO_TRANSMIT_BUFFER
 
     /* UDP Header {{{3 */
     /* SRC/DST already written */
@@ -294,13 +291,8 @@ DHCP_WRITE_IP_HEADER:
     /* Write first 8 bytes: OP, HTYPE, HLEN, HOPS AND XID (3 of 4 bytes) {{{4 */
     ldi   YL, lo8(EEPROM_DHCP_HEADER)
     ldi   YH, hi8(EEPROM_DHCP_HEADER)
-    ldi   COUNTER_REG, (EEPROM_DHCP_HEADER_END - EEPROM_DHCP_HEADER)
-DHCP_HEADER_FROM_EEPROM_LOOP:
-    rcall EEPROM_READ_N_INC
-    mov   ARG_REG1, RTV_L_REG
-    rcall SPI_MASTER_TRANSMIT
-    dec   COUNTER_REG
-    brne  DHCP_HEADER_FROM_EEPROM_LOOP
+    ldi   ARG_REG1, (EEPROM_DHCP_HEADER_END - EEPROM_DHCP_HEADER)
+    rcall SPI_EEPROM_TRANSMIT
 
     /* Last byte of XID {{{4 */
     lds   ARG_REG1, SRAM_DHCP_XID_LAST_BYTE
@@ -310,10 +302,9 @@ DHCP_HEADER_FROM_EEPROM_LOOP:
     /* set SECS and FLAGS to Zero {{{4 */
     clr   ARG_REG1
     ldi   COUNTER_REG, 4
-SECS_FLAGS_TO_ZERO:
-    rcall SPI_MASTER_TRANSMIT
+0:  rcall SPI_MASTER_TRANSMIT
     dec   COUNTER_REG
-    brne  SECS_FLAGS_TO_ZERO
+    brne  0b
 
     /* CIADDR {{{4
     Field      DHCPDISCOVER          DHCPREQUEST           DHCPDECLINE,
@@ -365,13 +356,8 @@ YIADDR_SIADDR_GIADDR_TO_ZERO:
     ldi   YL, lo8(EEPROM_MAC_ADDR)
     ldi   YH, hi8(EEPROM_MAC_ADDR)
 #endif
-    ldi   COUNTER_REG, MAC_ADDR_LEN
-DHCP_CHADDR_LOOP:
-    rcall EEPROM_READ_N_INC
-    mov   ARG_REG1, RTV_L_REG
-    rcall SPI_MASTER_TRANSMIT
-    dec   COUNTER_REG
-    brne  DHCP_CHADDR_LOOP
+    ldi   ARG_REG1, MAC_ADDR_LEN
+    rcall SPI_EEPROM_TRANSMIT
 
     /* header has 16 bytes for mac, as using only 6, there are 10 bytes to {{{4
      * write as zero, then we have 192 bytes of zero (option overload/BOOTS
@@ -389,13 +375,8 @@ DHCP_LEGACY_TO_ZERO_LOOP:
 #if EEPROM_DHCP_MAGIC_COOKIE_END != EEPROM_DHCP_OPTION_MSG_N_LEN
 #   error "Optimization requires EEPROM_DHCP_MAGIC_COOKIE_END == EEPROM_DHCP_OPTION_MSG_N_LEN"
 #endif
-    ldi   COUNTER_REG, (EEPROM_DHCP_OPTION_MSG_N_LEN_END - EEPROM_DHCP_MAGIC_COOKIE)
-DHCP_MAGIC_COOKIE_LOOP:
-    rcall EEPROM_READ_N_INC
-    mov   ARG_REG1, RTV_L_REG
-    rcall SPI_MASTER_TRANSMIT
-    dec   COUNTER_REG
-    brne  DHCP_MAGIC_COOKIE_LOOP
+    ldi   ARG_REG1, (EEPROM_DHCP_OPTION_MSG_N_LEN_END - EEPROM_DHCP_MAGIC_COOKIE)
+    rcall SPI_EEPROM_TRANSMIT
 
     /* DHCP Options {{{4 */
     /* DHCP MSG TYPE {{{5 */
@@ -422,13 +403,8 @@ DHCP_REQUEST_OPS: /* DHCP Request options {{{5 */
     /* Hostname and IP address {{{6 */
     ldi   YL, lo8(EEPROM_DHCP_REQUEST_OPS)
     ldi   YH, hi8(EEPROM_DHCP_REQUEST_OPS)
-    ldi   COUNTER_REG, (EEPROM_IP_ADDR_END - EEPROM_DHCP_REQUEST_OPS)
-DHCP_REQUEST_EEPROM_OPS:
-    rcall EEPROM_READ_N_INC
-    mov   ARG_REG1, RTV_L_REG
-    rcall SPI_MASTER_TRANSMIT
-    dec   COUNTER_REG
-    brne  DHCP_REQUEST_EEPROM_OPS
+    ldi   ARG_REG1, (EEPROM_IP_ADDR_END - EEPROM_DHCP_REQUEST_OPS)
+    rcall SPI_EEPROM_TRANSMIT
 
     /* DHCP server IP address {{{6 */
     ldi   ARG_REG1, DHCP_OPTION_DHCP_SERVER_ID
@@ -436,20 +412,17 @@ DHCP_REQUEST_EEPROM_OPS:
     ldi   ARG_REG1, DHCP_OPTION_DHCP_SERVER_ID_LEN
     rcall SPI_MASTER_TRANSMIT
 
-    ldi   YL, lo8(SRAM_DHCP_SERVER_IP_ADDR)
-    ldi   YH, hi8(SRAM_DHCP_SERVER_IP_ADDR)
-    ldi   COUNTER_REG, DHCP_OPTION_DHCP_SERVER_ID_LEN
-DHCP_SERVER_IP:
-    ld    ARG_REG1, Y+
-    rcall SPI_MASTER_TRANSMIT
-    dec   COUNTER_REG
-    brne  DHCP_SERVER_IP
+    ldi   ZL, lo8(SRAM_DHCP_SERVER_IP_ADDR)
+    ldi   ZH, hi8(SRAM_DHCP_SERVER_IP_ADDR)
+    ldi   ARG_REG1, DHCP_OPTION_DHCP_SERVER_ID_LEN
+    rcall ETH_WRITE_Z_TO_TRANSMIT_BUFFER
 
 DHCP_END_OP: /* End Options */
     ldi   ARG_REG1, DHCP_OPTION_END
     rcall SPI_MASTER_TRANSMIT
     /* }}}3 */
     ETH_END_LISTEN_ON_SPI
+    rcall ETH_UNSET_FLAG_KEEP_OPEN_AFTER_WRITE
     rcall ETH_WRITE_BUFFER_PACKET_PAYLOAD_FINISH
     ret
 
