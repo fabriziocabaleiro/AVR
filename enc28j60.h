@@ -3,6 +3,11 @@
 #define _ENC28J60_H_
 
 /* MACROS {{{1 */
+/* Use move read pointer
+ * Respose for DHCP may be faster, as it can jump through BOOTP legacy, but it
+ * uses a big amount of instructions, so preferring smaller footprint */
+#define USE_MOVE_RDPT 0
+
 /* Choose what interrupts to use */
 /* This interrupt is triggered when a packet is received, but there is no space
  * left or the packet counter reached its maximum, therefore discarding the
@@ -15,9 +20,12 @@
  * TODO: take action upon this event */
 #define USE_TXERIF 0
 
-/* This interrupt should be trigger when the host cancels or abort a packet
- * transmission. Cancellation or abort of transmission by host is not
- * implemented at the moment, so ignore this event */
+/* This interrupt should be trigger upon transmission completion or when the
+ * host cancels or abort a packet transmission.
+ * We don't wait for the transmission to be complete.
+ * Cancellation or abort of transmission by host is not implemented at the
+ * moment, so ignore this event.
+ */
 #define USE_TXIF   0
 
 /* To receive it, the host controller must set the PHIE.PLNKIE and PGEIE bits,

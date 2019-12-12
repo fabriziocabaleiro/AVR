@@ -233,8 +233,20 @@ EEPROM_ENC_MAC_INIT: /* {{{2 */
     .byte ENC_COMMON_ECON1 | ETH_SPI_CMD_BFS
     .byte ENC_COMMON_ECON1_BSEL1 | ENC_COMMON_ECON1_BSEL0
 
-
 EEPROM_ENC_MAC_INIT_END:
+EEPROM_ENC_WRITE_BUFFER_PACKET_HEADER_PRESET:
+    /* Set BANK 0 */
+    .byte ENC_COMMON_ECON1 | ETH_SPI_CMD_BFC
+    .byte ENC_COMMON_ECON1_BSEL0 | ENC_COMMON_ECON1_BSEL1
+
+    /* Set Write Pointer EWRPT to start of transmit buffer */
+    .byte ENC_BANK0_EWRPTL | ETH_SPI_CMD_WCR
+    .byte BUF_TX_ST_L
+
+    .byte ENC_BANK0_EWRPTH | ETH_SPI_CMD_WCR
+    .byte BUF_TX_ST_H
+
+EEPROM_ENC_WRITE_BUFFER_PACKET_HEADER_PRESET_END:
 EEPROM_DHCP_SRC_DST_PORT: /* {{{2 */
     .byte hi8(INTERNET_SERVICE_BOOTPS_67_UDP)
     .byte lo8(INTERNET_SERVICE_BOOTPS_67_UDP)
@@ -279,15 +291,15 @@ EEPROM_ARP_REQUEST: /* {{{2 */
 EEPROM_ARP_REQUEST_END:
 EEPROM_HTTP_RESPONSE: /* {{{2 */
     .byte 'H','T','T','P','/','1','.','1',' ','2','0','0',' ','O','K','\r','\n'
-    .byte 'c','o','n','t','e','n','t','-','l','e','n','g','t','h',':','1','8','\r','\n'
+    .byte 'c','o','n','t','e','n','t','-','l','e','n','g','t','h',':','1','6','\r','\n'
     .byte '\r','\n'
 EEPROM_HTTP_BODY:
     .byte 'R','H',':'
 EEPROM_HTTP_RH_OFFSET:
-    .byte '0','0','.','0','0'
+    .byte '0','0','.','0'
     .byte '\n'
     .byte 'T','*',':'
-    .byte '0','0','.','0','0'
+    .byte '0','0','.','0'
     .byte '\n'
 EEPROM_HTTP_BODY_END:
 EEPROM_HTTP_RESPONSE_END:

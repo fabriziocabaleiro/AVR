@@ -453,11 +453,18 @@ DHCP_HANDLE_PKT:
     brne  DHCP_HANDLE_EXIT_SUCCESS
 
     /* Jump to YIADDR {{{3 */
+#if USE_MOVE_RDPT
     ETH_READ_BUFFER_END
     ldi   ARG_REG1, 0
     ldi   ARG_REG2, 8 /* SECS + FLAGS + CIADDR */
-    rcall ETH_MOVE_READ_POINTER
+    rcall ETH_MOVE_RDPT
     rcall ETH_READ_BUFFER_START
+#else
+    ldi   COUNTER_REG, 8
+0:  ETH_READ_NEXT_BYTE
+    dec   COUNTER_REG
+    brne  0b
+#endif
 
     /* Read offered IP and write it into EEPROM {{{3 */
     ldi   COUNTER_REG, IPV4_ADDR_LEN
@@ -471,11 +478,18 @@ UPDATE_EEPROM_IP_ADDR:
     brne  UPDATE_EEPROM_IP_ADDR
 
     /* Jump from siaddr ip addr to magic cookie {{{3 */
+#if USE_MOVE_RDPT
     ETH_READ_BUFFER_END
     ldi   ARG_REG1, 0
     ldi   ARG_REG2, 216
-    rcall ETH_MOVE_READ_POINTER
+    rcall ETH_MOVE_RDPT
     rcall ETH_READ_BUFFER_START
+#else
+    ldi   COUNTER_REG, 216
+0:  ETH_READ_NEXT_BYTE
+    dec   COUNTER_REG
+    brne  0b
+#endif
 
     /* Check magic cookie {{{3 */
     ldi   YL, lo8(EEPROM_DHCP_MAGIC_COOKIE)

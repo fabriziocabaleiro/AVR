@@ -25,7 +25,7 @@
 .global ETH_SET_LISTEN_ON_SPI
 .global ETH_WRITE_Z_TO_TRANSMIT_BUFFER
 .global ETH_WRITE_BUFFER_PACKET_PAYLOAD_FINISH
-.global ETH_MOVE_READ_POINTER
+.global ETH_MOVE_RDPT
 .global ETH_UNSET_FLAG_KEEP_OPEN_AFTER_WRITE
 .global ETH_SET_FLAG_KEEP_OPEN_AFTER_WRITE
 
@@ -99,12 +99,7 @@ ETH_READ_CONTROL_REGISTER:
 ETH_WRITE_CONTROL_REGISTER:
     /* command is 010AAAAA, then corresponding prefix */
     sbr   ARG_REG1, ETH_SPI_CMD_WCR
-    SPI_SELECT_ETH
-    rcall SPI_MASTER_TRANSMIT
-    mov   ARG_REG1, ARG_REG2
-    rcall SPI_MASTER_TRANSMIT
-    SPI_END_ETH
-    ret
+    rjmp  0f
 
 /* Set the given bits into the register {{{2 -----------------------------------
  * Inputs:
@@ -113,12 +108,7 @@ ETH_WRITE_CONTROL_REGISTER:
 ETH_BIT_FIELD_SET:
     /* command is 100AAAAA, then corresponding prefix */
     sbr   ARG_REG1, ETH_SPI_CMD_BFS
-    SPI_SELECT_ETH
-    rcall SPI_MASTER_TRANSMIT
-    mov   ARG_REG1, ARG_REG2
-    rcall SPI_MASTER_TRANSMIT
-    SPI_END_ETH
-    ret
+    rjmp  0f
 
 /* Clear the given bits into the register {{{2 ---------------------------------
  * Inputs:
@@ -127,7 +117,10 @@ ETH_BIT_FIELD_SET:
 ETH_BIT_FIELD_CLEAR:
     /* command is 101AAAAA, then corresponding prefix */
     sbr   ARG_REG1, ETH_SPI_CMD_BFC
-    SPI_SELECT_ETH
+
+/* ETH_WRITE_CONTROL_REGISTER, ETH_BIT_FIELD_SET and ETH_BIT_FIELD_CLEAR {{{2 --
+ * common part */
+0:  SPI_SELECT_ETH
     rcall SPI_MASTER_TRANSMIT
     mov   ARG_REG1, ARG_REG2
     rcall SPI_MASTER_TRANSMIT
@@ -187,18 +180,8 @@ ETH_SOFTWARE_RESET:
 ETH_BUFFER_INIT:
     ldi   YL, lo8(EEPROM_ENC_BUFFER_INIT)
     ldi   YH, hi8(EEPROM_ENC_BUFFER_INIT)
-    ldi   COUNTER_REG, (EEPROM_ENC_BUFFER_INIT_END - EEPROM_ENC_BUFFER_INIT) / 2
-ETH_BUFFER_INIT_LOOP:
-    SPI_SELECT_ETH
-    rcall EEPROM_READ_N_INC
-    mov   ARG_REG1, RTV_L_REG
-    rcall SPI_MASTER_TRANSMIT
-    rcall EEPROM_READ_N_INC
-    mov   ARG_REG1, RTV_L_REG
-    rcall SPI_MASTER_TRANSMIT
-    SPI_END_ETH
-    dec   COUNTER_REG
-    brne  ETH_BUFFER_INIT_LOOP
+    ldi   ARG_REG2, (EEPROM_ENC_BUFFER_INIT_END - EEPROM_ENC_BUFFER_INIT) / 2
+    rcall ETH_CMDS_FROM_EEPROM
 
     /* Power-on Reset, the ENC_COMMON_ESTAT.CLKRDY bit should be polled to make certain that
      * enough time
@@ -210,18 +193,8 @@ ETH_BUFFER_INIT_LOOP:
 ETH_MAC_INIT: /* ONLY ONCE */
     ldi   YL, lo8(EEPROM_ENC_MAC_INIT)
     ldi   YH, hi8(EEPROM_ENC_MAC_INIT)
-    ldi   COUNTER_REG, (EEPROM_ENC_MAC_INIT_END - EEPROM_ENC_MAC_INIT) / 2
-ETH_MAC_INIT_LOOP:
-    SPI_SELECT_ETH
-    rcall EEPROM_READ_N_INC
-    mov   ARG_REG1, RTV_L_REG
-    rcall SPI_MASTER_TRANSMIT
-    rcall EEPROM_READ_N_INC
-    mov   ARG_REG1, RTV_L_REG
-    rcall SPI_MASTER_TRANSMIT
-    SPI_END_ETH
-    dec   COUNTER_REG
-    brne  ETH_MAC_INIT_LOOP
+    ldi   ARG_REG2, (EEPROM_ENC_MAC_INIT_END - EEPROM_ENC_MAC_INIT) / 2
+    rcall ETH_CMDS_FROM_EEPROM
 
     /* Program the local MAC address into the MAADR1:MAADR6 registers. */
     /* MAC registers are:
@@ -240,8 +213,7 @@ ETH_MAC_INIT_LOOP:
     ldi   YH, hi8(EEPROM_MAC_ADDR)
     ldi   YL, lo8(EEPROM_MAC_ADDR)
     ldi   TMP_REG2, ENC_BANK3_MAADR1
-ETH_MAC_INIT_SET_MAC_LOOP:
-    rcall EEPROM_READ_N_INC
+0:  rcall EEPROM_READ_N_INC
     mov   ARG_REG1, TMP_REG2
     mov   ARG_REG2, RTV_L_REG
     rcall ETH_WRITE_CONTROL_REGISTER
@@ -252,9 +224,26 @@ ETH_MAC_INIT_SET_MAC_LOOP:
     inc   TMP_REG2
     sbrs  TMP_REG2, 0 /* if odd, jump back right away */
     subi  TMP_REG2, 4
-    rjmp  ETH_MAC_INIT_SET_MAC_LOOP
+    rjmp  0b /* Keep within loop */
 ETH_MAC_INIT_SET_MAC_LOOP_END:
+    ret
 
+/* Write commands from EEPROM {{{2 ---------------------------------------------
+ * Read EEPROM pointed by Y
+ * ARG_REG1 number of commands to read
+ * Commands are 2 bytes long
+ */
+ETH_CMDS_FROM_EEPROM:
+    SPI_SELECT_ETH
+    rcall EEPROM_READ_N_INC
+    mov   ARG_REG1, RTV_L_REG
+    rcall SPI_MASTER_TRANSMIT
+    rcall EEPROM_READ_N_INC
+    mov   ARG_REG1, RTV_L_REG
+    rcall SPI_MASTER_TRANSMIT
+    SPI_END_ETH
+    dec   ARG_REG2
+    brne  ETH_CMDS_FROM_EEPROM
     ret
 
 /* Start buffer read {{{2 ----------------------------------------------------*/
@@ -275,14 +264,10 @@ ETH_READ_RECEIVE_HEADER:
 
     /* Read the whole receive status vector */
     /* TODO: NS_MEMCPY */
-    ldi   COUNTER_REG, RPKT_STATUS_VECTOR_LEN
     ldi   ZH, hi8(SRAM_RPKT_N_PKT_L)
     ldi   ZL, lo8(SRAM_RPKT_N_PKT_L)
-ETH_READ_RECEIVE_HEADER_LOOP:
-    rcall SPI_MASTER_TRANSMIT
-    st    Z+, RTV_L_REG
-    dec   COUNTER_REG
-    brne  ETH_READ_RECEIVE_HEADER_LOOP
+    ldi   ARG_REG1, RPKT_STATUS_VECTOR_LEN
+    rcall SPI_MEMCPY
 
     SPI_END_ETH
     pop   ZH
@@ -325,14 +310,10 @@ ETH_READ_MAC_ADDRS_N_LEN_TYPE:
     push  ZH
 
     /* Mac address SRC/DST and Type/len is all continuous in memory */
-    ldi   COUNTER_REG, (MAC_ADDR_LEN + MAC_ADDR_LEN + 2)
     ldi   ZH, hi8(SRAM_ENC_HEADER)
     ldi   ZL, lo8(SRAM_ENC_HEADER)
-ETH_READ_MAC_ADDRS_N_LEN_TYPE_KEEP_READING:
-    rcall SPI_MASTER_TRANSMIT
-    st    Z+, RTV_L_REG
-    dec   COUNTER_REG
-    brne  ETH_READ_MAC_ADDRS_N_LEN_TYPE_KEEP_READING
+    ldi   ARG_REG1, (MAC_ADDR_LEN + MAC_ADDR_LEN + 2)
+    rcall SPI_MEMCPY
 
     /* Update Mac Addr Dst & Type/Len ptr */
     /* TODO: Could be done in other way */
@@ -432,19 +413,11 @@ ETH_WRITE_BUFFER_PACKET_HEADER:
     push YH
     push COUNTER /* Same as TMP_PTR_H */
     push TMP_PTR_L
-    /* Set BANK 0 */
-    ldi   ARG_REG1, ENC_COMMON_ECON1
-    ldi   ARG_REG2, ENC_COMMON_ECON1_BSEL0 | ENC_COMMON_ECON1_BSEL1
-    rcall ETH_BIT_FIELD_CLEAR
 
-    /* Set Write Pointer EWRPT to start of transmit buffer */
-    ldi   ARG_REG1, ENC_BANK0_EWRPTL
-    ldi   ARG_REG2, BUF_TX_ST_L
-    rcall ETH_WRITE_CONTROL_REGISTER
-
-    ldi   ARG_REG1, ENC_BANK0_EWRPTH
-    ldi   ARG_REG2, BUF_TX_ST_H
-    rcall ETH_WRITE_CONTROL_REGISTER
+    ldi   YL, lo8(EEPROM_ENC_WRITE_BUFFER_PACKET_HEADER_PRESET)
+    ldi   YH, hi8(EEPROM_ENC_WRITE_BUFFER_PACKET_HEADER_PRESET)
+    ldi   ARG_REG2, (EEPROM_ENC_WRITE_BUFFER_PACKET_HEADER_PRESET_END - EEPROM_ENC_WRITE_BUFFER_PACKET_HEADER_PRESET) / 2
+    rcall ETH_CMDS_FROM_EEPROM
 
     /* Send write command */
     ldi   ARG_REG1, ETH_SPI_CMD_WBM
@@ -468,6 +441,7 @@ ETH_WRITE_BUFFER_PACKET_HEADER:
     mov   YH, TMP_PTR_H
     mov   YL, TMP_PTR_L
     ldi   COUNTER, MAC_ADDR_LEN
+    /* TODO: SPI_SRAM_TRANSMIT ? */
 ETH_WRITE_BUFFER_MAC_DST:
     ld    ARG_REG1, Y+
     rcall SPI_MASTER_TRANSMIT
@@ -578,26 +552,35 @@ ETH_SET_FLAG_KEEP_OPEN_AFTER_WRITE:
 
 /* Finish Write Payload {{{2 -------------------------------------------------*/
 ETH_WRITE_BUFFER_PACKET_PAYLOAD_FINISH:
-    /* read EWRPT and set BANK0 */
-    push  ZH
-    push  ZL
-    rcall ETH_GET_EWRPT_BANK0_TO_Z
+    /* Set BANK 0 */
+    ldi   ARG_REG1, ENC_COMMON_ECON1
+    ldi   ARG_REG2, ENC_COMMON_ECON1_BSEL0 | ENC_COMMON_ECON1_BSEL1
+    rcall ETH_BIT_FIELD_CLEAR
 
-    sbiw  ZL, 1
+    /* read EWRPT */
+    ldi   ARG_REG1, ENC_BANK0_EWRPTH
+    rcall ETH_READ_CONTROL_REGISTER
+    mov   RTV_H_REG, RTV_L_REG
+
+    ldi   ARG_REG1, ENC_BANK0_EWRPTL
+    rcall ETH_READ_CONTROL_REGISTER
+
+    /* Move pointer to last written byte */
+    subi  RTV_L_REG, 1
+    sbc   RTV_H_REG, ZERO_REG
 
     ldi   ARG_REG1, ENC_BANK0_ETXNDL
-    mov   ARG_REG2, ZL
+    mov   ARG_REG2, RTV_L_REG
     rcall ETH_WRITE_CONTROL_REGISTER
     ldi   ARG_REG1, ENC_BANK0_ETXNDH
-    mov   ARG_REG2, ZH
+    mov   ARG_REG2, RTV_H_REG
     rcall ETH_WRITE_CONTROL_REGISTER
 
-    pop   ZL
-    pop   ZH
     /* Clear ENC_COMMON_EIR.TXIF, set ENC_COMMON_EIE.TXIE and set ENC_COMMON_EIE.INTIE
      *   to enable an interrupt when done (if desired).
      *   Start the transmission process by setting
      */
+#if USE_TXIF
     ldi   ARG_REG1, ENC_COMMON_EIR
     ldi   ARG_REG2, (1 << ENC_COMMON_EIR_TXIF)
     rcall ETH_BIT_FIELD_CLEAR
@@ -605,49 +588,13 @@ ETH_WRITE_BUFFER_PACKET_PAYLOAD_FINISH:
     ldi   ARG_REG1, ENC_COMMON_EIE
     ldi   ARG_REG2, (1 << ENC_COMMON_EIE_TXIE) | (1 << ENC_COMMON_EIE_INTIE)
     rcall ETH_BIT_FIELD_SET
+#endif
 
     /* Set bits to send packet */
     ldi   ARG_REG1, ENC_COMMON_ECON1
     ldi   ARG_REG2, ENC_COMMON_ECON1_TXRTS
     rcall ETH_BIT_FIELD_SET
 
-ETH_WRITE_BUFFER_PACKET_PAYLOAD_FINISH_WAIT:
-    ldi   ARG_REG1, ENC_COMMON_ECON1
-    rcall ETH_READ_CONTROL_REGISTER
-    sbrc  RTV_L_REG, ENC_COMMON_ECON1_RXEN_BIT
-    rjmp  ETH_WRITE_BUFFER_PACKET_PAYLOAD_FINISH_WAIT
-
-    ldi   ARG_REG1, ENC_COMMON_EIR
-    ldi   ARG_REG2, (1 << ENC_COMMON_EIR_TXIF)
-    rcall ETH_BIT_FIELD_CLEAR
-
-    ret
-
-/* Get EWRPT into Z {{{2 -------------------------------------------------------
- * BEWARE, THIS ROUTINE IS GOING TO MODIFY THE CURRENT BANK, setting BANK0
- * Return [EWRPTH:EWRPTL] into [ZH:ZL] */
-ETH_GET_EWRPT_BANK0_TO_Z:
-    push  ARG_REG1
-    push  ARG_REG2
-    push  RTV_L_REG
-
-    /* Set BANK 0 */
-    ldi   ARG_REG1, ENC_COMMON_ECON1
-    ldi   ARG_REG2, ENC_COMMON_ECON1_BSEL0 | ENC_COMMON_ECON1_BSEL1
-    rcall ETH_BIT_FIELD_CLEAR
-
-    /* read EWRPT */
-    ldi   ARG_REG1, ENC_BANK0_EWRPTL
-    rcall ETH_READ_CONTROL_REGISTER
-    mov   ZL, RTV_L_REG
-
-    ldi   ARG_REG1, ENC_BANK0_EWRPTH
-    rcall ETH_READ_CONTROL_REGISTER
-    mov   ZH, RTV_L_REG
-
-    pop   RTV_L_REG
-    pop   ARG_REG2
-    pop   ARG_REG1
     ret
 
 /* Move the RDPT {{{2 ----------------------------------------------------------
@@ -661,10 +608,11 @@ ETH_GET_EWRPT_BANK0_TO_Z:
  *      ERDPT = Packet Start Address + Offset - (ERXND - ERXST + 1)
  *   else
  *      ERDPT = Packet Start Address + Offset */
+#if USE_MOVE_RDPT
 #define RDPT_H R23
 #define RDPT_L R24
 #define TMP_REG3 RTV_L_REG
-ETH_MOVE_READ_POINTER:
+ETH_MOVE_RDPT:
     push  RDPT_H
     push  RDPT_L
     /* Save ARG_REG[12] to be used later */
@@ -751,5 +699,6 @@ UPDATE_ERDPT:
 #undef RDPT_H
 #undef RDPT_L
 #undef TMP_REG3
+#endif
 
 .end

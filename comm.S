@@ -47,6 +47,12 @@ SRAM_COMM_PAYLOAD:     .skip (DHT11_PAYLOAD_LEN + MQ135_PAYLOAD_LEN)
 /* COMM init {{{2 --------------------------------------------------------------
  * Initialize communication */
 COMM_INIT:
+    ldi   ZL, lo8(SRAM_COMM_RR_ITERATOR)
+    ldi   ZH, hi8(SRAM_COMM_RR_ITERATOR)
+    ldi   COUNTER_REG, (COMM_DST_TBL_LEN + DHT11_PAYLOAD_LEN + MQ135_PAYLOAD_LEN + 1 + 2)
+0:  st    Z+, ZERO_REG
+    dec   COUNTER_REG
+    brne  0b
     sts   SRAM_COMM_RR_ITERATOR, ZERO_REG
     ldi   TMP_REG2, hi8(ETHER_TYPE_IPV4)
     sts   SRAM_COMM_TYPE_LEN + 0, TMP_REG2

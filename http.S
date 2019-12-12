@@ -60,14 +60,8 @@ FILL_8_DOT_8_VALUE:
     adiw  ZL, 1
 
     ld    ARG_REG1, Y+
-    ldi   TMP_REG2, ASCII_ZERO
-    ldi   TMP_REG1, 10
-    mul   ARG_REG1, TMP_REG1
-    add   XMULX_RTV_H_REG, TMP_REG2 /* + '0' */
-    st    Z+, XMULX_RTV_H_REG
-    mul   XMULX_RTV_L_REG, TMP_REG1
-    add   XMULX_RTV_H_REG, TMP_REG2 /* + '0' */
-    st    Z+, XMULX_RTV_H_REG
+    subi  ARG_REG1, -ASCII_ZERO /* + '0' */
+    st    Z+, ARG_REG1
 
     ret
 

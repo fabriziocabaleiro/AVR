@@ -18,6 +18,7 @@
 .global SPI_MASTER_INIT
 .global SPI_MASTER_TRANSMIT
 .global SPI_EEPROM_TRANSMIT
+.global SPI_MEMCPY
 
 /* TEXT {{{1 -----------------------------------------------------------------*/
 .section .text
@@ -70,5 +71,16 @@ SPI_EEPROM_TRANSMIT:
     dec   COUNTER_REG
     brne  0b
     ret
+
+/* Copy from SPI to memory {{{2 ------------------------------------------------
+ * Copy ARG_REG1 from SPI to memory pointed by Z
+ */
+SPI_MEMCPY:
+    dec   ARG_REG1
+    brmi  0f
+    rcall SPI_MASTER_TRANSMIT
+    st    Z+, RTV_L_REG
+    rjmp  SPI_MEMCPY
+0:  ret
 
 .end

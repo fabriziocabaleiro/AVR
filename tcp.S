@@ -15,7 +15,7 @@
 #define TCP_HEADER_LEN_REG   SAVED1_REG
 #define TCP_PAYLOAD_LEN_REG  SAVED2_REG
 #define SEQ_N_LEN            4
-#define TCP_PAYLOAD_LEN      20
+#define TCP_PAYLOAD_LEN      (EEPROM_HTTP_RESPONSE_END - EEPROM_HTTP_RESPONSE)
 
 /* GLOBAL {{{1 ---------------------------------------------------------------*/
 .global TCP_HANDLE_PKT
