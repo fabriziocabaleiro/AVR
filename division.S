@@ -15,31 +15,32 @@
 /* Divide by right shift {{{2
  * Y points to src data
  * Z points to dst data
- * ARG_REG1 number of right shift, i.e. ARG_REG1 = 1 means division by 2
- * ARG_REG2 number of bytes in the division
+ * x1 number of right shift, i.e. x1 = 1 means division by 2
+ * x2 number of bytes in the division
  */
+/* TODO: remove file */
 DIV_RIGHT_SHIFT:
     push  YL
     push  YH
-    push  COUNTER_REG
+    push  t3
     clc /* Clear carry for first ror */
-    mov   TMP_REG2, ARG_REG1
+    mov   t2, x1
 DIV_SHIFTS_LOOP:
-    mov   COUNTER_REG, ARG_REG2
+    mov   t3, x2
 DIV_BYTES_LOOP:
-    ld    TMP_REG1, Y+
-    ror   TMP_REG1
-    st    Z+, TMP_REG1
-    dec   COUNTER_REG
+    ld    t1, Y+
+    ror   t1
+    st    Z+, t1
+    dec   t3
     brne  DIV_BYTES_LOOP
     /* Set pointer back to origin and use dst address as src */
-    sub   ZL, ARG_REG2
+    sub   ZL, x2
     sbci  ZH, 0
     mov   YL, ZL
     mov   YH, ZH
-    dec   TMP_REG2
+    dec   t2
     brne  DIV_SHIFTS_LOOP
-    pop   COUNTER_REG
+    pop   t3
     pop   YH
     pop   YL
 

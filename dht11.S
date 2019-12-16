@@ -44,8 +44,6 @@
 #   error "Unsupported F_CPU value"
 #endif
 
-#define TCNT2_TMP_REG RTV_L_REG
-
 /* GLOBAL {{{1 ---------------------------------------------------------------*/
 .global DHT11_INIT
 .global DHT11_READ
@@ -64,19 +62,19 @@ SRAM_DHT11_PAYLOAD: .skip DHT11_PAYLOAD_LEN
  * Setup interrupt port as Input with value Zero */
 DHT11_INIT:
     /* Disable interrupt */
-    in    TMP_REG1, _SFR_IO_ADDR(TIMSK)
-    cbr   TMP_REG1, (1 << TOIE2)
-    out   _SFR_IO_ADDR(TIMSK), TMP_REG1
+    in    t1, _SFR_IO_ADDR(TIMSK)
+    cbr   t1, (1 << TOIE2)
+    out   _SFR_IO_ADDR(TIMSK), t1
 
     /* Set INT1 on falling edge */
-    in    TMP_REG1, _SFR_IO_ADDR(MCUCR)
-    sbr   TMP_REG1, (1 << ISC11)
-    out   _SFR_IO_ADDR(MCUCR), TMP_REG1
+    in    t1, _SFR_IO_ADDR(MCUCR)
+    sbr   t1, (1 << ISC11)
+    out   _SFR_IO_ADDR(MCUCR), t1
 
     /* Set Interrupt in INT1 */
-    in    TMP_REG2, _SFR_IO_ADDR(GICR)
-    sbr   TMP_REG2, (1 << INT1)
-    out   _SFR_IO_ADDR(GICR), TMP_REG2
+    in    t2, _SFR_IO_ADDR(GICR)
+    sbr   t2, (1 << INT1)
+    out   _SFR_IO_ADDR(GICR), t2
 
     /* Set INT1 */
     /* This line must be hold high while the DHT11 is not in used. */
@@ -90,7 +88,7 @@ DHT11_INIT:
 /* Read data from sensor {{{2 --------------------------------------------------
  * Data is store in SRAM_DHT11_PAYLOAD
  * Interrupt are used with falling edge
- * COUNTER_REG used to count falling edge on interrupt pin, so we know when data
+ * t3 used to count falling edge on interrupt pin, so we know when data
  *   start arriving and when bytes have been transmitted.
  * BEWARE: Idle is the only sleep mode that support edge interrupts
  * BEWARE: Calling this routine at 1Hz causes issues, DHT11 sensor should not be
@@ -100,18 +98,18 @@ DHT11_READ:
     push  ZH
 
     /* Setup initial Step, used when receiving stream of data */
-    ldi   COUNTER_REG, DHT11_RESPONSE_INIT
+    ldi   t3, DHT11_RESPONSE_INIT
 
     /* Set clock prescaler to 1024, to we can have ms easily */
-    in    TMP_REG2, _SFR_IO_ADDR(TCCR2)
-    sbr   TMP_REG2, (1 << CS22)|(1 << CS21)|(1 << CS20)
-    out   _SFR_IO_ADDR(TCCR2), TMP_REG2
+    in    t2, _SFR_IO_ADDR(TCCR2)
+    sbr   t2, (1 << CS22)|(1 << CS21)|(1 << CS20)
+    out   _SFR_IO_ADDR(TCCR2), t2
 
     /* Start communication by pulling down */
     sbi   _SFR_IO_ADDR(DDRD),  PD3
 
     /* Clear the counter */
-    out   _SFR_IO_ADDR(TCNT2), ZERO_REG
+    out   _SFR_IO_ADDR(TCNT2), zero
     /* Pulling Down data line for at least 18ms */
 DHT11_READ_WAIT_START_SIGNAL:
     in    ZL, _SFR_IO_ADDR(TCNT2)
@@ -120,20 +118,20 @@ DHT11_READ_WAIT_START_SIGNAL:
 
     /* Set clock prescaler to 8, which gives good precision to differentiate
      * between a ZERO or ONE sent by the DHT11 */
-    in    TMP_REG2, _SFR_IO_ADDR(TCCR2)
-    cbr   TMP_REG2, (1 << CS22)|(1 << CS21)|(1 << CS20)
-    sbr   TMP_REG2, T2_PRESCALER
-    out   _SFR_IO_ADDR(TCCR2), TMP_REG2
+    in    t2, _SFR_IO_ADDR(TCCR2)
+    cbr   t2, (1 << CS22)|(1 << CS21)|(1 << CS20)
+    sbr   t2, T2_PRESCALER
+    out   _SFR_IO_ADDR(TCCR2), t2
 
     /* Clear Timer 2 Overflow flag */
-    in    TMP_REG2, _SFR_IO_ADDR(TIFR)
-    sbr   TMP_REG2, (1 << TOV2)
-    out   _SFR_IO_ADDR(TIFR), TMP_REG2
+    in    t2, _SFR_IO_ADDR(TIFR)
+    sbr   t2, (1 << TOV2)
+    out   _SFR_IO_ADDR(TIFR), t2
 
     /* Set timer overflow interrupt enable */
-    in    TMP_REG2, _SFR_IO_ADDR(TIMSK)
-    sbr   TMP_REG2, (1 << TOIE2)
-    out   _SFR_IO_ADDR(TIMSK), TMP_REG2
+    in    t2, _SFR_IO_ADDR(TIMSK)
+    sbr   t2, (1 << TOIE2)
+    out   _SFR_IO_ADDR(TIMSK), t2
 
     /* Set Z to point to DHT11 payload */
     ldi   ZH, hi8(SRAM_DHT11_PAYLOAD)
@@ -145,16 +143,16 @@ DHT11_READ_WAIT_START_SIGNAL:
     cbi   _SFR_IO_ADDR(DDRD), PD3
 
     /* 40 cycles, one for each bit, plus 2 falling edges at the beginning */
-    ldi   TMP_REG1, 42
+    ldi   t1, 42
 DHT11_TRANSMISSION_LOOP:
     sleep
-    dec   TMP_REG1
+    dec   t1
     brne  DHT11_TRANSMISSION_LOOP
 
     /* Unset timer overflow interrupt enable */
-    in    TMP_REG2, _SFR_IO_ADDR(TIMSK)
-    cbr   TMP_REG2, (1 << TOIE2)
-    out   _SFR_IO_ADDR(TIMSK), TMP_REG2
+    in    t2, _SFR_IO_ADDR(TIMSK)
+    cbr   t2, (1 << TOIE2)
+    out   _SFR_IO_ADDR(TIMSK), t2
 
     pop   ZH
     pop   ZL
@@ -166,31 +164,31 @@ DHT11_TRANSMISSION_LOOP:
 TIMER2_OVF_vect:
 INT1_vect:
     /* Read counter and reset it */
-    in    TCNT2_TMP_REG, _SFR_IO_ADDR(TCNT2)
-    out   _SFR_IO_ADDR(TCNT2), ZERO_REG
+    in    x3, _SFR_IO_ADDR(TCNT2) /* Using x3 as temporary reg */
+    out   _SFR_IO_ADDR(TCNT2), zero
 
-    inc   COUNTER_REG
-    cpi   COUNTER_REG, DHT11_RESPONSE_DATA_COMING
+    inc   t3
+    cpi   t3, DHT11_RESPONSE_DATA_COMING
     /* Return right away for the two falling edges before data transmission */
     brmi  DHT11_INT1_vect_EXIT
 
 DATA_IS_COMING:
     /* Load data from SRAM, shift left, decode incoming data, set LSB in case of
      * a one, save data back to SRAM */
-    ld    TMP_REG2, Z
-    lsl   TMP_REG2
+    ld    t2, Z
+    lsl   t2
 
-    cpi   TCNT2_TMP_REG, INTERVAL_THRESHOLD
+    cpi   x3, INTERVAL_THRESHOLD
     brlo  DHT11_SENT_0
 
 DHT11_SENT_1:
-    sbr   TMP_REG2, 0x01
+    sbr   t2, 0x01
 DHT11_SENT_0:
-    st    Z, TMP_REG2
+    st    Z, t2
 
     /* Increment Z if we finished writing a byte */
-    mov   TMP_REG2, COUNTER_REG
-    andi  TMP_REG2, 0x07
+    mov   t2, t3
+    andi  t2, 0x07
     brne  DHT11_INT1_vect_EXIT
     adiw  ZL, 1
 DHT11_INT1_vect_EXIT:

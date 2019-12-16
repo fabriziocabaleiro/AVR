@@ -48,13 +48,10 @@ SRAM_IPV4_PAYLOAD:      .skip   IPV4_PAYLOAD_LEN
 /* Handle IPv4 packet {{{2 -----------------------------------------------------
  * Check protocol (tcp, udp, etc) and port to deliver to corresponding routine
  * IP version != 4 will be ignore */
-#define IPV4_HEADER_FLAGS_REG R23
-#define RECEIVED_IP_IS_MINE_BIT      3
-#define RECEIVED_IP_IS_BROADCAST_BIT 7
 IPV4_HANDLE_PKT:
     push  ZH
     push  ZL
-    push  IPV4_HEADER_FLAGS_REG
+    push  s1 /* IPv4 broadcast and unicast to me flags */
 
     /* Read IPv4 Header */
     ldi   ZL, lo8(SRAM_IPV4_HEADER)
@@ -65,95 +62,95 @@ IPV4_HANDLE_PKT:
      * assign counter with the length and check that version is 4, if not,
      * return 1 and exit */
     ETH_READ_NEXT_BYTE
-    st    Z+, RTV_L_REG
-    mov   COUNTER_REG, RTV_L_REG
+    st    Z+, x4
+    mov   t3, x4
     /* Check if IPv4 */
-    andi  RTV_L_REG, 0xF0
-    cpi   RTV_L_REG, 0x40
+    andi  x4, 0xF0
+    cpi   x4, 0x40
     /* Only IPv4 will be handle, other versions will be ignore */
     breq  PACKET_IS_IPV4
     rjmp  IPV4_HANDLE_EXIT
 PACKET_IS_IPV4:
-    andi  COUNTER_REG, 0x0F
+    andi  t3, 0x0F
     /* Length is in 32bits words, as reading bytes, then IHL * 4, then subtract
      * one as the first bytes was already read */
-    lsl   COUNTER_REG
-    lsl   COUNTER_REG
+    lsl   t3
+    lsl   t3
     /* Taking the chance to store the Internet Header Length in bytes */
-    sts   SRAM_IPV4_IHL_IN_BYTES, COUNTER_REG
+    sts   SRAM_IPV4_IHL_IN_BYTES, t3
     /* We already read one byte (version|IHL), so, subtract 1 */
-    subi  COUNTER_REG, 1
+    subi  t3, 1
     /* Read the rest of the IPv4 header */
 READ_HEADER:
     ETH_READ_NEXT_BYTE
-    st    Z+, RTV_L_REG
-    dec   COUNTER_REG
+    st    Z+, x4
+    dec   t3
     brne  READ_HEADER
     ETH_READ_BUFFER_END
 
     push  YL
     push  YH
     /* Check if Dst IP Address is ours */
-    clr   IPV4_HEADER_FLAGS_REG
+    clr   s1
     ldi   YH, hi8(EEPROM_IP_ADDR)
     ldi   YL, lo8(EEPROM_IP_ADDR)
     ldi   ZL, lo8(SRAM_IPV4_HEADER + IPV4_DST_ADDR)
     ldi   ZH, hi8(SRAM_IPV4_HEADER + IPV4_DST_ADDR)
-    ldi   ARG_REG1, IPV4_ADDR_LEN
+    ldi   x1, IPV4_ADDR_LEN
     rcall ES_MEMCMP
     brne  0f
-    sbr   IPV4_HEADER_FLAGS_REG, (1 << RECEIVED_IP_IS_MINE_BIT)
+    sbr   s1, (1 << RECEIVED_IP_IS_MINE_BIT)
 0:
 
     /* Check if Dst IP Address is broadcast */
     movw  YL, ZL
-    ldi   ARG_REG2, 0xFF
+    ldi   x2, 0xFF
     rcall REG_MEMCMP
     brne  0f
-    sbr   IPV4_HEADER_FLAGS_REG, (1 << RECEIVED_IP_IS_BROADCAST_BIT)
+    sbr   s1, (1 << RECEIVED_IP_IS_BROADCAST_BIT)
 0:
 
     /* Get and store IPv4 Payload length in bytes */
     sbiw  YL, (IPV4_DST_ADDR - IPV4_TOTAL_LENGTH - 1)
-    ld    TMP_REG1, Y
-    lds   TMP_REG2, SRAM_IPV4_IHL_IN_BYTES
-    sub   TMP_REG1, TMP_REG2 /* total length - header */
+    ld    t1, Y
+    lds   t2, SRAM_IPV4_IHL_IN_BYTES
+    sub   t1, t2 /* total length - header */
     /* TODO: use STD which is lighter than STS */
-    sts   SRAM_IPV4_PAYLOAD_LENGTH_IN_BYTES + 1, TMP_REG1
-    ld    TMP_REG1, -Y
-    sbc   TMP_REG1, ZERO_REG
-    sts   SRAM_IPV4_PAYLOAD_LENGTH_IN_BYTES, TMP_REG1
+    sts   SRAM_IPV4_PAYLOAD_LENGTH_IN_BYTES + 1, t1
+    ld    t1, -Y
+    sbc   t1, zero
+    sts   SRAM_IPV4_PAYLOAD_LENGTH_IN_BYTES, t1
 
     pop   YH
     pop   YL
 
-    sts   SRAM_IPV4_FLAGS, IPV4_HEADER_FLAGS_REG
+    sts   SRAM_IPV4_FLAGS, s1
 
     /* Deliver packet using IPv4 protocol {{{ */
     sbiw  ZL, IPV4_DST_ADDR
     /* Load Internet protocol number */
-    ldd   TMP_REG1, Z + IPV4_PROTOCOL
+    ldd   t1, Z + IPV4_PROTOCOL
 
     /* We may receive a DHCP packet that doesn't have our current IP address,
      * therefore we don't check if Dst IP Addr is ours */
-    cpi   TMP_REG1, INTERNET_PROTOCOL_NUMBER_USER_DATAGRAM
+    cpi   t1, INTERNET_PROTOCOL_NUMBER_USER_DATAGRAM
     brne  RETURN_IF_IP_PACKET_NOT_FOR_ME
     rcall UDP_HANDLE_PKT
     rjmp  IPV4_HANDLE_EXIT
 
     /* Stop processing IP packet if Dst IP address is not mine */
 RETURN_IF_IP_PACKET_NOT_FOR_ME:
-    sbrs  IPV4_HEADER_FLAGS_REG, RECEIVED_IP_IS_MINE_BIT
+    sbrs  s1, RECEIVED_IP_IS_MINE_BIT
     rjmp  IPV4_HANDLE_EXIT
 
 TRY_PROTOCOL_ICMP:
-    cpi   TMP_REG1, INTERNET_PROTOCOL_NUMBER_ICMP
+    cpi   t1, INTERNET_PROTOCOL_NUMBER_ICMP
     brne  TRY_PROTOCOL_TCP
     rcall ICMP_HANDLE_PKT
     rjmp  IPV4_HANDLE_EXIT
 
 TRY_PROTOCOL_TCP:
-    cpi   TMP_REG1, INTERNET_PROTOCOL_NUMBER_TCP
+    cpi   t1, INTERNET_PROTOCOL_NUMBER_TCP
     brne  IPV4_HANDLE_EXIT
     /* TCP not implemented yet */
     rcall TCP_HANDLE_PKT
@@ -161,7 +158,7 @@ TRY_PROTOCOL_TCP:
     /* }}} */
 
 IPV4_HANDLE_EXIT:
-    pop   IPV4_HEADER_FLAGS_REG
+    pop   s1
     pop   ZL
     pop   ZH
     ret
@@ -170,83 +167,83 @@ IPV4_HANDLE_EXIT:
  * Byte order independent
  *
  * Input:
- *   ZH:ZL     Address to start reading from
- *   ARG_REG1  Bytes to read, if odd, then, rounded down.
- *   ARG_REG2[0] == 1 ? Include Pseudo header.
+ *   ZH:ZL Address to start reading from
+ *   x1    Bytes to read.
+ *   x2[0] == 1 ? Include Pseudo header.
  *
- * Return value (checksum) in [RTV_H_REG:RTV_L_REG]
+ * Return value (checksum) in [x3:x4]
  * previous value of Y is lost, caller must take care of it. */
 INTERNET_CHECKSUM_RFC1071:
     push  ZL
     push  ZH
     push  YL
     push  YH
-    push  SAVED1_REG
-    push  SAVED2_REG
-    push  ARG_REG1
+    push  s1
+    push  s2
+    push  x1
 
-    mov   SAVED2_REG, ARG_REG1
-    clr   RTV_L_REG
-    clr   RTV_H_REG
-    clr   TMP_REG2
+    mov   s2, x1
+    clr   x4
+    clr   x3
+    clr   t2
 
     clc   /* Clear any carry from before */
 
 IPV4_PING_CHECKSUM_LOOP:
-    ld    TMP_REG1, Z+
-    sbrs  TMP_REG2, 0
-    adc   RTV_H_REG, TMP_REG1
-    sbrc  TMP_REG2, 0
-    adc   RTV_L_REG, TMP_REG1
-    inc   TMP_REG2
-    dec   ARG_REG1
+    ld    t1, Z+
+    sbrs  t2, 0
+    adc   x3, t1
+    sbrc  t2, 0
+    adc   x4, t1
+    inc   t2
+    dec   x1
     brne  IPV4_PING_CHECKSUM_LOOP
 
     /* pseudo header */
-    sbrs  ARG_REG2, 0
+    sbrs  x2, 0
     rjmp  INTERNET_CHECKSUM_LOOP_END
 
     /* Save Status Register to continue summation with pseudo header */
-    in    SAVED1_REG, _SFR_IO_ADDR(SREG)
+    in    s1, _SFR_IO_ADDR(SREG)
 
     /* Copy src/dst IP addresses */
     ldi   YL, lo8(SRAM_IPV4_HEADER + IPV4_SRC_ADDR)
     ldi   YH, hi8(SRAM_IPV4_HEADER + IPV4_SRC_ADDR)
     ldi   ZL, lo8(SRAM_IPV4_PSEUDO_HEADER)
     ldi   ZH, hi8(SRAM_IPV4_PSEUDO_HEADER)
-    ldi   ARG_REG1, IPV4_ADDR_LEN * 2
+    ldi   x1, IPV4_ADDR_LEN * 2
     rcall MEMCPY
 
     /* Reserve byte and IPv4 Protocol */
-    st    Z+, ZERO_REG
-    lds   TMP_REG1, (SRAM_IPV4_HEADER + IPV4_PROTOCOL)
-    st    Z+, TMP_REG1
+    st    Z+, zero
+    lds   t1, (SRAM_IPV4_HEADER + IPV4_PROTOCOL)
+    st    Z+, t1
 
     /* Length, this length does NOT include the pseudo header length */
-    st    Z+, ZERO_REG
-    st    Z+, SAVED2_REG
+    st    Z+, zero
+    st    Z+, s2
     
-    cbr   ARG_REG2, 1
-    clr   TMP_REG2
+    cbr   x2, 1
+    clr   t2
     ldi   ZL, lo8(SRAM_IPV4_PSEUDO_HEADER)
     ldi   ZH, hi8(SRAM_IPV4_PSEUDO_HEADER)
-    ldi   ARG_REG1, IPV4_PSEUDO_HEADER_LEN
-    out   _SFR_IO_ADDR(SREG), SAVED1_REG
+    ldi   x1, IPV4_PSEUDO_HEADER_LEN
+    out   _SFR_IO_ADDR(SREG), s1
     rjmp  IPV4_PING_CHECKSUM_LOOP
 
 INTERNET_CHECKSUM_LOOP_END:
     /* If the last addition generated a Carry, then add zero with carry, which
-     * could also generate a Carry into RTV_H_REG, so, add zero with carry as
+     * could also generate a Carry into x3, so, add zero with carry as
      * well */
-    adc   RTV_H_REG, ZERO_REG
-    adc   RTV_L_REG, ZERO_REG
+    adc   x3, zero
+    adc   x4, zero
 
-    com   RTV_L_REG
-    com   RTV_H_REG
+    com   x4
+    com   x3
 
-    pop   ARG_REG1
-    pop   SAVED2_REG
-    pop   SAVED1_REG
+    pop   x1
+    pop   s2
+    pop   s1
     pop   YH
     pop   YL
     pop   ZH
@@ -254,7 +251,7 @@ INTERNET_CHECKSUM_LOOP_END:
     ret
 
 /* Prepare IPv4 header {{{2 ----------------------------------------------------
- * ARG_REG1 total size */
+ * x1 total size */
 IPV4_PREPARE_DEFAULT_HEADER_20_40_BYTES:
     push  YH
     push  YL
@@ -265,52 +262,52 @@ IPV4_PREPARE_DEFAULT_HEADER_20_40_BYTES:
     /* TODO: ES_MEMCMP */
     ldi   YL, lo8(EEPROM_IP_HEADER)
     ldi   YH, hi8(EEPROM_IP_HEADER)
-    ldi   COUNTER_REG, (EEPROM_IP_HEADER_TIL_CHK_SUM - EEPROM_IP_HEADER)
+    ldi   t3, (EEPROM_IP_HEADER_TIL_CHK_SUM - EEPROM_IP_HEADER)
     /* Write to */
     ldi   ZL, lo8(SRAM_IPV4_HEADER)
     ldi   ZH, hi8(SRAM_IPV4_HEADER)
 IPV4_PREPARE_HEADER_GET_FROM_EEPROM:
     rcall EEPROM_READ_N_INC
-    st    Z+, RTV_L_REG
-    dec   COUNTER_REG
+    st    Z+, x4
+    dec   t3
     brne  IPV4_PREPARE_HEADER_GET_FROM_EEPROM
     /* till here we have 10 bytes written. Now we have to write checksum and
      * src/dst IP addresses */
     /* Write zero checksum for the moment */
-    st    Z+, ZERO_REG
-    st    Z+, ZERO_REG
+    st    Z+, zero
+    st    Z+, zero
 
     /* SRC IP Address */
     ldi   YL, lo8(EEPROM_IP_ADDR)
     ldi   YH, hi8(EEPROM_IP_ADDR)
-    ldi   COUNTER_REG, IPV4_ADDR_LEN
+    ldi   t3, IPV4_ADDR_LEN
 IPV4_PREPARE_HEADER_GET_IP_FROM_EEPROM:
     rcall EEPROM_READ_N_INC
-    st    Z+, RTV_L_REG
-    dec   COUNTER_REG
+    st    Z+, x4
+    dec   t3
     brne  IPV4_PREPARE_HEADER_GET_IP_FROM_EEPROM
 
     /* DST IP Address */
     /* TODO: MEMCPY */
     ldi   YL, lo8(SRAM_IP_ADDR_DST)
     ldi   YH, hi8(SRAM_IP_ADDR_DST)
-    ldi   COUNTER_REG, IPV4_ADDR_LEN
+    ldi   t3, IPV4_ADDR_LEN
 IPV4_PREPARE_HEADER_GET_IP_FROM_EEPROM_DST:
-    ld    TMP_REG1, Y+
-    st    Z+, TMP_REG1
-    dec   COUNTER_REG
+    ld    t1, Y+
+    st    Z+, t1
+    dec   t3
     brne  IPV4_PREPARE_HEADER_GET_IP_FROM_EEPROM_DST
 
     /* Update Total length and calculate Checksum */
     ldi   ZL, lo8(SRAM_IPV4_HEADER)
     ldi   ZH, hi8(SRAM_IPV4_HEADER)
-    std   Z + (IPV4_TOTAL_LENGTH + 1), ARG_REG1
+    std   Z + (IPV4_TOTAL_LENGTH + 1), x1
 
-    ldi   ARG_REG1, IPV4_DEFAULT_HEADER_LEN
-    ldi   ARG_REG2, 0
+    ldi   x1, IPV4_DEFAULT_HEADER_LEN
+    ldi   x2, 0
     rcall INTERNET_CHECKSUM_RFC1071
-    std   Z + (IPV4_H_CHECKSUM + 0), RTV_H_REG
-    std   Z + (IPV4_H_CHECKSUM + 1), RTV_L_REG
+    std   Z + (IPV4_H_CHECKSUM + 0), x3
+    std   Z + (IPV4_H_CHECKSUM + 1), x4
 
     pop   ZL
     pop   ZH
@@ -319,7 +316,7 @@ IPV4_PREPARE_HEADER_GET_IP_FROM_EEPROM_DST:
     ret
 
 /* Using incoming IPv4 header for outgoing IPv4 header {{{2 --------------------
-   ARG_REG1: IPv4 Total Length in bytes
+   x1: IPv4 Total Length in bytes
    Z will be left pointing to SRAM_IPV4_HEADER
    */
 IPV4_PREPARE_INCOMING_HEADER_FOR_RESPONSE:
@@ -329,28 +326,28 @@ IPV4_PREPARE_INCOMING_HEADER_FOR_RESPONSE:
     /* IPv4 payload length */
     ldi   ZL, lo8(SRAM_IPV4_HEADER)
     ldi   ZH, hi8(SRAM_IPV4_HEADER)
-    std   Z + (IPV4_TOTAL_LENGTH + 0), ZERO_REG
-    std   Z + (IPV4_TOTAL_LENGTH + 1), ARG_REG1
+    std   Z + (IPV4_TOTAL_LENGTH + 0), zero
+    std   Z + (IPV4_TOTAL_LENGTH + 1), x1
 
     /* Swap SRC/DST IP Addresses */
     adiw  ZL, IPV4_SRC_ADDR
     ldi   YL, lo8(SRAM_IPV4_HEADER + IPV4_DST_ADDR)
     ldi   YH, hi8(SRAM_IPV4_HEADER + IPV4_DST_ADDR)
-    ldi   ARG_REG1, IPV4_ADDR_LEN
+    ldi   x1, IPV4_ADDR_LEN
     rcall MEMSWAP
 
     /* ipv4 checksum */
     /* Zero out checksum */
     sbiw  ZL, (IPV4_SRC_ADDR + IPV4_ADDR_LEN - IPV4_H_CHECKSUM)
-    st    Z+, ZERO_REG
-    st    Z+, ZERO_REG
+    st    Z+, zero
+    st    Z+, zero
     sbiw  ZL, (IPV4_H_CHECKSUM + 2) /* set Z to IPv4 header */
     /* TODO: handle identification ? */
-    lds   ARG_REG1, SRAM_IPV4_IHL_IN_BYTES
-    ldi   ARG_REG2, 0
+    lds   x1, SRAM_IPV4_IHL_IN_BYTES
+    ldi   x2, 0
     rcall INTERNET_CHECKSUM_RFC1071
-    std   Z + IPV4_H_CHECKSUM + 0, RTV_H_REG
-    std   Z + IPV4_H_CHECKSUM + 1, RTV_L_REG
+    std   Z + IPV4_H_CHECKSUM + 0, x3
+    std   Z + IPV4_H_CHECKSUM + 1, x4
 
     pop   YH
     pop   YL

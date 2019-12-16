@@ -12,8 +12,6 @@
 #define UDP_PKT_LEN    14
 #define UDP_HEADER_LEN  8
 
-#define TMP_REG4 ARG_REG2
-
 /* GLOBAL {{{1 ---------------------------------------------------------------*/
 .global UDP_HANDLE_PKT
 .global UDP_PREPARE_PACKET
@@ -37,19 +35,19 @@ UDP_HANDLE_PKT:
 
     rcall ETH_READ_BUFFER_START
     /* Read UDP header */
-    ldi   COUNTER_REG, UDP_HEADER_LEN
+    ldi   t3, UDP_HEADER_LEN
     ldi   ZL, lo8(SRAM_UDP_HEADER)
     ldi   ZH, hi8(SRAM_UDP_HEADER)
 READ_HEADER:
     ETH_READ_NEXT_BYTE
-    st    Z+, RTV_L_REG
-    dec   COUNTER_REG
+    st    Z+, x4
+    dec   t3
     brne  READ_HEADER
 
     /* Set common argument for ES_MEMCMP */
     ldi   ZL, lo8(SRAM_UDP_HEADER)
     ldi   ZH, hi8(SRAM_UDP_HEADER)
-    ldi   ARG_REG1, 4
+    ldi   x1, 4
 
     /* DHCP */
     ldi   YL, lo8(EEPROM_DHCP_SRC_DST_PORT)
@@ -86,17 +84,17 @@ UDP_PREPARE_PACKET:
     ldi   YL, lo8(SRAM_UDP_HEADER)
     ldi   YH, hi8(SRAM_UDP_HEADER)
     /* Write Src, Dst and Length. Chksum will be written next */
-    ldi   ARG_REG1, (UDP_HEADER_CHK_SUM - UDP_HEADER_SRC_PORT)
+    ldi   x1, (UDP_HEADER_CHK_SUM - UDP_HEADER_SRC_PORT)
     rcall MEMCPY
 
     /* Clear checksum */
-    st    Z+, ZERO_REG
-    st    Z+, ZERO_REG
+    st    Z+, zero
+    st    Z+, zero
 
     /* Copy payload */
     pop   YH
     pop   YL
-    lds   ARG_REG1, SRAM_UDP_PKT_LEN + 1
+    lds   x1, SRAM_UDP_PKT_LEN + 1
     rcall MEMCPY
 
     ret

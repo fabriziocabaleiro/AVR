@@ -6,7 +6,7 @@
 /* Use move read pointer
  * Respose for DHCP may be faster, as it can jump through BOOTP legacy, but it
  * uses a big amount of instructions, so preferring smaller footprint */
-#define USE_MOVE_RDPT 0
+#define USE_MOVE_RDPT 1
 
 /* Choose what interrupts to use */
 /* This interrupt is triggered when a packet is received, but there is no space

@@ -8,25 +8,37 @@
 #define USE_DHT11
 
 /* Registers {{{1 -------------------------------------------------------------*/
-#define XMULX_RTV_L_REG  R0
-#define XMULX_RTV_H_REG  R1
-#define SAVED1_REG       R2
-#define SAVED2_REG       R3
-#define ZERO_REG         R10
-#define ENC_INT_RQST_REG R15
-/* Register used for temporary values, they may be change after any rcall */
-#define TMP_REG1         R16
-#define TMP_REG2         R17
-/* Register used to pass arguments to routines, some routines will change their
- * values, other won't */
-#define ARG_REG1         R18
-#define ARG_REG2         R19
-/* Registers used to pass values back from routines.
- * Routines may change them even though they don't return anything */
-#define RTV_L_REG        R20
-#define RTV_H_REG        R21
-/* Counter */
-#define COUNTER_REG      R22
+/* Multiplication output */
+#define ml     R0
+#define mh     R1
+
+/* This register is set to zero at the beginning of main and must stay like that
+ * forever */
+#define zero   R10
+
+/* Register for exchanging values with routines.
+ * All of this registers may change after calling a routine.
+ * We prefer to:
+ * - Populate input values from x1 to x4.
+ * - Populate return values from x4 to x1.
+ * By doing this, we may be able to retain the value of the input register,
+ * avoiding the need of resetting them. */
+#define x1     R16
+#define x2     R17
+#define x3     R18 /* used with movw */
+#define x4     R19
+
+/* Register used for temporary values, they may be change after calling a
+ * routine */
+#define t1     R20
+#define t2     R21
+#define t3     R22 /* Used normally as counter */
+
+/* Register that hold saved values, we guarantee that this register will have
+ * the same value after calling a routine */
+#define s3     R23
+#define s1     R24 /* used with sbiw */
+#define s2     R25
 
 /* When multiplying two registers, the results is store in R1:R0, therefore
  * avoid using them */
@@ -41,6 +53,9 @@
 #pragma GCC poison R20
 #pragma GCC poison R21
 #pragma GCC poison R22
+#pragma GCC poison R23
+#pragma GCC poison R24
+#pragma GCC poison R25
 /* Poison [R26:R31] to avoid overwriting X, Y and Z without noticing */
 #pragma GCC poison R26
 #pragma GCC poison R27

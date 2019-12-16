@@ -29,16 +29,16 @@ BIT_FIELD_1: .skip 1
 /* main, initialize everything {{{2 ------------------------------------------*/
 main:
     /* Keep register with zero value to avoid using clr over and over */
-    clr   ZERO_REG
+    clr   zero
 
     /* Set LED errors */
     ERR_SET_DDR
 
     /* Set global interrupt enable, sleep mode and sleep enable
      * Interrupt on INT0: falling edge */
-    in    TMP_REG1, _SFR_IO_ADDR(MCUCR)
-    sbr   TMP_REG1, ((1 << SE)|(1 << ISC01))
-    out   _SFR_IO_ADDR(MCUCR), TMP_REG1
+    in    t1, _SFR_IO_ADDR(MCUCR)
+    sbr   t1, ((1 << SE)|(1 << ISC01))
+    out   _SFR_IO_ADDR(MCUCR), t1
 
     /* Enable timer and have initial delay */
     rcall TIMER_INIT
@@ -58,9 +58,9 @@ main:
     DEBUG(PRINT_STR STR_START)
 
     /* Enable external interrupt 0 and 1 */
-    in    TMP_REG1, _SFR_IO_ADDR(GICR)
-    sbr   TMP_REG1, (1 << INT1)|(1 << INT0)
-    out   _SFR_IO_ADDR(GICR), TMP_REG1
+    in    t1, _SFR_IO_ADDR(GICR)
+    sbr   t1, (1 << INT1)|(1 << INT0)
+    out   _SFR_IO_ADDR(GICR), t1
 
 /* LOOP {{{2 -----------------------------------------------------------------*/
 LOOP:
@@ -69,41 +69,42 @@ LOOP:
     sbis  _SFR_IO_ADDR(PIND), PD2
     rcall ENC_INTERRUPT_HANDLE
     /* Event triggered by timer {{{ */
-    lds   TMP_REG1, SRAM_TIMER1_EVENTS
-    sbrs  TMP_REG1, TIMER1_EVENTS_SECOND
+    lds   t1, SRAM_TIMER1_EVENTS
+    sbrs  t1, TIMER1_EVENTS_SECOND
     rjmp  LOOP
-    cbr   TMP_REG1, (1 << TIMER1_EVENTS_SECOND)
-    sts   SRAM_TIMER1_EVENTS, TMP_REG1
+    cbr   t1, (1 << TIMER1_EVENTS_SECOND)
+    sts   SRAM_TIMER1_EVENTS, t1
 
     rcall DHCP
 
-    lds   TMP_REG1, SRAM_TIMER1_EVENTS
-    sbrs  TMP_REG1, TIMER1_EVENTS_2S
+    lds   t1, SRAM_TIMER1_EVENTS
+    sbrs  t1, TIMER1_EVENTS_2S
     rjmp  LOOP
-    cbr   TMP_REG1, (1 << TIMER1_EVENTS_2S)
-    sts   SRAM_TIMER1_EVENTS, TMP_REG1
+    cbr   t1, (1 << TIMER1_EVENTS_2S)
+    sts   SRAM_TIMER1_EVENTS, t1
 
     /* Collect data */
     rcall DHT11_READ
 
     rcall ADC_ENABLE_N_START
     sleep
+    /* TODO: check if it is necessary to disable ADC */
     rcall ADC_DISABLE
 
     ldi   YH, hi8(SRAM_DHT11_PAYLOAD)
     ldi   YL, lo8(SRAM_DHT11_PAYLOAD)
     ldi   ZL, lo8(SRAM_COMM_PAYLOAD)
     ldi   ZH, hi8(SRAM_COMM_PAYLOAD)
-    ldi   ARG_REG1, DHT11_PAYLOAD_LEN
+    ldi   x1, DHT11_PAYLOAD_LEN
     rcall MEMCPY
 
     ldi   YH, hi8(SRAM_MQ135_PAYLOAD)
     ldi   YL, lo8(SRAM_MQ135_PAYLOAD)
-    ldi   ARG_REG1, MQ135_PAYLOAD_LEN
+    ldi   x1, MQ135_PAYLOAD_LEN
     rcall MEMCPY
 
     /* Send data */
-    ldi   ARG_REG1, (DHT11_PAYLOAD_LEN + MQ135_PAYLOAD_LEN)
+    ldi   x1, (DHT11_PAYLOAD_LEN + MQ135_PAYLOAD_LEN)
     rcall SEND_PACKET
     /* }}} */
     rjmp  LOOP
@@ -118,37 +119,39 @@ INT0_vect:
  * ENC28J60 has multiple sources of interrupt, but only one output pin, this pin
  * will be held down until all sources of interrupts are cleared */
 ENC_INTERRUPT_HANDLE:
+    push  s1 /* Not really necessary as LOOP is not using s1 at all */
     /* Read Global interrupt register from ENC28J60 and execute routines
      * accordingly */
-    ldi   ARG_REG1, ENC_COMMON_EIR
+    ldi   x1, ENC_COMMON_EIR
     rcall ETH_READ_CONTROL_REGISTER
-    mov   ENC_INT_RQST_REG, RTV_L_REG
+    mov   s1, x4
 
     /* First check for errors */
 #if USE_DMAIF
-    sbrc  ENC_INT_RQST_REG, ENC_COMMON_EIE_DMAIE
+    sbrc  s1, ENC_COMMON_EIE_DMAIE
     TODO
 #endif
 #if USE_LINKIF
-    sbrc  ENC_INT_RQST_REG, ENC_COMMON_EIE_LINKIE
+    sbrc  s1, ENC_COMMON_EIE_LINKIE
     TODO
 #endif
 #if USE_TXIF
-    sbrc  ENC_INT_RQST_REG, ENC_COMMON_EIE_TXIE
+    sbrc  s1, ENC_COMMON_EIE_TXIE
     TODO
 #endif
 #if USE_TXERIF
-    sbrc  ENC_INT_RQST_REG, ENC_COMMON_EIE_TXERIE
+    sbrc  s1, ENC_COMMON_EIE_TXERIE
     TODO
 #endif
 #if USE_RXERIF
-    sbrc  ENC_INT_RQST_REG, ENC_COMMON_EIE_RXERIE
+    sbrc  s1, ENC_COMMON_EIE_RXERIE
     TODO
 #endif
     /* The system would be useless if this is not in use */
-    sbrc  ENC_INT_RQST_REG, ENC_COMMON_EIR_PKTIF
+    sbrc  s1, ENC_COMMON_EIR_PKTIF
     rcall HANDLE_PACKET
 
+    pop   s1
     ret
 
 /* Handle received packet {{{2 -------------------------------------------------
@@ -158,14 +161,14 @@ HANDLE_PACKET:
     /* TODO: merge ETH_READ_RECEIVE_HEADER and ETH_READ_MAC_ADDRS_N_LEN_TYPE */
     rcall ETH_READ_RECEIVE_HEADER
     rcall ETH_CHECK_RECEIVE_STATUS_VECTOR
-    cpi   RTV_L_REG, 0
+    cpi   x4, 0
     /* Error seen commonly after programming */
     brne  RESET_ETH
 
     rcall ETH_READ_MAC_ADDRS_N_LEN_TYPE
 
-    lds   TMP_REG2, SRAM_RPKT_STATUS3
-    sbrs  TMP_REG2, RPKT_STATUS3_RECEIVE_BROADCAST_PACKET
+    lds   t2, SRAM_RPKT_STATUS3
+    sbrs  t2, RPKT_STATUS3_RECEIVE_BROADCAST_PACKET
     rjmp  CHK_RPKT_STATUS2
 
     /* Check if broadcast was sent by me */
@@ -173,25 +176,25 @@ HANDLE_PACKET:
     ldi   YL, lo8(EEPROM_MAC_ADDR)
     ldi   ZH, hi8(SRAM_ENC_SRC_ADDR)
     ldi   ZL, lo8(SRAM_ENC_SRC_ADDR)
-    ldi   ARG_REG1, MAC_ADDR_LEN
+    ldi   x1, MAC_ADDR_LEN
     rcall ES_MEMCMP
     brne  CHK_RPKT_STATUS2
     rjmp  SKIP_ETH_PKT
 
 CHK_RPKT_STATUS2:
-    lds   TMP_REG2, SRAM_RPKT_STATUS2
-    sbrc  TMP_REG2, RPKT_STATUS2_LENGTH_OUT_OF_RANGE
+    lds   t2, SRAM_RPKT_STATUS2
+    sbrc  t2, RPKT_STATUS2_LENGTH_OUT_OF_RANGE
     rjmp  TYPE_LEN_TYPE
     rjmp  SKIP_ETH_PKT /* no support for type/length = length packets */
 
 TYPE_LEN_TYPE: /* Call handler based on TYPE */
-    lds   TMP_REG1, SRAM_TYPE_LEN_H
-    lds   TMP_REG2, SRAM_TYPE_LEN_L
+    lds   t1, SRAM_TYPE_LEN_H
+    lds   t2, SRAM_TYPE_LEN_L
 TYPE_LEN_IPV4:
     /* Check Type/Len is IPv4 or jump to next type/len */
-    cpi   TMP_REG1, hi8(ETHER_TYPE_IPV4)
+    cpi   t1, hi8(ETHER_TYPE_IPV4)
     brne  TYPE_LEN_ARP
-    cpi   TMP_REG2, lo8(ETHER_TYPE_IPV4)
+    cpi   t2, lo8(ETHER_TYPE_IPV4)
     brne  TYPE_LEN_ARP
 
     rcall IPV4_HANDLE_PKT
@@ -199,9 +202,9 @@ TYPE_LEN_IPV4:
 
 TYPE_LEN_ARP:
     /* Check Type/Len is ARP or jump to next type/len */
-    cpi   TMP_REG1, hi8(ETHER_TYPE_ARP)
+    cpi   t1, hi8(ETHER_TYPE_ARP)
     brne  TYPE_LEN_UNKNOWN
-    cpi   TMP_REG2, lo8(ETHER_TYPE_ARP)
+    cpi   t2, lo8(ETHER_TYPE_ARP)
     brne  TYPE_LEN_UNKNOWN
 
     rcall ARP_HANDLE_PKT
@@ -214,7 +217,7 @@ SKIP_ETH_PKT:
 
 RESET_ETH:
     DEBUG(PRINT_STR STR_ENC_STATUS_VECTOR_ERROR)
-    DEBUG(PRINT_REG RTV_L_REG)
+    DEBUG(PRINT_REG x4)
     DEBUG(PRINT_NEWLINE)
     rcall ETH_INIT
     ret

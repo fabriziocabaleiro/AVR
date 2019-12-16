@@ -20,12 +20,12 @@
 
 /* HTTP handle {{{2  -----------------------------------------------------------
  * Z must be pointing to first byte of TCP payload
- * RTV_L_REG: HTTP length in bytes
+ * x4: output HTTP length in bytes
  */
 HTTP_HANDLE_PKT:
     ldi   YL, lo8(EEPROM_HTTP_RESPONSE)
     ldi   YH, hi8(EEPROM_HTTP_RESPONSE)
-    ldi   ARG_REG1, (EEPROM_HTTP_RESPONSE_END - EEPROM_HTTP_RESPONSE)
+    ldi   x1, (EEPROM_HTTP_RESPONSE_END - EEPROM_HTTP_RESPONSE)
     rcall ES_MEMCPY
     /* Set back Z to beginning of HTTP payload */
     sbiw  ZL, (EEPROM_HTTP_RESPONSE_END - EEPROM_HTTP_RH_OFFSET)
@@ -41,7 +41,7 @@ HTTP_HANDLE_PKT:
     rcall FILL_8_DOT_8_VALUE
 
     /* Set return value to payload size */
-    ldi   RTV_L_REG, (EEPROM_HTTP_RESPONSE_END - EEPROM_HTTP_RESPONSE)
+    ldi   x4, (EEPROM_HTTP_RESPONSE_END - EEPROM_HTTP_RESPONSE)
 
     ret
 
@@ -49,19 +49,19 @@ HTTP_HANDLE_PKT:
  */
 FILL_8_DOT_8_VALUE:
     /* RH */
-    ld    ARG_REG1, Y+
-    ldi   ARG_REG2, 10
+    ld    x1, Y+
+    ldi   x2, 10
     rcall SDIV
-    subi  RTV_L_REG, -ASCII_ZERO /* + '0' */
-    subi  RTV_H_REG, -ASCII_ZERO /* + '0' */
-    st    Z+, RTV_L_REG
-    st    Z+, RTV_H_REG
+    subi  x4, -ASCII_ZERO /* + '0' */
+    subi  x3, -ASCII_ZERO /* + '0' */
+    st    Z+, x4
+    st    Z+, x3
 
     adiw  ZL, 1
 
-    ld    ARG_REG1, Y+
-    subi  ARG_REG1, -ASCII_ZERO /* + '0' */
-    st    Z+, ARG_REG1
+    ld    x1, Y+
+    subi  x1, -ASCII_ZERO /* + '0' */
+    st    Z+, x1
 
     ret
 

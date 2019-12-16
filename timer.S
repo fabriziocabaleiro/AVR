@@ -42,25 +42,25 @@ SRAM_TIMER1_EVENTS:  .skip 1
  * 8 seconds for a clock of 1Mhz */
 TIMER_INIT:
     /* Set CTC with top OCR1A, prescaler clk_io/1024 */
-    in    TMP_REG1, _SFR_IO_ADDR(TCCR1B)
-    sbr   TMP_REG1, (1 << WGM12)|(1 << CS12)|(1 << CS10)
-    out   _SFR_IO_ADDR(TCCR1B), TMP_REG1
+    in    t1, _SFR_IO_ADDR(TCCR1B)
+    sbr   t1, (1 << WGM12)|(1 << CS12)|(1 << CS10)
+    out   _SFR_IO_ADDR(TCCR1B), t1
 
     /* Set OCR1A */
-    ldi   TMP_REG1, hi8(OCR1A_VAL)
-    out   _SFR_IO_ADDR(OCR1AH), TMP_REG1
-    ldi   TMP_REG1, lo8(OCR1A_VAL)
-    out   _SFR_IO_ADDR(OCR1AL), TMP_REG1
+    ldi   t1, hi8(OCR1A_VAL)
+    out   _SFR_IO_ADDR(OCR1AH), t1
+    ldi   t1, lo8(OCR1A_VAL)
+    out   _SFR_IO_ADDR(OCR1AL), t1
 
     /* Enable interrupt */
-    in    TMP_REG1, _SFR_IO_ADDR(TIMSK)
-    sbr   TMP_REG1, (1 << OCIE1A)
-    out   _SFR_IO_ADDR(TIMSK), TMP_REG1
+    in    t1, _SFR_IO_ADDR(TIMSK)
+    sbr   t1, (1 << OCIE1A)
+    out   _SFR_IO_ADDR(TIMSK), t1
 
-    sts   SRAM_TIMER1_SECONDS + 0, ZERO_REG
-    sts   SRAM_TIMER1_SECONDS + 1, ZERO_REG
-    sts   SRAM_TIMER1_SECONDS + 2, ZERO_REG
-    sts   SRAM_TIMER1_SECONDS + 3, ZERO_REG
+    sts   SRAM_TIMER1_SECONDS + 0, zero
+    sts   SRAM_TIMER1_SECONDS + 1, zero
+    sts   SRAM_TIMER1_SECONDS + 2, zero
+    sts   SRAM_TIMER1_SECONDS + 3, zero
 
     ret
 
@@ -68,43 +68,43 @@ TIMER_INIT:
  * With a prescaler of 1024 and a OCR1A of OCR1A_VAL, we will have a match every
  * second. */
 TIMER1_COMPA_vect:
-    push  TMP_REG1
-    in    TMP_REG1, _SFR_IO_ADDR(SREG)
-    push  TMP_REG1
-    push  TMP_REG2
+    push  t1
+    in    t1, _SFR_IO_ADDR(SREG)
+    push  t1
+    push  t2
     push  YL
     push  YH
 
     ldi   YL, lo8(SRAM_TIMER1_SECONDS)
     ldi   YH, hi8(SRAM_TIMER1_SECONDS)
-    ldi   TMP_REG2, TIMER1_SECONDS_LEN
+    ldi   t2, TIMER1_SECONDS_LEN
 INC_SECONDS:
-    ld    TMP_REG1, Y+
-    inc   TMP_REG1
-    sts   SRAM_TIMER1_SECONDS, TMP_REG1
+    ld    t1, Y+
+    inc   t1
+    sts   SRAM_TIMER1_SECONDS, t1
     brne  TIMER1_SET_EVENTS
     /* if overflow, then increment next byte */
-    dec   TMP_REG2
+    dec   t2
     breq  TIMER1_SET_EVENTS
     rjmp  INC_SECONDS
 
 TIMER1_SET_EVENTS:
 
-    lds   TMP_REG1, SRAM_TIMER1_EVENTS
+    lds   t1, SRAM_TIMER1_EVENTS
 
-    lds   TMP_REG2, SRAM_TIMER1_SECONDS
-    sbrs  TMP_REG2, 0
-    sbr   TMP_REG1, (1 << TIMER1_EVENTS_2S)
+    lds   t2, SRAM_TIMER1_SECONDS
+    sbrs  t2, 0
+    sbr   t1, (1 << TIMER1_EVENTS_2S)
 
-    sbr   TMP_REG1, (1 << TIMER1_EVENTS_SECOND)
-    sts   SRAM_TIMER1_EVENTS, TMP_REG1
+    sbr   t1, (1 << TIMER1_EVENTS_SECOND)
+    sts   SRAM_TIMER1_EVENTS, t1
 
     pop   YH
     pop   YL
-    pop   TMP_REG2
-    pop   TMP_REG1
-    out   _SFR_IO_ADDR(SREG), TMP_REG1
-    pop   TMP_REG1
+    pop   t2
+    pop   t1
+    out   _SFR_IO_ADDR(SREG), t1
+    pop   t1
 
     reti
 

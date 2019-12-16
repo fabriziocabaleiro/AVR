@@ -31,8 +31,6 @@
 
 /* TEXT {{{1 -----------------------------------------------------------------*/
 
-/* TODO: At the moment, strings are required to be word aligned. Automate the
- * alignment */
 .section .text
 #ifndef NDEBUG
 STR_START:
@@ -46,7 +44,7 @@ STR_INCOMING_XID:
 STR_LOCAL_XID:
 .string "Local    XID "
 STR_OPT_ACK:
-.string "ACK \r\n"
+.string "ACK\r\n"
 STR_DONE:
 .string "Done\r\n"
 STR_FAILURE:
@@ -54,7 +52,9 @@ STR_FAILURE:
 STR_ENC_STATUS_VECTOR_ERROR:
 .string "ENC status vector error: "
 STR_TIMER0:
-.string "*Timer0 interrupt handler* "
+.string "*Timer0 interrupt handler*"
 STR_STATE:
 .string "STATE  "
+
+.align 1
 #endif

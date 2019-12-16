@@ -16,9 +16,9 @@
 /* Push and Pop {{{2 ---------------------------------------------------------*/
 .macro DEBUG_PUSH
 #ifndef NDEBUG
-    push  ARG_REG1
-    push  TMP_REG1
-    push  TMP_REG2
+    push  x1
+    push  t1
+    push  t2
     push  ZL
     push  ZH
 #endif
@@ -28,48 +28,48 @@
 #ifndef NDEBUG
     pop   ZH
     pop   ZL
-    pop   TMP_REG2
-    pop   TMP_REG1
-    pop   ARG_REG1
+    pop   t2
+    pop   t1
+    pop   x1
 #endif
 .endm
 
 /* Print Char {{{2 -----------------------------------------------------------*/
 .macro PRINT_CHAR x
 #ifndef NDEBUG
-    ldi   ARG_REG1, \x
+    ldi   x1, \x
     rcall UART_TRANSMIT
 #endif
 .endm
 
 .macro PRINT_CHAR_SAFE x
 #ifndef NDEBUG
-    push  ARG_REG1
-    ldi   ARG_REG1, \x
+    push  x1
+    ldi   x1, \x
     rcall UART_TRANSMIT
-    pop   ARG_REG1
+    pop   x1
 #endif
 .endm
 
 /* Print Register {{{2 -------------------------------------------------------*/
 .macro PRINT_REG x
 #ifndef NDEBUG
-    mov   ARG_REG1, \x
+    mov   x1, \x
     rcall UART_TRANSMIT_HEX
 #endif
 .endm
 
 .macro PRINT_REG_SAFE x
 #ifndef NDEBUG
-    /* UART_TRANSMIT_HEX modifies TMP_REG1 and TMP_REG2 */
-    push  ARG_REG1
-    push  TMP_REG1
-    push  TMP_REG2
-    mov   ARG_REG1, \x
+    /* UART_TRANSMIT_HEX modifies t1 and t2 */
+    push  x1
+    push  t1
+    push  t2
+    mov   x1, \x
     rcall UART_TRANSMIT_HEX
-    pop   TMP_REG2
-    pop   TMP_REG1
-    pop   ARG_REG1
+    pop   t2
+    pop   t1
+    pop   x1
 #endif
 .endm
 
@@ -97,20 +97,20 @@
 /* Print new line {{{2 -------------------------------------------------------*/
 .macro PRINT_NEWLINE
 #ifndef NDEBUG
-    ldi   ARG_REG1, '\r'
+    ldi   x1, '\r'
     rcall UART_TRANSMIT
-    ldi   ARG_REG1, '\n'
+    ldi   x1, '\n'
     rcall UART_TRANSMIT
 #endif
 .endm
 
 .macro PRINT_NEWLINE_SAFE
 #ifndef NDEBUG
-    push  ARG_REG1
-    ldi   ARG_REG1, '\r'
+    push  x1
+    ldi   x1, '\r'
     rcall UART_TRANSMIT
-    ldi   ARG_REG1, '\n'
+    ldi   x1, '\n'
     rcall UART_TRANSMIT
-    pop   ARG_REG1
+    pop   x1
 #endif
 .endm

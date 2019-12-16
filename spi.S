@@ -35,12 +35,12 @@
  * - SPR1 set, clock rate fck/64 */
 SPI_MASTER_INIT:
     SPI_END_ETH
-    ldi TMP_REG2, ((1 << SPI_MOSI_BIT) | \
+    ldi t2, ((1 << SPI_MOSI_BIT) | \
                    (1 << SPI_SCK_BIT)  | \
                    (1 << SPI_SS_ETH))
-    out _SFR_IO_ADDR(SPI_MOSI_DDR), TMP_REG2
-    ldi TMP_REG2, (1 << SPE)|(1 << MSTR)|SPI_SCK
-    out _SFR_IO_ADDR(SPCR), TMP_REG2
+    out _SFR_IO_ADDR(SPI_MOSI_DDR), t2
+    ldi t2, (1 << SPE)|(1 << MSTR)|SPI_SCK
+    out _SFR_IO_ADDR(SPCR), t2
     ret
 
 /* Init SPI {{{2 ---------------------------------------------------------------
@@ -52,34 +52,34 @@ SPI_MASTER_INIT:
  * - SS should be clear on the caller
  ******************************************************************************/
 SPI_MASTER_TRANSMIT:
-    /* Start transmission of data on (ARG_REG1) */
-    out   _SFR_IO_ADDR(SPDR), ARG_REG1
+    /* Start transmission of data on (x1) */
+    out   _SFR_IO_ADDR(SPDR), x1
     /* Wait for transmission complete */
 0:  sbis  _SFR_IO_ADDR(SPSR), SPIF
     rjmp  0b
     /* Get received message */
-    in    RTV_L_REG, _SFR_IO_ADDR(SPDR)
+    in    x4, _SFR_IO_ADDR(SPDR)
     ret
 
-/* Write ARG_REG1 bytes from Y (EEPROM) to SPI {{{2 ----------------------------
+/* Write x1 bytes from Y (EEPROM) to SPI {{{2 ----------------------------
    */
 SPI_EEPROM_TRANSMIT:
-    mov   COUNTER_REG, ARG_REG1
+    mov   t3, x1
 0:  rcall EEPROM_READ_N_INC
-    mov   ARG_REG1, RTV_L_REG
+    mov   x1, x4
     rcall SPI_MASTER_TRANSMIT
-    dec   COUNTER_REG
+    dec   t3
     brne  0b
     ret
 
 /* Copy from SPI to memory {{{2 ------------------------------------------------
- * Copy ARG_REG1 from SPI to memory pointed by Z
+ * Copy x1 from SPI to memory pointed by Z
  */
 SPI_MEMCPY:
-    dec   ARG_REG1
+    dec   x1
     brmi  0f
     rcall SPI_MASTER_TRANSMIT
-    st    Z+, RTV_L_REG
+    st    Z+, x4
     rjmp  SPI_MEMCPY
 0:  ret
 

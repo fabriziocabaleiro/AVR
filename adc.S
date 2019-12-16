@@ -65,9 +65,9 @@ SRAM_MQ135_PAYLOAD: .skip MQ135_PAYLOAD_LEN
  *   Enable ADC interrupt
  *   ADC prescaler to 8 (expecting running at 1MHz) */
 ADC_ENABLE_N_START:
-    in    TMP_REG1, _SFR_IO_ADDR(ADCSRA)
-    sbr   TMP_REG1, (1 << ADEN)|(1 << ADSC)|(1 << ADIE)|ADC_PRESCALER
-    out   _SFR_IO_ADDR(ADCSRA), TMP_REG1
+    in    t1, _SFR_IO_ADDR(ADCSRA)
+    sbr   t1, (1 << ADEN)|(1 << ADSC)|(1 << ADIE)|(ADC_PRESCALER)
+    out   _SFR_IO_ADDR(ADCSRA), t1
     ret
 
 /* Disable ADC {{{2 ----------------------------------------------------------*/
@@ -78,18 +78,19 @@ ADC_DISABLE:
 /* ADC interrupt routine {{{2 --------------------------------------------------
  * Read the content of [ADCH:ADCL] and store it into SRAM */
 ADC_vect:
-    push  TMP_REG1
-    in    TMP_REG1, _SFR_IO_ADDR(SREG)
-    push  TMP_REG1
+    push  t1
+    in    t1, _SFR_IO_ADDR(SREG)
+    push  t1
 
-    in    TMP_REG1, _SFR_IO_ADDR(ADCL)
-    sts   SRAM_MQ135_PAYLOAD + 1, TMP_REG1
-    in    TMP_REG1, _SFR_IO_ADDR(ADCH)
-    sts   SRAM_MQ135_PAYLOAD + 0, TMP_REG1
+    /* TODO: give pointer to where we want to store the ADC results */
+    in    t1, _SFR_IO_ADDR(ADCL)
+    sts   SRAM_MQ135_PAYLOAD + 1, t1
+    in    t1, _SFR_IO_ADDR(ADCH)
+    sts   SRAM_MQ135_PAYLOAD + 0, t1
 
-    pop   TMP_REG1
-    out   _SFR_IO_ADDR(SREG), TMP_REG1
-    pop   TMP_REG1
+    pop   t1
+    out   _SFR_IO_ADDR(SREG), t1
+    pop   t1
     reti
 
 .end

@@ -25,13 +25,13 @@
    UBRR = 12 @1MHz => Baud rate 4800, error 0.2%
  */
 UART_INIT:
-    out   _SFR_IO_ADDR(UBRRH), ZERO_REG
-    ldi   TMP_REG1, 12
-    out   _SFR_IO_ADDR(UBRRL), TMP_REG1
+    out   _SFR_IO_ADDR(UBRRH), zero
+    ldi   t1, 12
+    out   _SFR_IO_ADDR(UBRRL), t1
 
     /* Enable transmit */
-    ldi   TMP_REG1, (1 << TXEN)
-    out   _SFR_IO_ADDR(UCSRB), TMP_REG1
+    ldi   t1, (1 << TXEN)
+    out   _SFR_IO_ADDR(UCSRB), t1
     ret
 
 /* xxxxxxxxxxx {{{2  -----------------------------------------------------------
@@ -40,49 +40,49 @@ UART_TRANSMIT:
     /* Wait for empty transmit buffer */
 0:  sbis  _SFR_IO_ADDR(UCSRA), UDRE
     rjmp  0b
-    out   _SFR_IO_ADDR(UDR), ARG_REG1
+    out   _SFR_IO_ADDR(UDR), x1
     ret
 
 /* xxxxxxxxxxx {{{2  -----------------------------------------------------------
  */
 UART_TRANSMIT_HEX:
-    clr   TMP_REG2
-    swap  ARG_REG1
+    clr   t2
+    swap  x1
 
     /* Wait for empty transmit buffer */
 0:  sbis  _SFR_IO_ADDR(UCSRA), UDRE
     rjmp  0b
-    mov   TMP_REG1, ARG_REG1
-    andi  TMP_REG1, 0x0F
-    cpi   TMP_REG1, 10
+    mov   t1, x1
+    andi  t1, 0x0F
+    cpi   t1, 10
     brsh  1f
-    subi  TMP_REG1, -48 /* + '0' */
+    subi  t1, -48 /* + '0' */
     rjmp  2f
-1:  subi  TMP_REG1, -55 /* + 'A' - 10 */
-2:  out   _SFR_IO_ADDR(UDR), TMP_REG1
+1:  subi  t1, -55 /* + 'A' - 10 */
+2:  out   _SFR_IO_ADDR(UDR), t1
 
-    sbrc  TMP_REG2, 0
+    sbrc  t2, 0
     ret
-    sbr   TMP_REG2, 0x01
-    swap  ARG_REG1
+    sbr   t2, 0x01
+    swap  x1
     rjmp  0b
 
 /* xxxxxxxxxxx {{{2  -----------------------------------------------------------
  * Z points to a string
  */
 UART_TRANSMIT_STR:
-    push  ARG_REG1
+    push  x1
     /* Wait for empty transmit buffer */
 0:  sbis  _SFR_IO_ADDR(UCSRA), UDRE
     rjmp  0b
     /* Read next byte, check if end of string, if not, write to UART, else jump
      * to the end */
-    lpm   ARG_REG1, Z+
-    tst   ARG_REG1
+    lpm   x1, Z+
+    tst   x1
     breq  0f
-    out   _SFR_IO_ADDR(UDR), ARG_REG1
+    out   _SFR_IO_ADDR(UDR), x1
     rjmp  0b
-0:  pop   ARG_REG1
+0:  pop   x1
     ret
 
 .end

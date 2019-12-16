@@ -2,6 +2,9 @@
 #ifndef _IPV4_H_
 #define _IPV4_H_
 
+#define RECEIVED_IP_IS_MINE_BIT      3
+#define RECEIVED_IP_IS_BROADCAST_BIT 7
+
 #define IPV4_ADDR_LEN                        4
 #define IPV4_PORT_LEN                        2
 #define IPV4_MAX_HEADER_LEN                 60

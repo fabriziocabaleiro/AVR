@@ -49,40 +49,36 @@ SRAM_COMM_PAYLOAD:     .skip (DHT11_PAYLOAD_LEN + MQ135_PAYLOAD_LEN)
 COMM_INIT:
     ldi   ZL, lo8(SRAM_COMM_RR_ITERATOR)
     ldi   ZH, hi8(SRAM_COMM_RR_ITERATOR)
-    ldi   COUNTER_REG, (COMM_DST_TBL_LEN + DHT11_PAYLOAD_LEN + MQ135_PAYLOAD_LEN + 1 + 2)
-0:  st    Z+, ZERO_REG
-    dec   COUNTER_REG
+    ldi   t3, (COMM_DST_TBL_LEN + DHT11_PAYLOAD_LEN + MQ135_PAYLOAD_LEN + 1 + 2)
+0:  st    Z+, zero
+    dec   t3
     brne  0b
-    sts   SRAM_COMM_RR_ITERATOR, ZERO_REG
-    ldi   TMP_REG2, hi8(ETHER_TYPE_IPV4)
-    sts   SRAM_COMM_TYPE_LEN + 0, TMP_REG2
-    ldi   TMP_REG2, lo8(ETHER_TYPE_IPV4)
-    sts   SRAM_COMM_TYPE_LEN + 1, TMP_REG2
+    sts   SRAM_COMM_RR_ITERATOR, zero
+    ldi   t1, hi8(ETHER_TYPE_IPV4)
+    sts   SRAM_COMM_TYPE_LEN + 0, t1
+    ldi   t1, lo8(ETHER_TYPE_IPV4)
+    sts   SRAM_COMM_TYPE_LEN + 1, t1
     ret
 
 /* Send a packet to IP registered in COMM table {{{2 ---------------------------
  * Z points to the data
- * ARG_REG1 is the length */
-#define ENTRY_IT_REG        R23
-#define ARG_UDP_PAYLOAD_REG R14
-#pragma GCC poison          R23
-#pragma GCC poison          R14
+ * x1 is the UDP length */
 SEND_PACKET:
-    push  ARG_UDP_PAYLOAD_REG
-    push  ENTRY_IT_REG
+    push  s1 /* Counter for all entries of comm table */
+    push  s2 /* Save x1 to be used later within loop */
     push  ZL
     push  ZH
     push  YL
     push  YH
 
-    ldi   ENTRY_IT_REG, COMM_DST_TBL_SIZE
-    mov   ARG_UDP_PAYLOAD_REG, ARG_REG1
+    ldi   s1, COMM_DST_TBL_SIZE
+    mov   s2, x1
     ldi   YL, lo8(SRAM_COMM_TABLE)
     ldi   YH, hi8(SRAM_COMM_TABLE)
     /* For all entries of the COMM table */
 SEND_PACKET_FOR_ALL_ENTRIES:
-    ldi   ARG_REG1, IPV4_ADDR_LEN
-    clr   ARG_REG2
+    ldi   x1, IPV4_ADDR_LEN
+    clr   x2
     rcall REG_MEMCMP
     breq  SEND_PACKET_NEXT_ENTRY
     push  YL
@@ -90,14 +86,14 @@ SEND_PACKET_FOR_ALL_ENTRIES:
     /* Set MAC Dst pointer {{{3 */
     rcall ARP_GET_MAC_ADDR_PTR
     brne  IP_NOT_IN_ARP_TABLE
-    sts   SRAM_ENC_MAC_DST_PTR + 0, RTV_H_REG
-    sts   SRAM_ENC_MAC_DST_PTR + 1, RTV_L_REG
+    sts   SRAM_ENC_MAC_DST_PTR + 0, x4
+    sts   SRAM_ENC_MAC_DST_PTR + 1, x3
 
     /* Set Type/Len pointer {{{3 */
-    ldi   TMP_REG2, hi8(SRAM_COMM_TYPE_LEN)
-    sts   SRAM_ENC_TYPE_LEN_PTR + 0, TMP_REG2
-    ldi   TMP_REG2, lo8(SRAM_COMM_TYPE_LEN)
-    sts   SRAM_ENC_TYPE_LEN_PTR + 1, TMP_REG2
+    ldi   t2, hi8(SRAM_COMM_TYPE_LEN)
+    sts   SRAM_ENC_TYPE_LEN_PTR + 0, t2
+    ldi   t2, lo8(SRAM_COMM_TYPE_LEN)
+    sts   SRAM_ENC_TYPE_LEN_PTR + 1, t2
     /* }}}3 */
     /* Write Ethernet Header */
     rcall ETH_WRITE_BUFFER_PACKET_HEADER
@@ -105,43 +101,43 @@ SEND_PACKET_FOR_ALL_ENTRIES:
     /* Set Dst IP address {{{3 */
     ldi   ZL, lo8(SRAM_IP_ADDR_DST)
     ldi   ZH, hi8(SRAM_IP_ADDR_DST)
-    ldi   ARG_REG1, IPV4_ADDR_LEN
+    ldi   x1, IPV4_ADDR_LEN
     rcall MEMCPY
 
     /* Set Src and Dst UDP port {{{3 */
     ldi   ZL, lo8(SRAM_UDP_HEADER + UDP_HEADER_SRC_PORT)
     ldi   ZH, hi8(SRAM_UDP_HEADER + UDP_HEADER_SRC_PORT)
-    ldi   ARG_REG1, (IPV4_PORT_LEN * 2)
+    ldi   x1, (IPV4_PORT_LEN * 2)
     rcall MEMCPY
 
     /* Set UDP packet length {{{3 */
-    st    Z+, ZERO_REG
-    ldi   TMP_REG1, (DHT11_PAYLOAD_LEN + MQ135_PAYLOAD_LEN + UDP_HEADER_LEN)
-    st    Z+, TMP_REG1
+    st    Z+, zero
+    ldi   t1, (DHT11_PAYLOAD_LEN + MQ135_PAYLOAD_LEN + UDP_HEADER_LEN)
+    st    Z+, t1
 
     /* Prepare UDP packet {{{3 */
     ldi   YH, hi8(SRAM_COMM_PAYLOAD)
     ldi   YL, lo8(SRAM_COMM_PAYLOAD)
     ldi   ZH, hi8(SRAM_IPV4_PAYLOAD)
     ldi   ZL, lo8(SRAM_IPV4_PAYLOAD)
-    mov   ARG_REG1, ARG_UDP_PAYLOAD_REG
+    mov   x1, s2
     rcall UDP_PREPARE_PACKET
 
     /* Prepare IPv4 header {{{3 */
-    ldi   ARG_REG1, (IPV4_DEFAULT_HEADER_LEN + UDP_HEADER_LEN)
-    add   ARG_REG1, ARG_UDP_PAYLOAD_REG
+    ldi   x1, (IPV4_DEFAULT_HEADER_LEN + UDP_HEADER_LEN)
+    add   x1, s2
     rcall IPV4_PREPARE_DEFAULT_HEADER_20_40_BYTES
 
     /* Write IPv4 header into Ethernet module {{{3 */
     ldi   ZL, lo8(SRAM_IPV4_HEADER)
     ldi   ZH, hi8(SRAM_IPV4_HEADER)
-    ldi   ARG_REG1, 20
+    ldi   x1, 20
     rcall ETH_WRITE_Z_TO_TRANSMIT_BUFFER
 
     /* Write IPv4 payload into Ethernet module {{{3 */
     ldi   ZH, hi8(SRAM_IPV4_PAYLOAD)
     ldi   ZL, lo8(SRAM_IPV4_PAYLOAD)
-    ldi   ARG_REG1, (DHT11_PAYLOAD_LEN + MQ135_PAYLOAD_LEN + UDP_HEADER_LEN)
+    ldi   x1, (DHT11_PAYLOAD_LEN + MQ135_PAYLOAD_LEN + UDP_HEADER_LEN)
     rcall ETH_WRITE_Z_TO_TRANSMIT_BUFFER
     /* }}}3 */
     /* Send the packet */
@@ -151,7 +147,7 @@ IP_NOT_IN_ARP_TABLE:
     pop   YH
     pop   YL
 SEND_PACKET_NEXT_ENTRY:
-    dec   ENTRY_IT_REG
+    dec   s1
     breq  SEND_PACKET_EXIT
     adiw  YL, COMM_DST_TBL_ENTRY
     rjmp  SEND_PACKET_FOR_ALL_ENTRIES
@@ -161,37 +157,34 @@ SEND_PACKET_EXIT:
     pop   YL
     pop   ZH
     pop   ZL
-    pop   ENTRY_IT_REG
-    pop   ARG_UDP_PAYLOAD_REG
+    pop   s2
+    pop   s1
     ret
-
-#undef ARG_UDP_PAYLOAD_REG
-#undef ENTRY_IT_REG
 
 /* Register an IP to send packages to {{{2 -------------------------------------
  * Use Round Robin to write destination entries into the table */
 COMM_REGISTER_IP:
     /* Select the entry on the table to register using ROUND ROBIN */
-    lds   TMP_REG1, SRAM_COMM_RR_ITERATOR
-    ldi   TMP_REG2, COMM_DST_TBL_ENTRY
-    mul   TMP_REG1, TMP_REG2
+    lds   t1, SRAM_COMM_RR_ITERATOR
+    ldi   t2, COMM_DST_TBL_ENTRY
+    mul   t1, t2 /* multiplication output into [R1:R0] -> [mh:ml] */
     ldi   YL, lo8(SRAM_COMM_TABLE)
     ldi   YH, hi8(SRAM_COMM_TABLE)
-    add   YL, XMULX_RTV_L_REG
-    adc   YH, XMULX_RTV_H_REG
+    add   YL, ml
+    adc   YH, mh
     /* Set RR iterator to next entry */
-    inc   TMP_REG1
-    cpi   TMP_REG1, COMM_DST_TBL_SIZE
+    inc   t1
+    cpi   t1, COMM_DST_TBL_SIZE
     brne  1f
-    clr   TMP_REG1
-1:  sts   SRAM_COMM_RR_ITERATOR, TMP_REG1
+    clr   t1
+1:  sts   SRAM_COMM_RR_ITERATOR, t1
 
     /* From start of entry till COMM_DST_IPV4_TIME */
-    ldi   COUNTER_REG, COMM_DST_IPV4_TIME
+    ldi   t3, COMM_DST_IPV4_TIME
 COMM_REGISTER_IP_LOOP:
     ETH_READ_NEXT_BYTE
-    st    Y+, RTV_L_REG
-    dec   COUNTER_REG
+    st    Y+, x4
+    dec   t3
     brne  COMM_REGISTER_IP_LOOP
     ETH_READ_BUFFER_END
 

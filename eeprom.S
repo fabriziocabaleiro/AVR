@@ -21,14 +21,15 @@ SRAM_EEPROM_COREDUMP_DISPLACEMENT:
 SRAM_EEPROM_SREG:          .skip 1
 SRAM_EEPROM_PCH:           .skip 1
 SRAM_EEPROM_PCL:           .skip 1
-/* Save TMP_REG1 during INT1_vect */
+/* Save t1 during INT1_vect */
+/* TODO: cleanup */
 SRAM_EEPROM_TMP_REG1_SAVE: .skip 1
 AFTER_LAST_COREDUMP_ELEMENT:
 
 /* TEXT {{{1 -----------------------------------------------------------------*/
 .section .text
 
-/* Read bytes pointed by Y and return them on RTV_L_REG {{{2 -------------------
+/* Read bytes pointed by Y and return them on x4 {{{2 -------------------
  * Y gets incremented after every call */
 EEPROM_READ_N_INC:
     /* Wait for previous write to finish */
@@ -39,12 +40,12 @@ EEPROM_READ_N_INC:
     out   _SFR_IO_ADDR(EEARL), YL
     /* Set Read Enable and read */
     sbi   _SFR_IO_ADDR(EECR), EERE
-    in    RTV_L_REG, _SFR_IO_ADDR(EEDR)
+    in    x4, _SFR_IO_ADDR(EEDR)
     /* Increment Y for continuous eeprom reading */
     adiw  YL, 1
     ret
 
-/* Write ARG_REG1 to EEPROM pointer by Y {{{2 ----------------------------------
+/* Write x1 to EEPROM pointer by Y {{{2 ----------------------------------
  * Y gets incremented after every call */
 EEPROM_WRITE_N_INC:
     /* Wait for previous write to finish */
@@ -54,7 +55,7 @@ EEPROM_WRITE_N_INC:
     out   _SFR_IO_ADDR(EEARH), YH
     out   _SFR_IO_ADDR(EEARL), YL
     /* Set data */
-    out    _SFR_IO_ADDR(EEDR), ARG_REG1
+    out    _SFR_IO_ADDR(EEDR), x1
     /* Set master write enable and write enable */
     sbi   _SFR_IO_ADDR(EECR), EEMWE
     sbi   _SFR_IO_ADDR(EECR), EEWE
