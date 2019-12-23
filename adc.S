@@ -3,6 +3,7 @@
 .NOLIST
 #include <avr/io.h>
 #include "defs.h"
+#include "macros.S"
 .LIST
 
 /* ADC prescaler documentation {{{1 --------------------------------------------
@@ -30,7 +31,7 @@
  * 8M / 64 = 125k, so 1 1 0
  */
 
-/* Prescaler setup {{{1 ------------------------------------------------------*/
+/* MACORS {{{1 ---------------------------------------------------------------*/
 #ifndef F_CPU
 #   error "CPU frequency not specified, cannot calculate ADC prescaler"
 #endif
@@ -47,15 +48,20 @@
 #   error "Unsupported F_CPU value"
 #endif
 
+#define ADC0_DATA_LEN 2
+#if MQ135_PAYLOAD_LEN != ADC0_DATA_LEN
+#   error ADC0 data length != MQ135 payload length
+#endif
+
 /* GLOBAL {{{1 ---------------------------------------------------------------*/
 .global ADC_ENABLE_N_START
-.global ADC_DISABLE
 .global ADC_vect
 
-.global SRAM_MQ135_PAYLOAD
+.global SRAM_ADC0
 
+/* DATA  {{{1 ----------------------------------------------------------------*/
 .section .data
-SRAM_MQ135_PAYLOAD: .skip MQ135_PAYLOAD_LEN
+SRAM_ADC0: .skip ADC0_DATA_LEN
 
 /* TEXT {{{1 -----------------------------------------------------------------*/
 .section .text
@@ -70,11 +76,6 @@ ADC_ENABLE_N_START:
     out   _SFR_IO_ADDR(ADCSRA), t1
     ret
 
-/* Disable ADC {{{2 ----------------------------------------------------------*/
-ADC_DISABLE:
-    cbi   _SFR_IO_ADDR(ADCSRA), ADEN
-    ret
-
 /* ADC interrupt routine {{{2 --------------------------------------------------
  * Read the content of [ADCH:ADCL] and store it into SRAM */
 ADC_vect:
@@ -82,11 +83,13 @@ ADC_vect:
     in    t1, _SFR_IO_ADDR(SREG)
     push  t1
 
-    /* TODO: give pointer to where we want to store the ADC results */
     in    t1, _SFR_IO_ADDR(ADCL)
-    sts   SRAM_MQ135_PAYLOAD + 1, t1
+    sts   SRAM_ADC0 + 1, t1
     in    t1, _SFR_IO_ADDR(ADCH)
-    sts   SRAM_MQ135_PAYLOAD + 0, t1
+    sts   SRAM_ADC0 + 0, t1
+
+    /* Disable ADC after conversion */
+    cbi   _SFR_IO_ADDR(ADCSRA), ADEN
 
     pop   t1
     out   _SFR_IO_ADDR(SREG), t1

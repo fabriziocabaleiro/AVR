@@ -7,6 +7,24 @@
 .LIST
 
 /* MACORS {{{1 ---------------------------------------------------------------*/
+#ifndef F_CPU
+#   error "CPU frequency not specified, cannot calculate UBRRH:UBRRL"
+#endif
+
+/* Values originally obtained from Atmega8 datasheet section "Examples of Baud
+ * Rate Setting", but for 4M and 8M they didn't work, so adjusted by try and
+ * error */
+#if   F_CPU == 1000000
+#   define  UBRRL_VAL           12
+#elif F_CPU == 2000000
+#   define  UBRRL_VAL           25
+#elif F_CPU == 4000000
+#   define  UBRRL_VAL           54
+#elif F_CPU == 8000000
+#   define  UBRRL_VAL          110
+#else
+#   error "Unsupported F_CPU value"
+#endif
 
 /* GLOBAL {{{1 ---------------------------------------------------------------*/
 .global UART_INIT
@@ -22,11 +40,11 @@
 
 /* Initialize USART {{{2  ------------------------------------------------------
    Asynchronous normal mode
-   UBRR = 12 @1MHz => Baud rate 4800, error 0.2%
+   UBRR => Baud rate 4800, error 0.2%
  */
 UART_INIT:
     out   _SFR_IO_ADDR(UBRRH), zero
-    ldi   t1, 12
+    ldi   t1, UBRRL_VAL
     out   _SFR_IO_ADDR(UBRRL), t1
 
     /* Enable transmit */
@@ -34,7 +52,8 @@ UART_INIT:
     out   _SFR_IO_ADDR(UCSRB), t1
     ret
 
-/* xxxxxxxxxxx {{{2  -----------------------------------------------------------
+/* Uart Transmit {{{2 ----------------------------------------------------------
+ * x1 Byte to be transmitted
  */
 UART_TRANSMIT:
     /* Wait for empty transmit buffer */
@@ -43,7 +62,7 @@ UART_TRANSMIT:
     out   _SFR_IO_ADDR(UDR), x1
     ret
 
-/* xxxxxxxxxxx {{{2  -----------------------------------------------------------
+/* Uart Transmit register as hexadecimal {{{2 ----------------------------------
  */
 UART_TRANSMIT_HEX:
     clr   t2
@@ -67,7 +86,7 @@ UART_TRANSMIT_HEX:
     swap  x1
     rjmp  0b
 
-/* xxxxxxxxxxx {{{2  -----------------------------------------------------------
+/* Uart Transmit string {{{2  --------------------------------------------------
  * Z points to a string
  */
 UART_TRANSMIT_STR:

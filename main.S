@@ -87,9 +87,6 @@ LOOP:
     rcall DHT11_READ
 
     rcall ADC_ENABLE_N_START
-    sleep
-    /* TODO: check if it is necessary to disable ADC */
-    rcall ADC_DISABLE
 
     ldi   YH, hi8(SRAM_DHT11_PAYLOAD)
     ldi   YL, lo8(SRAM_DHT11_PAYLOAD)
@@ -98,10 +95,12 @@ LOOP:
     ldi   x1, DHT11_PAYLOAD_LEN
     rcall MEMCPY
 
-    ldi   YH, hi8(SRAM_MQ135_PAYLOAD)
-    ldi   YL, lo8(SRAM_MQ135_PAYLOAD)
+    ldi   YH, hi8(SRAM_ADC0)
+    ldi   YL, lo8(SRAM_ADC0)
     ldi   x1, MQ135_PAYLOAD_LEN
+    cli   /* Avoid race condition with SRAM_ADC0 */
     rcall MEMCPY
+    sei
 
     /* Send data */
     ldi   x1, (DHT11_PAYLOAD_LEN + MQ135_PAYLOAD_LEN)
