@@ -57,10 +57,10 @@ TIMER_INIT:
     sbr   t1, (1 << OCIE1A)
     out   _SFR_IO_ADDR(TIMSK), t1
 
-    sts   SRAM_TIMER1_SECONDS + 0, zero
-    sts   SRAM_TIMER1_SECONDS + 1, zero
-    sts   SRAM_TIMER1_SECONDS + 2, zero
-    sts   SRAM_TIMER1_SECONDS + 3, zero
+    ldi   YL, lo8(SRAM_TIMER1_SECONDS)
+    ldi   YH, hi8(SRAM_TIMER1_SECONDS)
+    ldi   x1, 4
+    rcall BZERO
 
     ret
 

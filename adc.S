@@ -6,7 +6,12 @@
 #include "macros.S"
 .LIST
 
-/* ADC prescaler documentation {{{1 --------------------------------------------
+/* MACORS {{{1 ---------------------------------------------------------------*/
+#ifndef F_CPU
+#   error "CPU frequency not specified, cannot calculate ADC prescaler"
+#endif
+
+/* ADC prescaler documentation {{{ ---------------------------------------------
  * By default, the successive approximation circuitry requires an input clock
  * frequency between 50kHz and 200kHz to get maximum resolution. If a lower
  * resolution than 10 bits is needed, the input clock frequency to the ADC can
@@ -29,12 +34,7 @@
  * 2M / 16 = 125k, so 1 0 0
  * 4M / 32 = 125k, so 1 0 1
  * 8M / 64 = 125k, so 1 1 0
- */
-
-/* MACORS {{{1 ---------------------------------------------------------------*/
-#ifndef F_CPU
-#   error "CPU frequency not specified, cannot calculate ADC prescaler"
-#endif
+ * }}} */
 
 #if   F_CPU == 1000000
 #   define ADC_PRESCALER (1 << ADPS1)|(1 << ADPS0)

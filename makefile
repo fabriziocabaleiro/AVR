@@ -40,7 +40,6 @@ ifeq (${TARGET}, main)
            dhcp.o          \
            tcp.o           \
            icmp.o          \
-           division.o      \
            utils.o         \
            http.o          \
            comm.o

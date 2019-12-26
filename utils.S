@@ -23,6 +23,7 @@
 .global MEMSWAP
 .global ADD_32b
 .global SDIV
+.global BZERO
 
 /* TEXT {{{1 -----------------------------------------------------------------*/
 .section .text
@@ -203,5 +204,15 @@ SDIV:
 1:  mov   x3, x1
     add   x3, x2
     ret
+
+/* BZERO -----------------------------------------------------------------------
+ * Set x1 bytes to zero the memory pointed by Y
+ */
+BZERO:
+    subi  x1, 1
+    brlo  0f
+    st    Y+, zero
+    rjmp  BZERO
+0:  ret
 
 .end

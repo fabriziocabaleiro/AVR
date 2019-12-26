@@ -38,13 +38,10 @@ SRAM_ARP_TABLE:   .skip ARP_TABLE_LEN
 
 /* ARP init {{{2 -------------------------------------------------------------*/
 ARP_INIT:
-    ldi  ZL, lo8(SRAM_ARP_TABLE)
-    ldi  ZH, hi8(SRAM_ARP_TABLE)
-    ldi  t3, ARP_TABLE_LEN
-ZERO_OUT_ARP_TABLE_LOOP:
-    st   Z+, zero
-    dec  t3
-    brne ZERO_OUT_ARP_TABLE_LOOP
+    ldi   YL, lo8(SRAM_ARP_TABLE)
+    ldi   YH, hi8(SRAM_ARP_TABLE)
+    ldi   x1, ARP_TABLE_LEN
+    rcall BZERO
     ret
 
 /* Handle ARP packet {{{2 ------------------------------------------------------

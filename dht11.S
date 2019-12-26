@@ -72,9 +72,9 @@ DHT11_INIT:
     out   _SFR_IO_ADDR(MCUCR), t1
 
     /* Set Interrupt in INT1 */
-    in    t2, _SFR_IO_ADDR(GICR)
-    sbr   t2, (1 << INT1)
-    out   _SFR_IO_ADDR(GICR), t2
+    in    t1, _SFR_IO_ADDR(GICR)
+    sbr   t1, (1 << INT1)
+    out   _SFR_IO_ADDR(GICR), t1
 
     /* Set INT1 */
     /* This line must be hold high while the DHT11 is not in used. */
