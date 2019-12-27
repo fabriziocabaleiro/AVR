@@ -104,7 +104,7 @@ END_OF_OPTIONS:
     sub   x1, TCP_HEADER_LEN_REG
     add   x1, t2
     /* Y is pointing to SRAM_TCP_ACK_N from previous MEMSWAP */
-    rcall ADD_32b
+    rcall ADD_UINT32_BIG_ENDIAN
 
     /* Set checksum to zero */
     adiw  ZL, 2 /* point to SRAM_TCP_CHKSUM */

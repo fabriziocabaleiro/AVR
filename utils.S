@@ -21,7 +21,7 @@
 .global ES_MEMCPY
 .global EN_MEMCMP
 .global MEMSWAP
-.global ADD_32b
+.global ADD_UINT32_BIG_ENDIAN
 .global SDIV
 .global BZERO
 
@@ -173,17 +173,18 @@ MEMSWAP:
     brne MEMSWAP
     ret
 
-/* ADD_32b {{{2 ----------------------------------------------------------------
- * 32bits addition, Big endian
+/* ADD_UINT32_BIG_ENDIAN {{{2 ----------------------------------------------------------------
+ * 4 bytes addition, Big endian
  * Y points to 32b number*/
-ADD_32b:
+ADD_UINT32_BIG_ENDIAN:
     adiw  YL, 4
+    ldi   t3, 4
     clc
 0:  ld    t1, -Y
     adc   t1, x1
     clr   x1
     st    Y, t1
-    dec   t2
+    dec   t3
     brne  0b
     ret
 

@@ -4,6 +4,7 @@
 #include <avr/io.h>
 #include "defs.h"
 #include "timer.h"
+#include "macros.S"
 .LIST
 
 /* MACORS {{{1 ---------------------------------------------------------------*/
@@ -23,6 +24,9 @@
 #   error "Unsupported F_CPU value"
 #endif
 
+#define SECONDS_LEN 4
+#define EVENT_LEN   1
+
 /* GLOBAL {{{1 ---------------------------------------------------------------*/
 .global TIMER_INIT
 .global TIMER1_COMPA_vect
@@ -32,8 +36,10 @@
 
 /* DATA  {{{1 ----------------------------------------------------------------*/
 .section .data
-SRAM_TIMER1_SECONDS: .skip 4
-SRAM_TIMER1_EVENTS:  .skip 1
+/* uint32 big endian */
+SRAM_TIMER1_SECONDS: .skip SECONDS_LEN
+/* SRAM_TIMER1_EVENTS must be right after SRAM_TIMER1_SECONDS, check XXX */
+SRAM_TIMER1_EVENTS:  .skip EVENT_LEN
 
 /* TEXT {{{1 -----------------------------------------------------------------*/
 .section .text
@@ -59,7 +65,7 @@ TIMER_INIT:
 
     ldi   YL, lo8(SRAM_TIMER1_SECONDS)
     ldi   YH, hi8(SRAM_TIMER1_SECONDS)
-    ldi   x1, 4
+    ldi   x1, (SECONDS_LEN + EVENT_LEN)
     rcall BZERO
 
     ret
@@ -75,29 +81,31 @@ TIMER1_COMPA_vect:
     push  YL
     push  YH
 
+    /* Increment seconds uint32 Big endian */
+    ldi   YL, lo8(SRAM_TIMER1_SECONDS + SECONDS_LEN)
+    ldi   YH, hi8(SRAM_TIMER1_SECONDS + SECONDS_LEN)
+    ldi   t2, SECONDS_LEN
+0:  ld    t1, -Y
+    inc   t1
+    st    Y, t1
+    brne  0f
+    dec   t2
+    brne  0b
+0:
+
+    /* XXX: ldd instead of "lds t1, SRAM_TIMER1_EVENTS" for smaller footprint */
     ldi   YL, lo8(SRAM_TIMER1_SECONDS)
     ldi   YH, hi8(SRAM_TIMER1_SECONDS)
-    ldi   t2, TIMER1_SECONDS_LEN
-INC_SECONDS:
-    ld    t1, Y+
-    inc   t1
-    sts   SRAM_TIMER1_SECONDS, t1
-    brne  TIMER1_SET_EVENTS
-    /* if overflow, then increment next byte */
-    dec   t2
-    breq  TIMER1_SET_EVENTS
-    rjmp  INC_SECONDS
+    ldd   t1, Y + SECONDS_LEN
 
-TIMER1_SET_EVENTS:
-
-    lds   t1, SRAM_TIMER1_EVENTS
-
-    lds   t2, SRAM_TIMER1_SECONDS
+    ldd   t2, Y + (SECONDS_LEN - 1) /* Load last byte from uint32 */
     sbrs  t2, 0
     sbr   t1, (1 << TIMER1_EVENTS_2S)
 
     sbr   t1, (1 << TIMER1_EVENTS_SECOND)
-    sts   SRAM_TIMER1_EVENTS, t1
+    std   Y + (SECONDS_LEN), t1
+
+    DEBUG(rcall PRINT_CURRENT_TIME)
 
     pop   YH
     pop   YL
@@ -108,4 +116,15 @@ TIMER1_SET_EVENTS:
 
     reti
 
+#ifndef NDEBUG
+PRINT_CURRENT_TIME:
+    ldi   t1, 4
+    PRINT_STR_SAFE STR_TIMER_CURRENT_TIME
+0:  ld    t2, Y+
+    PRINT_REG_SAFE t2
+    dec   t1
+    brne  0b
+    PRINT_NEWLINE_SAFE
+    ret
+#endif
 .end
