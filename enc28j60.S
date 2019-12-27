@@ -258,12 +258,9 @@ ETH_READ_RECEIVE_HEADER:
     push  ZL
     push  ZH
 
-    SPI_SELECT_ETH
-    ldi   x1, ETH_SPI_CMD_RBM
-    rcall SPI_MASTER_TRANSMIT
+    rcall ETH_READ_BUFFER_START
 
     /* Read the whole receive status vector */
-    /* TODO: NS_MEMCPY */
     ldi   ZH, hi8(SRAM_RPKT_N_PKT_L)
     ldi   ZL, lo8(SRAM_RPKT_N_PKT_L)
     ldi   x1, RPKT_STATUS_VECTOR_LEN
@@ -301,9 +298,7 @@ ETH_CHECK_RECEIVE_STATUS_VECTOR:
  * length field and it specifies the amount of non-padding data which follows in
  * the data field.  */
 ETH_READ_MAC_ADDRS_N_LEN_TYPE:
-    ldi   x1, ETH_SPI_CMD_RBM
-    SPI_SELECT_ETH
-    rcall SPI_MASTER_TRANSMIT
+    rcall ETH_READ_BUFFER_START
 
     /* Using register Z for SRAM write incremental */
     push  ZL

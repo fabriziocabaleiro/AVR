@@ -25,6 +25,8 @@
 .global STR_ENC_STATUS_VECTOR_ERROR
 .global STR_TIMER0
 .global STR_STATE
+.global STR_ARP_WR_TBL_ENTRY
+.global STR_ARP_REPLACE
 
 /* DATA  {{{1 ----------------------------------------------------------------*/
 .section .data
@@ -55,6 +57,10 @@ STR_TIMER0:
 .string "*Timer0 interrupt handler*"
 STR_STATE:
 .string "STATE  "
+STR_ARP_WR_TBL_ENTRY:
+.string "ARP writing to table entry: "
+STR_ARP_REPLACE:
+.string "ARP replacing oldest entry in ARP table\r\n"
 
 .align 1
 #endif

@@ -2,6 +2,7 @@
 /* INCLUDES {{{1 */
 .NOLIST
 #include <avr/io.h>
+#include "macros.S"
 #include "defs.h"
 #include "enc28j60.h"
 #include "arp.h"
@@ -13,15 +14,14 @@
 #define ARP_PAYLOAD_LEN      28
 /* How many entries can the ARP table hold */
 #define ARP_TABLE_SIZE       4
-/* How many time the entry has been requested */
-#define ACCESS_CNT           1
-#define ARP_TABLE_ENTRY_LEN  (IPV4_ADDR_LEN + MAC_ADDR_LEN + ACCESS_CNT)
+#define ARP_TABLE_ENTRY_LEN  (IPV4_ADDR_LEN + MAC_ADDR_LEN)
 #define ARP_TABLE_LEN        (ARP_TABLE_ENTRY_LEN * ARP_TABLE_SIZE)
+
+#define ARP_TABLE_CURRENT_ENTRY_LEN 1
 
 /* Offsets in ARP table */
 #define ARP_TABLE_IPV4        0
 #define ARP_TABLE_MAC         (IPV4_ADDR_LEN)
-#define ARP_TABLE_ACCESS_CNT  (ARP_TABLE_MAC + MAC_ADDR_LEN)
 
 /* GLOBAL {{{1 ---------------------------------------------------------------*/
 .global ARP_HANDLE_PKT
@@ -30,8 +30,10 @@
 
 /* DATA  {{{1 ----------------------------------------------------------------*/
 .section .data
-SRAM_ARP_PAYLOAD: .skip ARP_PAYLOAD_LEN
-SRAM_ARP_TABLE:   .skip ARP_TABLE_LEN
+SRAM_ARP_PAYLOAD:   .skip ARP_PAYLOAD_LEN
+/* The last byte on the table is the offset of the current entry where ARP reply
+ * are going to be store */
+SRAM_ARP_TABLE:     .skip (ARP_TABLE_LEN + ARP_TABLE_CURRENT_ENTRY_LEN)
 
 /* TEXT {{{1 -----------------------------------------------------------------*/
 .section .text
@@ -40,7 +42,7 @@ SRAM_ARP_TABLE:   .skip ARP_TABLE_LEN
 ARP_INIT:
     ldi   YL, lo8(SRAM_ARP_TABLE)
     ldi   YH, hi8(SRAM_ARP_TABLE)
-    ldi   x1, ARP_TABLE_LEN
+    ldi   x1, (ARP_TABLE_LEN + ARP_TABLE_CURRENT_ENTRY_LEN)
     rcall BZERO
     ret
 
@@ -57,14 +59,10 @@ ARP_HANDLE_PKT:
 
     /* Read ARP payload (28 bytes) into SRAM {{{3 */
     rcall ETH_READ_BUFFER_START
-    ldi   t3, ARP_PAYLOAD_LEN
     ldi   ZH, hi8(SRAM_ARP_PAYLOAD)
     ldi   ZL, lo8(SRAM_ARP_PAYLOAD)
-ARP_PROCESS_READ_PAYLOAD:
-    ETH_READ_NEXT_BYTE
-    st    Z+, x4
-    dec   t3
-    brne  ARP_PROCESS_READ_PAYLOAD
+    ldi   x1, ARP_PAYLOAD_LEN
+    rcall SPI_MEMCPY
 
     ETH_READ_BUFFER_END
     /* Check that ARP is for me  {{{3 */
@@ -83,57 +81,55 @@ ARP_PROCESS_READ_PAYLOAD:
 ARP_IS_REQUEST: /* {{{3 */
     /* Set OPER {{{4 */
     ldi   t2, ARP_OPER_REPLY
-    st    Z+, t2  /* Z ends up in the first address of the sender's MAC */
+    st    Z+, t2  /* Z ends up in the first address of the sender's MAC (SHA) */
 
     /* Set SHA and THA at the same time {{{4 */
     ldi   t3, MAC_ADDR_LEN
     ldi   YH, hi8(EEPROM_MAC_ADDR)
     ldi   YL, lo8(EEPROM_MAC_ADDR)
-ARP_PROCESS_KEEP_WRITING_MY_MAC:
     /* Write previous target MAC into destination MAC */
-    ld    t2, Z
+0:  ld    t2, Z
     std   Z+(ARP_THA - ARP_SHA), t2
-    /* Set Addr to read from EEPROM, read and write into SRAM */
+    /* Read from EEPROM and write into SRAM */
     rcall EEPROM_READ_N_INC
     st    Z+, x4
     dec   t3
-    brne  ARP_PROCESS_KEEP_WRITING_MY_MAC
+    brne  0b
 
     /* Set SPA and TPA at the same time {{{4 */
     ldi   t3, IPV4_ADDR_LEN
     ldi   YH, hi8(EEPROM_IP_ADDR)
     ldi   YL, lo8(EEPROM_IP_ADDR)
-
-ARP_PROCESS_WRITE_IP_BYTE:
     /* Copy IP from src to dst */
-    ld    t2, Z
+0:  ld    t2, Z
     std   Z+(ARP_TPA - ARP_SPA), t2
-    /* Set addr to read from EEPROM, read into t2 and write it into SRAM */
+    /* Read from EEPROM and write it into SRAM */
     rcall EEPROM_READ_N_INC
     st    Z+, x4
     dec   t3
-    brne  ARP_PROCESS_WRITE_IP_BYTE
+    brne  0b
     /* Send ARP packet back {{{4 */
     rcall ARP_SEND_PACKET
     rjmp  ARP_PROCESS_EXIT_SUCCESS
 
 ARP_IS_REPLY: /* {{{3 */
-    /* Find an empty space in the ARP table {{{4 */
+    /* Using Round Robin, insert the ARP reply into the ARP table */
+    /* Set Z, then load current offset using Z, update current offset and stored
+     * back using Z, then update Z to point to the entry to write to. We are
+     * going to start writing in the second slot, but it has a smallest
+     * footprint than other options */
     ldi   ZL, lo8(SRAM_ARP_TABLE)
     ldi   ZH, hi8(SRAM_ARP_TABLE)
-    ldi   t3, ARP_TABLE_SIZE
-    /* To find an empty entry on the ARP table, we are going to check if the
-     * first byte of the IP address is zero, if so, we assume that the entry is
-     * empty, else, we jump to the next entry and check again */
-FIND_EMPTY_ENTRY_LOOP:
-    ld    t1, Z
-    tst   t1
-    breq  EMPTY_ENTRY_FOUND
-    dec   t3
-    breq  OVERWRITE_LESS_ACCESSED
-    adiw  ZL, ARP_TABLE_ENTRY_LEN
+    ldd   t1, Z + (ARP_TABLE_LEN) /* Load current entry offset */
+    subi  t1, -(ARP_TABLE_ENTRY_LEN) /* Add entry length to offset */
+    cpi   t1, ARP_TABLE_LEN /* check if reached end of table */
+    brne  0f
+    clr   t1
+0:  std   Z + (ARP_TABLE_LEN), t1 /* Store value back */
+    DEBUG(rcall PRINT_CURRENT_ENTRY)
+    add   ZL, t1
+    adc   ZH, zero
 
-EMPTY_ENTRY_FOUND:
     /* Copy SPA {{{4 */
     ldi   YL, lo8(SRAM_ARP_PAYLOAD + ARP_SPA)
     ldi   YH, hi8(SRAM_ARP_PAYLOAD + ARP_SPA)
@@ -145,8 +141,6 @@ EMPTY_ENTRY_FOUND:
     ldi   x1, MAC_ADDR_LEN
     rcall MEMCPY
 
-    /* Set access counter to zero  {{{4 */
-    st    Z, zero
     /* }}}3 */
 ARP_PROCESS_EXIT_SUCCESS:
     pop   YL
@@ -154,11 +148,6 @@ ARP_PROCESS_EXIT_SUCCESS:
     pop   ZL
     pop   ZH
     ret
-
-OVERWRITE_LESS_ACCESSED: /* {{{3 */
-    /*TODO: find a less accessed entry */
-    sbiw  ZL, ARP_TABLE_LEN
-    rjmp  EMPTY_ENTRY_FOUND
 
 /* ARP request {{{2 ------------------------------------------------------------
  * Y: Pointer to Targer Protocol Address (TPA) */
@@ -216,25 +205,31 @@ ARP_GET_MAC_ADDR_PTR:
     ldi   ZH, hi8(SRAM_ARP_TABLE + ARP_TABLE_IPV4)
     ldi   t3, ARP_TABLE_SIZE
     ldi   x1, IPV4_ADDR_LEN
-ARP_TABLE_LOOP:
-    rcall MEMCMP
+    /* Loop through ARP table looking for IP Address */
+0:  rcall MEMCMP
     breq  ARP_ENTRY_FOUND
     adiw  ZL, ARP_TABLE_ENTRY_LEN
     dec   t3
-    brne  ARP_TABLE_LOOP
+    brne  0b
     /* ARP entry not found */
     rcall ARP_REQUEST
     clz
     rjmp  ARP_GET_MAC_ADDR_EXIT
 ARP_ENTRY_FOUND:
-    /* TODO: subtract first from Z and then movw */
+    adiw  ZL, (ARP_TABLE_MAC - ARP_TABLE_IPV4)
     movw  x3, ZL
-    subi  x3, lo8(-(ARP_TABLE_MAC - ARP_TABLE_IPV4))
-    sbci  x4, hi8(-(ARP_TABLE_MAC - ARP_TABLE_IPV4))
     sez
 
 ARP_GET_MAC_ADDR_EXIT:
     pop   ZH
     pop   ZL
     ret
+
+#ifndef NDEBUG
+PRINT_CURRENT_ENTRY:
+    DEBUG(PRINT_STR_SAFE STR_ARP_WR_TBL_ENTRY)
+    DEBUG(PRINT_REG_SAFE t1)
+    DEBUG(PRINT_NEWLINE_SAFE)
+    ret
+#endif
 .end
