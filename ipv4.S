@@ -11,6 +11,14 @@
 /* MACORS {{{1 ---------------------------------------------------------------*/
 #define IPV4_PSEUDO_HEADER_LEN (IPV4_ADDR_LEN * 2 + 1 + 1 + 2) /* 12 */
 
+/* Using (EEPROM_IP_HEADER_END - EEPROM_IP_HEADER) within ipv4.h is hacking, as
+ * including eeprom_data.h in ipv4.h doesn't work, so don't use those macros in
+ * ipv4.h, but check that we are defining the correct value.
+ * We define the default IPv4 header in the EERPOM. */
+#if (IPV4_DEFAULT_HEADER_LEN != (EEPROM_IP_HEADER_END - EEPROM_IP_HEADER))
+#   error "IPV4_DEFAULT_HEADER_LEN != (EEPROM_IP_HEADER_END - EEPROM_IP_HEADER)"
+#endif
+
 /* GLOBAL {{{1 ---------------------------------------------------------------*/
 .global IPV4_HANDLE_PKT
 .global INTERNET_CHECKSUM_RFC1071
@@ -253,66 +261,40 @@ INTERNET_CHECKSUM_LOOP_END:
 /* Prepare IPv4 header {{{2 ----------------------------------------------------
  * x1 total size */
 IPV4_PREPARE_DEFAULT_HEADER_20_40_BYTES:
-    push  YH
-    push  YL
-    push  ZH
-    push  ZL
+    push  x1
 
-    /* Read from */
-    /* TODO: ES_MEMCMP */
+    /* Get default header from EEPROM (don't include src/dst ip addresses */
     ldi   YL, lo8(EEPROM_IP_HEADER)
     ldi   YH, hi8(EEPROM_IP_HEADER)
-    ldi   t3, (EEPROM_IP_HEADER_TIL_CHK_SUM - EEPROM_IP_HEADER)
-    /* Write to */
     ldi   ZL, lo8(SRAM_IPV4_HEADER)
     ldi   ZH, hi8(SRAM_IPV4_HEADER)
-IPV4_PREPARE_HEADER_GET_FROM_EEPROM:
-    rcall EEPROM_READ_N_INC
-    st    Z+, x4
-    dec   t3
-    brne  IPV4_PREPARE_HEADER_GET_FROM_EEPROM
-    /* till here we have 10 bytes written. Now we have to write checksum and
-     * src/dst IP addresses */
-    /* Write zero checksum for the moment */
-    st    Z+, zero
-    st    Z+, zero
+    ldi   x1, (EEPROM_IP_HEADER_TIL_SRC_IP_ADDR - EEPROM_IP_HEADER)
+    rcall ES_MEMCPY
 
     /* SRC IP Address */
     ldi   YL, lo8(EEPROM_IP_ADDR)
     ldi   YH, hi8(EEPROM_IP_ADDR)
-    ldi   t3, IPV4_ADDR_LEN
-IPV4_PREPARE_HEADER_GET_IP_FROM_EEPROM:
-    rcall EEPROM_READ_N_INC
-    st    Z+, x4
-    dec   t3
-    brne  IPV4_PREPARE_HEADER_GET_IP_FROM_EEPROM
+    ldi   x1, IPV4_ADDR_LEN
+    rcall ES_MEMCPY
 
     /* DST IP Address */
-    /* TODO: MEMCPY */
     ldi   YL, lo8(SRAM_IP_ADDR_DST)
     ldi   YH, hi8(SRAM_IP_ADDR_DST)
-    ldi   t3, IPV4_ADDR_LEN
-IPV4_PREPARE_HEADER_GET_IP_FROM_EEPROM_DST:
-    ld    t1, Y+
-    st    Z+, t1
-    dec   t3
-    brne  IPV4_PREPARE_HEADER_GET_IP_FROM_EEPROM_DST
+    ldi   x1, IPV4_ADDR_LEN
+    rcall MEMCPY
 
     /* Update Total length and calculate Checksum */
-    ldi   ZL, lo8(SRAM_IPV4_HEADER)
-    ldi   ZH, hi8(SRAM_IPV4_HEADER)
+    sbiw  ZL, IPV4_DEFAULT_HEADER_LEN
+    pop   x1
     std   Z + (IPV4_TOTAL_LENGTH + 1), x1
 
+    /* Calculate and set checksum */
     ldi   x1, IPV4_DEFAULT_HEADER_LEN
-    ldi   x2, 0
+    clr   x2
     rcall INTERNET_CHECKSUM_RFC1071
     std   Z + (IPV4_H_CHECKSUM + 0), x3
     std   Z + (IPV4_H_CHECKSUM + 1), x4
 
-    pop   ZL
-    pop   ZH
-    pop   YL
-    pop   YH
     ret
 
 /* Using incoming IPv4 header for outgoing IPv4 header {{{2 --------------------

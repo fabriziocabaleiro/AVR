@@ -63,10 +63,10 @@ EEPROM_IP_HEADER: /* {{{2 */
     .byte 0xFF
     /* Protocol 17 (UDP) */
     .byte 0x11
-EEPROM_IP_HEADER_TIL_CHK_SUM:
     /* Checksum to zero, so it can be calculated and set when necessary */
     .byte 0x00
     .byte 0x00
+EEPROM_IP_HEADER_TIL_SRC_IP_ADDR:
     /* Source IP address, non-routable meta address */
     .byte 0x00
     .byte 0x00

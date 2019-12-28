@@ -24,7 +24,6 @@
 #   error "Unsupported F_CPU value"
 #endif
 
-#define SECONDS_LEN 4
 #define EVENT_LEN   1
 
 /* GLOBAL {{{1 ---------------------------------------------------------------*/
@@ -37,7 +36,7 @@
 /* DATA  {{{1 ----------------------------------------------------------------*/
 .section .data
 /* uint32 big endian */
-SRAM_TIMER1_SECONDS: .skip SECONDS_LEN
+SRAM_TIMER1_SECONDS: .skip TIMER1_SECONDS_LEN
 /* SRAM_TIMER1_EVENTS must be right after SRAM_TIMER1_SECONDS, check XXX */
 SRAM_TIMER1_EVENTS:  .skip EVENT_LEN
 
@@ -63,9 +62,9 @@ TIMER_INIT:
     sbr   t1, (1 << OCIE1A)
     out   _SFR_IO_ADDR(TIMSK), t1
 
-    ldi   YL, lo8(SRAM_TIMER1_SECONDS)
-    ldi   YH, hi8(SRAM_TIMER1_SECONDS)
-    ldi   x1, (SECONDS_LEN + EVENT_LEN)
+    ldi   ZL, lo8(SRAM_TIMER1_SECONDS)
+    ldi   ZH, hi8(SRAM_TIMER1_SECONDS)
+    ldi   x1, (TIMER1_SECONDS_LEN + EVENT_LEN)
     rcall BZERO
 
     ret
@@ -82,9 +81,9 @@ TIMER1_COMPA_vect:
     push  YH
 
     /* Increment seconds uint32 Big endian */
-    ldi   YL, lo8(SRAM_TIMER1_SECONDS + SECONDS_LEN)
-    ldi   YH, hi8(SRAM_TIMER1_SECONDS + SECONDS_LEN)
-    ldi   t2, SECONDS_LEN
+    ldi   YL, lo8(SRAM_TIMER1_SECONDS + TIMER1_SECONDS_LEN)
+    ldi   YH, hi8(SRAM_TIMER1_SECONDS + TIMER1_SECONDS_LEN)
+    ldi   t2, TIMER1_SECONDS_LEN
 0:  ld    t1, -Y
     inc   t1
     st    Y, t1
@@ -96,14 +95,14 @@ TIMER1_COMPA_vect:
     /* XXX: ldd instead of "lds t1, SRAM_TIMER1_EVENTS" for smaller footprint */
     ldi   YL, lo8(SRAM_TIMER1_SECONDS)
     ldi   YH, hi8(SRAM_TIMER1_SECONDS)
-    ldd   t1, Y + SECONDS_LEN
+    ldd   t1, Y + TIMER1_SECONDS_LEN
 
-    ldd   t2, Y + (SECONDS_LEN - 1) /* Load last byte from uint32 */
+    ldd   t2, Y + (TIMER1_SECONDS_LEN - 1) /* Load last byte from uint32 */
     sbrs  t2, 0
     sbr   t1, (1 << TIMER1_EVENTS_2S)
 
     sbr   t1, (1 << TIMER1_EVENTS_SECOND)
-    std   Y + (SECONDS_LEN), t1
+    std   Y + (TIMER1_SECONDS_LEN), t1
 
     DEBUG(rcall PRINT_CURRENT_TIME)
 

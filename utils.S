@@ -207,12 +207,12 @@ SDIV:
     ret
 
 /* BZERO -----------------------------------------------------------------------
- * Set x1 bytes to zero the memory pointed by Y
+ * Set x1 bytes to zero the memory pointed by Z
  */
 BZERO:
     subi  x1, 1
     brlo  0f
-    st    Y+, zero
+    st    Z+, zero
     rjmp  BZERO
 0:  ret
 

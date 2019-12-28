@@ -40,8 +40,8 @@ SRAM_ARP_TABLE:     .skip (ARP_TABLE_LEN + ARP_TABLE_CURRENT_ENTRY_LEN)
 
 /* ARP init {{{2 -------------------------------------------------------------*/
 ARP_INIT:
-    ldi   YL, lo8(SRAM_ARP_TABLE)
-    ldi   YH, hi8(SRAM_ARP_TABLE)
+    ldi   ZL, lo8(SRAM_ARP_TABLE)
+    ldi   ZH, hi8(SRAM_ARP_TABLE)
     ldi   x1, (ARP_TABLE_LEN + ARP_TABLE_CURRENT_ENTRY_LEN)
     rcall BZERO
     ret

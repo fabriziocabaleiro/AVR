@@ -49,6 +49,7 @@ SWAP_IP_ADDR:
     /* Plus 1 as we already read ICMP MSG TYPE */
     ldi   ZL, lo8(SRAM_IPV4_PAYLOAD + 1)
     ldi   ZH, hi8(SRAM_IPV4_PAYLOAD + 1)
+    /* TODO: SPI_MEMCPY ? */
 READ_PAYLOAD:
     ETH_READ_NEXT_BYTE
     st    Z+, x4

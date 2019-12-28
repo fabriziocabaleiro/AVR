@@ -81,6 +81,7 @@ UDP_PREPARE_PACKET:
     push  YL
     push  YH
 
+    /* Write UDP header */
     ldi   YL, lo8(SRAM_UDP_HEADER)
     ldi   YH, hi8(SRAM_UDP_HEADER)
     /* Write Src, Dst and Length. Chksum will be written next */
