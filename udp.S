@@ -30,28 +30,28 @@ SRAM_UDP_CHKSUM:   .skip 2
 
 /* Handle received UDP packet {{{2 -------------------------------------------*/
 UDP_HANDLE_PKT:
-    push  YL
-    push  YH
+    push  xl
+    push  xh
 
     rcall ETH_READ_BUFFER_START
     /* Read UDP header */
     ldi   t3, UDP_HEADER_LEN
-    ldi   ZL, lo8(SRAM_UDP_HEADER)
-    ldi   ZH, hi8(SRAM_UDP_HEADER)
+    ldi   zl, lo8(SRAM_UDP_HEADER)
+    ldi   zh, hi8(SRAM_UDP_HEADER)
 READ_HEADER:
     ETH_READ_NEXT_BYTE
-    st    Z+, x4
+    st    z+, a4
     dec   t3
     brne  READ_HEADER
 
     /* Set common argument for ES_MEMCMP */
-    ldi   ZL, lo8(SRAM_UDP_HEADER)
-    ldi   ZH, hi8(SRAM_UDP_HEADER)
-    ldi   x1, 4
+    ldi   zl, lo8(SRAM_UDP_HEADER)
+    ldi   zh, hi8(SRAM_UDP_HEADER)
+    ldi   a1, 4
 
     /* DHCP */
-    ldi   YL, lo8(EEPROM_DHCP_SRC_DST_PORT)
-    ldi   YH, hi8(EEPROM_DHCP_SRC_DST_PORT)
+    ldi   xl, lo8(EEPROM_DHCP_SRC_DST_PORT)
+    ldi   xh, hi8(EEPROM_DHCP_SRC_DST_PORT)
     rcall ES_MEMCMP
     brne  TRY_COMM
     rcall DHCP_HANDLE_PKT
@@ -60,42 +60,42 @@ READ_HEADER:
     /* COMM */
 TRY_COMM:
     /* TODO: ADIW instead of 2 x LDI */
-    ldi   YL, lo8(EEPROM_COMM_SRC_DST_PORT)
-    ldi   YH, hi8(EEPROM_COMM_SRC_DST_PORT)
+    ldi   xl, lo8(EEPROM_COMM_SRC_DST_PORT)
+    ldi   xh, hi8(EEPROM_COMM_SRC_DST_PORT)
     rcall ES_MEMCMP
     brne  UDP_HANDLE_PKT_END
     rcall COMM_REGISTER_IP
 
 UDP_HANDLE_PKT_END:
     ETH_READ_BUFFER_END
-    pop   YH
-    pop   YL
+    pop   xh
+    pop   xl
     ret
 
 /* Prepare UDP packet {{{2 -----------------------------------------------------
  * Note: UDP header and payload in IPv4 payload
- * Z, pointer to start writing the UDP packet to.
- * Y, pointer to the data that is going to be read from
+ * z, pointer to start writing the UDP packet to.
+ * x, pointer to the data that is going to be read from
  * This routine should write no more than 200 bytes of data */
 UDP_PREPARE_PACKET:
-    push  YL
-    push  YH
+    push  xl
+    push  xh
 
     /* Write UDP header */
-    ldi   YL, lo8(SRAM_UDP_HEADER)
-    ldi   YH, hi8(SRAM_UDP_HEADER)
+    ldi   xl, lo8(SRAM_UDP_HEADER)
+    ldi   xh, hi8(SRAM_UDP_HEADER)
     /* Write Src, Dst and Length. Chksum will be written next */
-    ldi   x1, (UDP_HEADER_CHK_SUM - UDP_HEADER_SRC_PORT)
+    ldi   a1, (UDP_HEADER_CHK_SUM - UDP_HEADER_SRC_PORT)
     rcall MEMCPY
 
     /* Clear checksum */
-    st    Z+, zero
-    st    Z+, zero
+    st    z+, zero
+    st    z+, zero
 
     /* Copy payload */
-    pop   YH
-    pop   YL
-    lds   x1, SRAM_UDP_PKT_LEN + 1
+    pop   xh
+    pop   xl
+    lds   a1, SRAM_UDP_PKT_LEN + 1
     rcall MEMCPY
 
     ret

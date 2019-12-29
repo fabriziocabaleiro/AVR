@@ -62,9 +62,9 @@ TIMER_INIT:
     sbr   t1, (1 << OCIE1A)
     out   _SFR_IO_ADDR(TIMSK), t1
 
-    ldi   ZL, lo8(SRAM_TIMER1_SECONDS)
-    ldi   ZH, hi8(SRAM_TIMER1_SECONDS)
-    ldi   x1, (TIMER1_SECONDS_LEN + EVENT_LEN)
+    ldi   zl, lo8(SRAM_TIMER1_SECONDS)
+    ldi   zh, hi8(SRAM_TIMER1_SECONDS)
+    ldi   a1, (TIMER1_SECONDS_LEN + EVENT_LEN)
     rcall BZERO
 
     ret
@@ -77,37 +77,37 @@ TIMER1_COMPA_vect:
     in    t1, _SFR_IO_ADDR(SREG)
     push  t1
     push  t2
-    push  YL
-    push  YH
+    push  zl
+    push  zh
 
     /* Increment seconds uint32 Big endian */
-    ldi   YL, lo8(SRAM_TIMER1_SECONDS + TIMER1_SECONDS_LEN)
-    ldi   YH, hi8(SRAM_TIMER1_SECONDS + TIMER1_SECONDS_LEN)
+    ldi   zl, lo8(SRAM_TIMER1_SECONDS + TIMER1_SECONDS_LEN)
+    ldi   zh, hi8(SRAM_TIMER1_SECONDS + TIMER1_SECONDS_LEN)
     ldi   t2, TIMER1_SECONDS_LEN
-0:  ld    t1, -Y
+0:  ld    t1, -z
     inc   t1
-    st    Y, t1
+    st    z, t1
     brne  0f
     dec   t2
     brne  0b
 0:
 
     /* XXX: ldd instead of "lds t1, SRAM_TIMER1_EVENTS" for smaller footprint */
-    ldi   YL, lo8(SRAM_TIMER1_SECONDS)
-    ldi   YH, hi8(SRAM_TIMER1_SECONDS)
-    ldd   t1, Y + TIMER1_SECONDS_LEN
+    ldi   zl, lo8(SRAM_TIMER1_SECONDS)
+    ldi   zh, hi8(SRAM_TIMER1_SECONDS)
+    ldd   t1, z + TIMER1_SECONDS_LEN
 
-    ldd   t2, Y + (TIMER1_SECONDS_LEN - 1) /* Load last byte from uint32 */
+    ldd   t2, z + (TIMER1_SECONDS_LEN - 1) /* Load last byte from uint32 */
     sbrs  t2, 0
     sbr   t1, (1 << TIMER1_EVENTS_2S)
 
     sbr   t1, (1 << TIMER1_EVENTS_SECOND)
-    std   Y + (TIMER1_SECONDS_LEN), t1
+    std   z + (TIMER1_SECONDS_LEN), t1
 
     DEBUG(rcall PRINT_CURRENT_TIME)
 
-    pop   YH
-    pop   YL
+    pop   zh
+    pop   zl
     pop   t2
     pop   t1
     out   _SFR_IO_ADDR(SREG), t1
@@ -119,7 +119,7 @@ TIMER1_COMPA_vect:
 PRINT_CURRENT_TIME:
     ldi   t1, 4
     PRINT_STR_SAFE STR_TIMER_CURRENT_TIME
-0:  ld    t2, Y+
+0:  ld    t2, z+
     PRINT_REG_SAFE t2
     dec   t1
     brne  0b

@@ -50,40 +50,40 @@ SRAM_COMM_TYPE_LEN:    .skip 2
 /* COMM init {{{2 --------------------------------------------------------------
  * Initialize communication */
 COMM_INIT:
-    ldi   ZL, lo8(SRAM_COMM_TABLE)
-    ldi   ZH, hi8(SRAM_COMM_TABLE)
-    ldi   x1, (COMM_DST_TBL_LEN + DHT11_PAYLOAD_LEN + MQ135_PAYLOAD_LEN + 1 + 2)
+    ldi   zl, lo8(SRAM_COMM_TABLE)
+    ldi   zh, hi8(SRAM_COMM_TABLE)
+    ldi   a1, (COMM_DST_TBL_LEN + DHT11_PAYLOAD_LEN + MQ135_PAYLOAD_LEN + 1 + 2)
     rcall BZERO
-    sbiw  ZL, 2
+    sbiw  zl, 2
     ldi   t1, hi8(ETHER_TYPE_IPV4)
-    st    Z+, t1
+    st    z+, t1
     ldi   t1, lo8(ETHER_TYPE_IPV4)
-    st    Z+, t1
+    st    z+, t1
     ret
 
 /* Send a packet to IP registered in COMM table {{{2 ---------------------------
- * x1 is the UDP length */
+ * a1 is the UDP length */
 SEND_PACKET:
     push  s1 /* Counter for all entries of comm table */
-    push  s2 /* Save x1 to be used later within loop */
+    push  s2 /* Save a1 to be used later within loop */
 
     ldi   s1, COMM_DST_TBL_SIZE
-    mov   s2, x1
-    ldi   YL, lo8(SRAM_COMM_TABLE)
-    ldi   YH, hi8(SRAM_COMM_TABLE)
+    mov   s2, a1
+    ldi   xl, lo8(SRAM_COMM_TABLE)
+    ldi   xh, hi8(SRAM_COMM_TABLE)
     /* For all entries of the COMM table */
 SEND_PACKET_FOR_ALL_ENTRIES:
-    ldi   x1, IPV4_ADDR_LEN
-    clr   x2
+    ldi   a1, IPV4_ADDR_LEN
+    clr   a2
     rcall REG_MEMCMP
     breq  SEND_PACKET_NEXT_ENTRY
-    push  YL
-    push  YH
+    push  xl
+    push  xh
     /* Set MAC Dst pointer {{{3 */
     rcall ARP_GET_MAC_ADDR_PTR
     brne  IP_NOT_IN_ARP_TABLE
-    sts   SRAM_ENC_MAC_DST_PTR + 0, x4
-    sts   SRAM_ENC_MAC_DST_PTR + 1, x3
+    sts   SRAM_ENC_MAC_DST_PTR + 0, a4
+    sts   SRAM_ENC_MAC_DST_PTR + 1, a3
 
     /* Set Type/Len pointer {{{3 */
     ldi   t2, hi8(SRAM_COMM_TYPE_LEN)
@@ -95,59 +95,59 @@ SEND_PACKET_FOR_ALL_ENTRIES:
     rcall ETH_WRITE_BUFFER_PACKET_HEADER
 
     /* Set Dst IP address {{{3 */
-    ldi   ZL, lo8(SRAM_IP_ADDR_DST)
-    ldi   ZH, hi8(SRAM_IP_ADDR_DST)
-    ldi   x1, IPV4_ADDR_LEN
+    ldi   zl, lo8(SRAM_IP_ADDR_DST)
+    ldi   zh, hi8(SRAM_IP_ADDR_DST)
+    ldi   a1, IPV4_ADDR_LEN
     rcall MEMCPY
 
     /* Set Src and Dst UDP port {{{3 */
-    ldi   ZL, lo8(SRAM_UDP_HEADER + UDP_HEADER_SRC_PORT)
-    ldi   ZH, hi8(SRAM_UDP_HEADER + UDP_HEADER_SRC_PORT)
-    ldi   x1, (IPV4_PORT_LEN * 2)
+    ldi   zl, lo8(SRAM_UDP_HEADER + UDP_HEADER_SRC_PORT)
+    ldi   zh, hi8(SRAM_UDP_HEADER + UDP_HEADER_SRC_PORT)
+    ldi   a1, (IPV4_PORT_LEN * 2)
     rcall MEMCPY
 
     /* Set UDP packet length {{{3 */
-    st    Z+, zero
+    st    z+, zero
     mov   t1, s2
     subi  t1, -(UDP_HEADER_LEN) /* UDP payload + UDP header */
-    st    Z+, t1
+    st    z+, t1
 
     /* Prepare UDP packet {{{3 */
-    ldi   YH, hi8(SRAM_COMM_PAYLOAD)
-    ldi   YL, lo8(SRAM_COMM_PAYLOAD)
-    ldi   ZH, hi8(SRAM_IPV4_PAYLOAD)
-    ldi   ZL, lo8(SRAM_IPV4_PAYLOAD)
-    mov   x1, s2
+    ldi   xh, hi8(SRAM_COMM_PAYLOAD)
+    ldi   xl, lo8(SRAM_COMM_PAYLOAD)
+    ldi   zh, hi8(SRAM_IPV4_PAYLOAD)
+    ldi   zl, lo8(SRAM_IPV4_PAYLOAD)
+    mov   a1, s2
     rcall UDP_PREPARE_PACKET
 
     /* Prepare IPv4 header {{{3 */
-    ldi   x1, (IPV4_DEFAULT_HEADER_LEN + UDP_HEADER_LEN)
-    add   x1, s2
+    ldi   a1, (IPV4_DEFAULT_HEADER_LEN + UDP_HEADER_LEN)
+    add   a1, s2
     rcall IPV4_PREPARE_DEFAULT_HEADER_20_40_BYTES
 
     /* Write IPv4 header into Ethernet module {{{3 */
-    ldi   ZL, lo8(SRAM_IPV4_HEADER)
-    ldi   ZH, hi8(SRAM_IPV4_HEADER)
-    ldi   x1, IPV4_DEFAULT_HEADER_LEN
+    ldi   zl, lo8(SRAM_IPV4_HEADER)
+    ldi   zh, hi8(SRAM_IPV4_HEADER)
+    ldi   a1, IPV4_DEFAULT_HEADER_LEN
     rcall ETH_WRITE_Z_TO_TRANSMIT_BUFFER
 
     /* Write IPv4 payload into Ethernet module {{{3 */
-    ldi   ZH, hi8(SRAM_IPV4_PAYLOAD)
-    ldi   ZL, lo8(SRAM_IPV4_PAYLOAD)
-    mov   x1, s2
-    subi  x1, -(UDP_HEADER_LEN) /* UDP payload + UDP header */
+    ldi   zh, hi8(SRAM_IPV4_PAYLOAD)
+    ldi   zl, lo8(SRAM_IPV4_PAYLOAD)
+    mov   a1, s2
+    subi  a1, -(UDP_HEADER_LEN) /* UDP payload + UDP header */
     rcall ETH_WRITE_Z_TO_TRANSMIT_BUFFER
     /* }}}3 */
     /* Send the packet */
     rcall ETH_WRITE_BUFFER_PACKET_PAYLOAD_FINISH
 
 IP_NOT_IN_ARP_TABLE:
-    pop   YH
-    pop   YL
+    pop   xh
+    pop   xl
 SEND_PACKET_NEXT_ENTRY:
     dec   s1
     breq  SEND_PACKET_EXIT
-    adiw  YL, COMM_DST_TBL_ENTRY
+    adiw  xl, COMM_DST_TBL_ENTRY
     rjmp  SEND_PACKET_FOR_ALL_ENTRIES
 
 SEND_PACKET_EXIT:
@@ -159,22 +159,22 @@ SEND_PACKET_EXIT:
  * Use Round Robin to write destination entries into the table */
 COMM_REGISTER_IP:
     /* Select the entry on the table to register using ROUND ROBIN */
-    ldi   YL, lo8(SRAM_COMM_TABLE)
-    ldi   YH, hi8(SRAM_COMM_TABLE)
-    ldd   t1, Y + COMM_DST_TBL_LEN
+    ldi   zl, lo8(SRAM_COMM_TABLE)
+    ldi   zh, hi8(SRAM_COMM_TABLE)
+    ldd   t1, z + COMM_DST_TBL_LEN
     subi  t1, -(COMM_DST_TBL_ENTRY)
     cpi   t1, COMM_DST_TBL_LEN
     brne  0f
     clr   t1
-0:  std   Y + COMM_DST_TBL_LEN, t1
-    add   YL, t1
-    adc   YH, zero
+0:  std   z + COMM_DST_TBL_LEN, t1
+    add   zl, t1
+    adc   zh, zero
 
     /* From start of entry till COMM_DST_IPV4_TIME */
     ldi   t3, COMM_DST_IPV4_TIME
 COMM_REGISTER_IP_LOOP:
     ETH_READ_NEXT_BYTE
-    st    Y+, x4
+    st    z+, a4
     dec   t3
     brne  COMM_REGISTER_IP_LOOP
     ETH_READ_BUFFER_END

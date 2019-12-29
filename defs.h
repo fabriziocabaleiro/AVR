@@ -19,14 +19,14 @@
 /* Register for exchanging values with routines.
  * All of this registers may change after calling a routine.
  * We prefer to:
- * - Populate input values from x1 to x4.
- * - Populate return values from x4 to x1.
+ * - Populate input values from a1 to a4.
+ * - Populate return values from a4 to a1.
  * By doing this, we may be able to retain the value of the input register,
  * avoiding the need of resetting them. */
-#define x1     R16
-#define x2     R17
-#define x3     R18 /* used with movw */
-#define x4     R19
+#define a1     R16
+#define a2     R17
+#define a3     R18 /* used with movw */
+#define a4     R19
 
 /* Register used for temporary values, they may be change after calling a
  * routine */
@@ -39,6 +39,12 @@
 #define s3     R23
 #define s1     R24 /* used with sbiw */
 #define s2     R25
+
+/* Note: X and Z are normally used as exchange registers, some functions do
+ * change them and others don't, depending on what will generate the smallest
+ * footprint.
+ * Normally using X as Src pointer and Z as Dst pointer.
+ * Using Y as saved pointer. */
 
 /* When multiplying two registers, the results is store in R1:R0, therefore
  * avoid using them */

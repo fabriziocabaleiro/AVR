@@ -16,45 +16,45 @@
 /* Push and Pop {{{2 ---------------------------------------------------------*/
 .macro DEBUG_PUSH
 #ifndef NDEBUG
-    push  x1
+    push  a1
     push  t1
     push  t2
-    push  ZL
-    push  ZH
+    push  zl
+    push  zh
 #endif
 .endm
 
 .macro DEBUG_POP
 #ifndef NDEBUG
-    pop   ZH
-    pop   ZL
+    pop   zh
+    pop   zl
     pop   t2
     pop   t1
-    pop   x1
+    pop   a1
 #endif
 .endm
 
 /* Print Char {{{2 -----------------------------------------------------------*/
 .macro PRINT_CHAR x
 #ifndef NDEBUG
-    ldi   x1, \x
+    ldi   a1, \x
     rcall UART_TRANSMIT
 #endif
 .endm
 
 .macro PRINT_CHAR_SAFE x
 #ifndef NDEBUG
-    push  x1
-    ldi   x1, \x
+    push  a1
+    ldi   a1, \x
     rcall UART_TRANSMIT
-    pop   x1
+    pop   a1
 #endif
 .endm
 
 /* Print Register {{{2 -------------------------------------------------------*/
 .macro PRINT_REG x
 #ifndef NDEBUG
-    mov   x1, \x
+    mov   a1, \x
     rcall UART_TRANSMIT_HEX
 #endif
 .endm
@@ -62,55 +62,55 @@
 .macro PRINT_REG_SAFE x
 #ifndef NDEBUG
     /* UART_TRANSMIT_HEX modifies t1 and t2 */
-    push  x1
+    push  a1
     push  t1
     push  t2
-    mov   x1, \x
+    mov   a1, \x
     rcall UART_TRANSMIT_HEX
     pop   t2
     pop   t1
-    pop   x1
+    pop   a1
 #endif
 .endm
 
 /* Print String {{{2 ---------------------------------------------------------*/
 .macro PRINT_STR x
 #ifndef NDEBUG
-    ldi   ZL, lo8(\x)
-    ldi   ZH, hi8(\x)
+    ldi   zl, lo8(\x)
+    ldi   zh, hi8(\x)
     rcall UART_TRANSMIT_STR
 #endif
 .endm
 
 .macro PRINT_STR_SAFE x
 #ifndef NDEBUG
-    push  ZL
-    push  ZH
-    ldi   ZL, lo8(\x)
-    ldi   ZH, hi8(\x)
+    push  zl
+    push  zh
+    ldi   zl, lo8(\x)
+    ldi   zh, hi8(\x)
     rcall UART_TRANSMIT_STR
-    pop   ZH
-    pop   ZL
+    pop   zh
+    pop   zl
 #endif
 .endm
 
 /* Print new line {{{2 -------------------------------------------------------*/
 .macro PRINT_NEWLINE
 #ifndef NDEBUG
-    ldi   x1, '\r'
+    ldi   a1, '\r'
     rcall UART_TRANSMIT
-    ldi   x1, '\n'
+    ldi   a1, '\n'
     rcall UART_TRANSMIT
 #endif
 .endm
 
 .macro PRINT_NEWLINE_SAFE
 #ifndef NDEBUG
-    push  x1
-    ldi   x1, '\r'
+    push  a1
+    ldi   a1, '\r'
     rcall UART_TRANSMIT
-    ldi   x1, '\n'
+    ldi   a1, '\n'
     rcall UART_TRANSMIT
-    pop   x1
+    pop   a1
 #endif
 .endm

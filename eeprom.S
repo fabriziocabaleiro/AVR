@@ -29,122 +29,122 @@ AFTER_LAST_COREDUMP_ELEMENT:
 /* TEXT {{{1 -----------------------------------------------------------------*/
 .section .text
 
-/* Read bytes pointed by Y and return them on x4 {{{2 -------------------
- * Y gets incremented after every call */
+/* Read bytes pointed by x and return them on a4 {{{2 -------------------
+ * x gets incremented after every call */
 EEPROM_READ_N_INC:
     /* Wait for previous write to finish */
     sbic  _SFR_IO_ADDR(EECR), EEWE
     rjmp  EEPROM_READ_N_INC
     /* Set address */
-    out   _SFR_IO_ADDR(EEARH), YH
-    out   _SFR_IO_ADDR(EEARL), YL
+    out   _SFR_IO_ADDR(EEARH), xh
+    out   _SFR_IO_ADDR(EEARL), xl
     /* Set Read Enable and read */
     sbi   _SFR_IO_ADDR(EECR), EERE
-    in    x4, _SFR_IO_ADDR(EEDR)
-    /* Increment Y for continuous eeprom reading */
-    adiw  YL, 1
+    in    a4, _SFR_IO_ADDR(EEDR)
+    /* Increment x for continuous eeprom reading */
+    adiw  xl, 1
     ret
 
-/* Write x1 to EEPROM pointer by Y {{{2 ----------------------------------
- * Y gets incremented after every call */
+/* Write a1 to EEPROM pointer by x {{{2 ----------------------------------
+ * x gets incremented after every call */
 EEPROM_WRITE_N_INC:
     /* Wait for previous write to finish */
     sbic  _SFR_IO_ADDR(EECR), EEWE
     rjmp  EEPROM_WRITE_N_INC
     /* Set address */
-    out   _SFR_IO_ADDR(EEARH), YH
-    out   _SFR_IO_ADDR(EEARL), YL
+    out   _SFR_IO_ADDR(EEARH), xh
+    out   _SFR_IO_ADDR(EEARL), xl
     /* Set data */
-    out    _SFR_IO_ADDR(EEDR), x1
+    out    _SFR_IO_ADDR(EEDR), a1
     /* Set master write enable and write enable */
     sbi   _SFR_IO_ADDR(EECR), EEMWE
     sbi   _SFR_IO_ADDR(EECR), EEWE
-    adiw  YL, 1
+    adiw  xl, 1
     ret
 
 /* Coredump into EEPROM {{{2 -------------------------------------------------*/
 EEPROM_COREDUMP:
-    /* Using YH as tmp reg */
-    push  YH
-    push  ZL
-    push  ZH
+    /* Using xh as tmp reg */
+    push  xh
+    push  zl
+    push  zh
 
     /* The value of this registers are going to be loaded from the stack */
-    push  ZH
-    push  ZL
-    push  YH
+    push  zh
+    push  zl
+    push  xh
 
     /* Get Program Counter into Stack */
-    lds   ZL, SPL
-    lds   ZH, SPH
-    adiw  ZL, (1 + /* Pointing to first element of stack */ \
+    lds   zl, SPL
+    lds   zh, SPH
+    adiw  zl, (1 + /* Pointing to first element of stack */ \
                6 + /* Push during EEPROM_COREDUMP */        \
                2 + /* Return address of EEPROM_COREDUMP */  \
                2   /* Push during INT1_vect */              \
               )
 
-    ld    YH, Z+
-    sts   SRAM_EEPROM_PCH, YH
-    ld    YH, Z+
-    sts   SRAM_EEPROM_PCL, YH
+    ld    xh, z+
+    sts   SRAM_EEPROM_PCH, xh
+    ld    xh, z+
+    sts   SRAM_EEPROM_PCL, xh
 
     /* Setup */
-    clr   ZL
-    clr   ZH
+    clr   zl
+    clr   zh
     /* Wait for previous write to finish */
 WAIT_PREVIOUS_WRITE:
     sbic  _SFR_IO_ADDR(EECR), EEWE
     rjmp  WAIT_PREVIOUS_WRITE
     /* Set address */
     /* Here a loop could be inserted to be able to write multiple core dumps */
-    /* Using Z as read and write pointer, when reading, Z starts at zero, when
-     * writing, Z starts at EEPROM_DEBUG, therefore EEPROM_DEBUG get added to Z
+    /* Using z as read and write pointer, when reading, z starts at zero, when
+     * writing, z starts at EEPROM_DEBUG, therefore EEPROM_DEBUG get added to z
      * before setting EEARH,EEARL and subtracted afterwards */
-    ldi   YH, lo8(EEPROM_DEBUG)
-    add   ZL, YH
-    ldi   YH, hi8(EEPROM_DEBUG)
-    adc   ZH, YH
-    out   _SFR_IO_ADDR(EEARH), ZH
-    out   _SFR_IO_ADDR(EEARL), ZL
-    ldi   YH, hi8(EEPROM_DEBUG)
-    sub   ZH, YH
-    ldi   YH, lo8(EEPROM_DEBUG)
-    sbc   ZL, YH
+    ldi   xh, lo8(EEPROM_DEBUG)
+    add   zl, xh
+    ldi   xh, hi8(EEPROM_DEBUG)
+    adc   zh, xh
+    out   _SFR_IO_ADDR(EEARH), zh
+    out   _SFR_IO_ADDR(EEARL), zl
+    ldi   xh, hi8(EEPROM_DEBUG)
+    sub   zh, xh
+    ldi   xh, lo8(EEPROM_DEBUG)
+    sbc   zl, xh
     /* Set data
-     * For YH, ZL and ZH, read from stack previous saved value */
-    cpi    ZL, 29
+     * For xh, zl and zh, read from stack previous saved value */
+    cpi    zl, 29
     breq   READ_FROM_STACK
-    cpi    ZL, 30
+    cpi    zl, 30
     breq   READ_FROM_STACK
-    cpi    ZL, 31
+    cpi    zl, 31
     breq   READ_FROM_STACK
     /* Write SREG and Program Counter 15:0 */
-    cpi    ZL, 0x5F
+    cpi    zl, 0x5F
     brsh   READ_FROM_SRAM_WITH_DISPLACEMENT
 READ_FROM_SRAM:
-    ld     YH, Z+
+    ld     xh, z+
     rjmp   WRITE_TO_EEPROM
 READ_FROM_SRAM_WITH_DISPLACEMENT:
-    ldd    YH, Z + (SRAM_EEPROM_COREDUMP_DISPLACEMENT - 0x5F)
-    adiw   ZL, 1
+    ldd    xh, z + (SRAM_EEPROM_COREDUMP_DISPLACEMENT - 0x5F)
+    adiw   zl, 1
     rjmp   WRITE_TO_EEPROM
 READ_FROM_STACK:
-    pop    YH
-    adiw   ZL, 1
+    pop    xh
+    adiw   zl, 1
 
     /* Write to EEPROM */
 WRITE_TO_EEPROM:
-    out    _SFR_IO_ADDR(EEDR), YH
+    out    _SFR_IO_ADDR(EEDR), xh
     /* Set master write enable and write enable */
     sbi   _SFR_IO_ADDR(EECR), EEMWE
     sbi   _SFR_IO_ADDR(EECR), EEWE
 
-    cpi   ZL, AFTER_LAST_COREDUMP_ELEMENT
+    cpi   zl, AFTER_LAST_COREDUMP_ELEMENT
     brne  WAIT_PREVIOUS_WRITE
 
-    pop   ZH
-    pop   ZL
-    pop   YH
+    pop   zh
+    pop   zl
+    pop   xh
     ret
 
 .end

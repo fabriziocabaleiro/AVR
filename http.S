@@ -19,29 +19,29 @@
 .section .text
 
 /* HTTP handle {{{2  -----------------------------------------------------------
- * Z must be pointing to first byte of TCP payload
- * x4: output HTTP length in bytes
+ * z must be pointing to first byte of TCP payload
+ * a4: output HTTP length in bytes
  */
 HTTP_HANDLE_PKT:
-    ldi   YL, lo8(EEPROM_HTTP_RESPONSE)
-    ldi   YH, hi8(EEPROM_HTTP_RESPONSE)
-    ldi   x1, (EEPROM_HTTP_RESPONSE_END - EEPROM_HTTP_RESPONSE)
+    ldi   xl, lo8(EEPROM_HTTP_RESPONSE)
+    ldi   xh, hi8(EEPROM_HTTP_RESPONSE)
+    ldi   a1, (EEPROM_HTTP_RESPONSE_END - EEPROM_HTTP_RESPONSE)
     rcall ES_MEMCPY
-    /* Set back Z to beginning of HTTP payload */
-    sbiw  ZL, (EEPROM_HTTP_RESPONSE_END - EEPROM_HTTP_RH_OFFSET)
+    /* Set back z to beginning of HTTP payload */
+    sbiw  zl, (EEPROM_HTTP_RESPONSE_END - EEPROM_HTTP_RH_OFFSET)
 
     /* RH */
-    ldi   YL, lo8(SRAM_DHT11_PAYLOAD)
-    ldi   YH, hi8(SRAM_DHT11_PAYLOAD)
+    ldi   xl, lo8(SRAM_DHT11_PAYLOAD)
+    ldi   xh, hi8(SRAM_DHT11_PAYLOAD)
 
     rcall FILL_8_DOT_8_VALUE
 
     /* Temperature */
-    adiw  ZL, 4
+    adiw  zl, 4
     rcall FILL_8_DOT_8_VALUE
 
     /* Set return value to payload size */
-    ldi   x4, (EEPROM_HTTP_RESPONSE_END - EEPROM_HTTP_RESPONSE)
+    ldi   a4, (EEPROM_HTTP_RESPONSE_END - EEPROM_HTTP_RESPONSE)
 
     ret
 
@@ -49,19 +49,19 @@ HTTP_HANDLE_PKT:
  */
 FILL_8_DOT_8_VALUE:
     /* RH */
-    ld    x1, Y+
-    ldi   x2, 10
+    ld    a1, x+
+    ldi   a2, 10
     rcall SDIV
-    subi  x4, -ASCII_ZERO /* + '0' */
-    subi  x3, -ASCII_ZERO /* + '0' */
-    st    Z+, x4
-    st    Z+, x3
+    subi  a4, -ASCII_ZERO /* + '0' */
+    subi  a3, -ASCII_ZERO /* + '0' */
+    st    z+, a4
+    st    z+, a3
 
-    adiw  ZL, 1
+    adiw  zl, 1
 
-    ld    x1, Y+
-    subi  x1, -ASCII_ZERO /* + '0' */
-    st    Z+, x1
+    ld    a1, x+
+    subi  a1, -ASCII_ZERO /* + '0' */
+    st    z+, a1
 
     ret
 

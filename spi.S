@@ -52,34 +52,34 @@ SPI_MASTER_INIT:
  * - SS should be clear on the caller
  ******************************************************************************/
 SPI_MASTER_TRANSMIT:
-    /* Start transmission of data on (x1) */
-    out   _SFR_IO_ADDR(SPDR), x1
+    /* Start transmission of data on (a1) */
+    out   _SFR_IO_ADDR(SPDR), a1
     /* Wait for transmission complete */
 0:  sbis  _SFR_IO_ADDR(SPSR), SPIF
     rjmp  0b
     /* Get received message */
-    in    x4, _SFR_IO_ADDR(SPDR)
+    in    a4, _SFR_IO_ADDR(SPDR)
     ret
 
-/* Write x1 bytes from Y (EEPROM) to SPI {{{2 ----------------------------
+/* Write a1 bytes from x (EEPROM) to SPI {{{2 ----------------------------
    */
 SPI_EEPROM_TRANSMIT:
-    mov   t3, x1
+    mov   t3, a1
 0:  rcall EEPROM_READ_N_INC
-    mov   x1, x4
+    mov   a1, a4
     rcall SPI_MASTER_TRANSMIT
     dec   t3
     brne  0b
     ret
 
 /* Copy from SPI to memory {{{2 ------------------------------------------------
- * Copy x1 from SPI to memory pointed by Z
+ * Copy a1 from SPI to memory pointed by z
  */
 SPI_MEMCPY:
-    dec   x1
+    dec   a1
     brmi  0f
     rcall SPI_MASTER_TRANSMIT
-    st    Z+, x4
+    st    z+, a4
     rjmp  SPI_MEMCPY
 0:  ret
 

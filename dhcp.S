@@ -21,6 +21,15 @@
 #   error "Optimization for EEPROM_DHCP_TIMERS won't work"
 #endif
 
+/* Define offsets to use ldd/std instead of lds/sts */
+#define DHCP_SERVER_IP_ADDR 0
+#define DHCP_XID_LAST_BYTE  (DHCP_SERVER_IP_ADDR + DHCP_OPTION_DHCP_SERVER_ID_LEN)
+#define DHCP_STATE          (DHCP_XID_LAST_BYTE  + 1)
+#define DHCP_ADDRESS_TIME   (DHCP_STATE          + 1)
+#define DHCP_SECONDS        (DHCP_ADDRESS_TIME   + DHCP_OPTION_ADDRESS_TIME_LEN
+#define DHCP_SUBNET_MASK    (DHCP_SECONDS        + DHCP_OPTION_ADDRESS_TIME_LEN
+#define DHCP_DOMAIN_SERVER  (DHCP_SUBNET_MASK    + DHCP_OPTION_SUBNET_MASK_LEN
+#define DHCP_T_SUB_PTR_L    (DHCP_DOMAIN_SERVER  + DHCP_DOMAIN_SERVER_LEN)
 /* GLOBAL {{{1 ---------------------------------------------------------------*/
 .global DHCP_HANDLE_PKT
 .global DHCP_INIT
@@ -28,6 +37,7 @@
 
 /* DATA  {{{1 ----------------------------------------------------------------*/
 .section .data
+SRAM_DHCP_DATA:
 SRAM_DHCP_SERVER_IP_ADDR:         .skip DHCP_OPTION_DHCP_SERVER_ID_LEN
 SRAM_DHCP_XID_LAST_BYTE:          .skip 1
 SRAM_DHCP_STATE:                  .skip 1
@@ -46,10 +56,10 @@ SRAM_DHCP_TIMER_SUBTRAHEND_PTR_L: .skip 1
  * This routine checks the current DHCP state, then sends the required packages
  * in order to have a valid IP address. */
 DHCP:
-    push  ZL
-    push  ZH
-    push  YL
-    push  YH
+    push  zl
+    push  zh
+    push  xl
+    push  xh
     push  s1 /* Pkt size low */
     push  s2 /* Pkt size high */
     push  s3 /* DHCP state */
@@ -83,14 +93,12 @@ DHCP:
      * which seems sensible */
 DHCP_IN_INIT_STATE: /* {{{3 */
     /* Try to send a REQUEST every 16 seconds
-     * At this point, subtrahend_ptr is not used, then we can use it to hold a
-     * counter and send request every N seconds */
+     * At this point, SRAM_DHCP_TIMER_SUBTRAHEND_PTR_L is not used, then we can
+     * use it to hold a counter and send request every N seconds */
     rcall DHCP_WAITING_IN_STATE
     brne  DHCP_IN_INIT_STATE_EXIT
 
-    /* In this state we send a discover and jump directly to selecting state.
-     * Also we store the local time in which we sent the discover packet */
-    /* TODO: do we store the local time as mentioned above? */
+    /* In this state we send a discover and jump directly to selecting state. */
     rcall DHCP_XID_INCREMENT
     rcall DHCP_SEND
     ldi   t1, (1 << DHCP_STATE_SELECTING)
@@ -135,7 +143,7 @@ DHCP_IN_REBIDING_STATE:
 DHCP_TIMER_LAP_COMPLETED:
     rcall DHCP_XID_INCREMENT
     rcall DHCP_SEND
-    /* Check if Y still pointing to T1 */
+    /* Check if x still pointing to T1 */
     lds   t1, SRAM_DHCP_TIMER_SUBTRAHEND_PTR_L
     cbr   t1, (1 << DHCP_TIMER_LAP)
     cpi   t1, EEPROM_DHCP_TIMERS_T2
@@ -172,10 +180,10 @@ DHCP_EXIT_SUCCESS:
     pop   s3
     pop   s2
     pop   s1
-    pop   YH
-    pop   YL
-    pop   ZH
-    pop   ZL
+    pop   xh
+    pop   xl
+    pop   zh
+    pop   zl
     ret
 
 /* DHCP_INIT {{{2 --------------------------------------------------------------
@@ -183,11 +191,11 @@ DHCP_EXIT_SUCCESS:
 DHCP_INIT:
     /* SRAM_DHCP_XID_LAST_BYTE will have random initial value */
     /* Check if our current IP in the EEPROM was set */
-    ldi   YL, lo8(EEPROM_IP_ADDR)
-    ldi   YH, hi8(EEPROM_IP_ADDR)
+    ldi   xl, lo8(EEPROM_IP_ADDR)
+    ldi   xh, hi8(EEPROM_IP_ADDR)
     ldi   t3, IPV4_ADDR_LEN
 0:  rcall EEPROM_READ_N_INC
-    tst   x4
+    tst   a4
     brne  VALID_IP
     dec   t3
     brne  0b
@@ -221,47 +229,47 @@ DHCP_SEND:
 #if EEPROM_IP_HEADER_END != EEPROM_UDP_DHCP_PORT
 #   error "Optimization requires EEPROM_IP_HEADER_END == EEPROM_UDP_DHCP_PORT"
 #endif
-    ldi   ZL, lo8(SRAM_IPV4_HEADER)
-    ldi   ZH, hi8(SRAM_IPV4_HEADER)
+    ldi   zl, lo8(SRAM_IPV4_HEADER)
+    ldi   zh, hi8(SRAM_IPV4_HEADER)
     /* Write to SRAM, so total length and checksum can be set */
-    ldi   YL, lo8(EEPROM_IP_HEADER)
-    ldi   YH, hi8(EEPROM_IP_HEADER)
-    ldi   x1, (EEPROM_UDP_DHCP_PORT_END - EEPROM_IP_HEADER)
+    ldi   xl, lo8(EEPROM_IP_HEADER)
+    ldi   xh, hi8(EEPROM_IP_HEADER)
+    ldi   a1, (EEPROM_UDP_DHCP_PORT_END - EEPROM_IP_HEADER)
     rcall ES_MEMCPY
-    /* Set Z back to SRAM_IPV4_HEADER */
-    sbiw  ZL, (EEPROM_UDP_DHCP_PORT_END - EEPROM_IP_HEADER)
+    /* Set z back to SRAM_IPV4_HEADER */
+    sbiw  zl, (EEPROM_UDP_DHCP_PORT_END - EEPROM_IP_HEADER)
 
     /* Set non default IPv4 header fields {{{4 */
     /* IP TOTAL LENGTH {{{5 */
-    std   Z + (IPV4_TOTAL_LENGTH + 0), s2
-    std   Z + (IPV4_TOTAL_LENGTH + 1), s1
+    std   z + (IPV4_TOTAL_LENGTH + 0), s2
+    std   z + (IPV4_TOTAL_LENGTH + 1), s1
 
     /* Src and Dst IP addresses for RENEWING {{{5 */
     sbrs  s3, DHCP_STATE_RENEWING
     rjmp  DEFAULT_SRC_DST_ADDRESSES
     /* Copy Src IP address */
-    adiw  ZL, IPV4_SRC_ADDR
-    ldi   x1, IPV4_ADDR_LEN
-    ldi   YL, lo8(EEPROM_IP_ADDR)
-    ldi   YH, hi8(EEPROM_IP_ADDR)
+    adiw  zl, IPV4_SRC_ADDR
+    ldi   a1, IPV4_ADDR_LEN
+    ldi   xl, lo8(EEPROM_IP_ADDR)
+    ldi   xh, hi8(EEPROM_IP_ADDR)
     rcall ES_MEMCPY
     /* Copy DHCP server IP address */
-    ldi   YL, lo8(SRAM_DHCP_SERVER_IP_ADDR)
-    ldi   YH, hi8(SRAM_DHCP_SERVER_IP_ADDR)
+    ldi   xl, lo8(SRAM_DHCP_SERVER_IP_ADDR)
+    ldi   xh, hi8(SRAM_DHCP_SERVER_IP_ADDR)
     rcall MEMCPY
-    /* Set Z back to SRAM_IPV4_HEADER */
-    sbiw  ZL, (IPV4_ADDR_LEN * 2)
+    /* Set z back to SRAM_IPV4_HEADER */
+    sbiw  zl, (IPV4_ADDR_LEN * 2)
 DEFAULT_SRC_DST_ADDRESSES:
 
     /* Internet Checksum {{{5 */
-    ldi   x1, (EEPROM_IP_HEADER_END - EEPROM_IP_HEADER)
-    ldi   x2, 0
+    ldi   a1, (EEPROM_IP_HEADER_END - EEPROM_IP_HEADER)
+    ldi   a2, 0
     rcall INTERNET_CHECKSUM_RFC1071
-    std   Z + (IPV4_H_CHECKSUM + 0), x3
-    std   Z + (IPV4_H_CHECKSUM + 1), x4
+    std   z + (IPV4_H_CHECKSUM + 0), a3
+    std   z + (IPV4_H_CHECKSUM + 1), a4
 
     /* Transmit IPv4 Header plus part of UDP {{{4 */
-    ldi   x1, (EEPROM_UDP_DHCP_PORT_END - EEPROM_IP_HEADER)
+    ldi   a1, (EEPROM_UDP_DHCP_PORT_END - EEPROM_IP_HEADER)
     rcall ETH_WRITE_Z_TO_TRANSMIT_BUFFER
 
     /* UDP Header {{{3 */
@@ -270,30 +278,30 @@ DEFAULT_SRC_DST_ADDRESSES:
     /* DHCP PKT SIZE was set to IP size, so, substract DHCP_IP_HEADER_SIZE to
      * get the UDP size */
     sbiw  s1, DHCP_IP_HEADER_SIZE
-    mov   x1, s2
+    mov   a1, s2
     rcall SPI_MASTER_TRANSMIT
-    mov   x1, s1
+    mov   a1, s1
     rcall SPI_MASTER_TRANSMIT
 
     /* UDP Checksum, Zero for ignore {{{4 */
-    clr   x1
+    clr   a1
     rcall SPI_MASTER_TRANSMIT
     rcall SPI_MASTER_TRANSMIT
 
     /* DHCP Body {{{3 */
     /* Write first 8 bytes: OP, HTYPE, HLEN, HOPS AND XID (3 of 4 bytes) {{{4 */
-    ldi   YL, lo8(EEPROM_DHCP_HEADER)
-    ldi   YH, hi8(EEPROM_DHCP_HEADER)
-    ldi   x1, (EEPROM_DHCP_HEADER_END - EEPROM_DHCP_HEADER)
+    ldi   xl, lo8(EEPROM_DHCP_HEADER)
+    ldi   xh, hi8(EEPROM_DHCP_HEADER)
+    ldi   a1, (EEPROM_DHCP_HEADER_END - EEPROM_DHCP_HEADER)
     rcall SPI_EEPROM_TRANSMIT
 
     /* Last byte of XID {{{4 */
-    lds   x1, SRAM_DHCP_XID_LAST_BYTE
+    lds   a1, SRAM_DHCP_XID_LAST_BYTE
     DEBUG(rcall PRINT_CURRENT_XID)
     rcall SPI_MASTER_TRANSMIT
 
     /* set SECS and FLAGS to Zero {{{4 */
-    clr   x1
+    clr   a1
     ldi   t3, 4
 0:  rcall SPI_MASTER_TRANSMIT
     dec   t3
@@ -308,18 +316,18 @@ DEFAULT_SRC_DST_ADDRESSES:
                network address       (BOUND/RENEW/REBIND)  address
                (DHCPINFORM)                                (DHCPRELEASE)
     */
-    ldi   YL, lo8(EEPROM_IP_ADDR)
-    ldi   YH, hi8(EEPROM_IP_ADDR)
+    ldi   xl, lo8(EEPROM_IP_ADDR)
+    ldi   xh, hi8(EEPROM_IP_ADDR)
     ldi   t3, IPV4_ADDR_LEN
 CIADDR_TO_ZERO_OR_MY_IP:
-    clr   x4
+    clr   a4
     /* IP ADDR is zero for DISCOVER, as it is unset, then, safe to read from
      * EEPROM. At request we already wrote the offer to EEPROM, so, don't use
      * EEPROM value, then, at BOUND/RENEW/REBIND use EEPROM value.
      * Ignoring DHCPDECLINE as logic for declining is not implemented */
 #if EEPROM_IP_ADDR_END != EEPROM_MAC_ADDR
     /* if the code reduction optimization is off, then, optimize power by
-     * skipping eeprom read, else, do eeprom read to increment Y as required by
+     * skipping eeprom read, else, do eeprom read to increment x as required by
      * CHADDR */
     sbrs  s3, DHCP_STATE_REQUESTING /* right after DHCPOFFER */
     rcall EEPROM_READ_N_INC
@@ -327,13 +335,13 @@ CIADDR_TO_ZERO_OR_MY_IP:
     rcall EEPROM_READ_N_INC
     sbrs  s3, DHCP_STATE_REQUESTING /* right after DHCPOFFER */
 #endif
-    mov   x1, x4
+    mov   a1, a4
     rcall SPI_MASTER_TRANSMIT
     dec   t3
     brne  CIADDR_TO_ZERO_OR_MY_IP
 
     /* YIADDR, SIADDR and GIADDR to Zero  {{{4 */
-    clr   x1
+    clr   a1
     ldi   t3, 12
 YIADDR_SIADDR_GIADDR_TO_ZERO:
     rcall SPI_MASTER_TRANSMIT
@@ -345,17 +353,17 @@ YIADDR_SIADDR_GIADDR_TO_ZERO:
 #   warning "Optimization expecting EEPROM_IP_ADDR_END == EEPROM_MAC_ADDR"
     /* This two instructions can be avoided if
      * EEPROM_IP_ADDR_END == EEPROM_MAC_ADDR
-     * and no modifications to Y are done after writing CIADDR */
-    ldi   YL, lo8(EEPROM_MAC_ADDR)
-    ldi   YH, hi8(EEPROM_MAC_ADDR)
+     * and no modifications to x are done after writing CIADDR */
+    ldi   xl, lo8(EEPROM_MAC_ADDR)
+    ldi   xh, hi8(EEPROM_MAC_ADDR)
 #endif
-    ldi   x1, MAC_ADDR_LEN
+    ldi   a1, MAC_ADDR_LEN
     rcall SPI_EEPROM_TRANSMIT
 
     /* header has 16 bytes for mac, as using only 6, there are 10 bytes to {{{4
      * write as zero, then we have 192 bytes of zero (option overload/BOOTS
      * legacy) */
-    clr   x1
+    clr   a1
     ldi   t3, 202
 DHCP_LEGACY_TO_ZERO_LOOP:
     rcall SPI_MASTER_TRANSMIT
@@ -363,21 +371,21 @@ DHCP_LEGACY_TO_ZERO_LOOP:
     brne  DHCP_LEGACY_TO_ZERO_LOOP
 
     /* Write magic cookie and beginning of option msg {{{4 */
-    ldi   YL, lo8(EEPROM_DHCP_MAGIC_COOKIE)
-    ldi   YH, hi8(EEPROM_DHCP_MAGIC_COOKIE)
+    ldi   xl, lo8(EEPROM_DHCP_MAGIC_COOKIE)
+    ldi   xh, hi8(EEPROM_DHCP_MAGIC_COOKIE)
 #if EEPROM_DHCP_MAGIC_COOKIE_END != EEPROM_DHCP_OPTION_MSG_N_LEN
 #   error "Optimization requires EEPROM_DHCP_MAGIC_COOKIE_END == EEPROM_DHCP_OPTION_MSG_N_LEN"
 #endif
-    ldi   x1, (EEPROM_DHCP_OPTION_MSG_N_LEN_END - EEPROM_DHCP_MAGIC_COOKIE)
+    ldi   a1, (EEPROM_DHCP_OPTION_MSG_N_LEN_END - EEPROM_DHCP_MAGIC_COOKIE)
     rcall SPI_EEPROM_TRANSMIT
 
     /* DHCP Options {{{4 */
     /* DHCP MSG TYPE {{{5 */
     /* MSG type and length is written from EEPROM */
     /* all messages from client but discover will have a request msg type */
-    ldi   x1, DHCP_OPTION_DHCP_MSG_TYPE_DHCP_DISCOVER
+    ldi   a1, DHCP_OPTION_DHCP_MSG_TYPE_DHCP_DISCOVER
     sbrs  s3, DHCP_STATE_INIT
-    ldi   x1, DHCP_OPTION_DHCP_MSG_TYPE_DHCP_REQUEST
+    ldi   a1, DHCP_OPTION_DHCP_MSG_TYPE_DHCP_REQUEST
     rcall SPI_MASTER_TRANSMIT
 
     /* DHCP packets that don't require more options {{{5
@@ -394,24 +402,24 @@ DHCP_REQUEST_OPS: /* DHCP Request options {{{5 */
 #   error "DHCP request required EEPROM_DHCP_REQUEST_OPS_END == EEPROM_IP_ADDR"
 #endif
     /* Hostname and IP address {{{6 */
-    ldi   YL, lo8(EEPROM_DHCP_REQUEST_OPS)
-    ldi   YH, hi8(EEPROM_DHCP_REQUEST_OPS)
-    ldi   x1, (EEPROM_IP_ADDR_END - EEPROM_DHCP_REQUEST_OPS)
+    ldi   xl, lo8(EEPROM_DHCP_REQUEST_OPS)
+    ldi   xh, hi8(EEPROM_DHCP_REQUEST_OPS)
+    ldi   a1, (EEPROM_IP_ADDR_END - EEPROM_DHCP_REQUEST_OPS)
     rcall SPI_EEPROM_TRANSMIT
 
     /* DHCP server IP address {{{6 */
-    ldi   x1, DHCP_OPTION_DHCP_SERVER_ID
+    ldi   a1, DHCP_OPTION_DHCP_SERVER_ID
     rcall SPI_MASTER_TRANSMIT
-    ldi   x1, DHCP_OPTION_DHCP_SERVER_ID_LEN
+    ldi   a1, DHCP_OPTION_DHCP_SERVER_ID_LEN
     rcall SPI_MASTER_TRANSMIT
 
-    ldi   ZL, lo8(SRAM_DHCP_SERVER_IP_ADDR)
-    ldi   ZH, hi8(SRAM_DHCP_SERVER_IP_ADDR)
-    ldi   x1, DHCP_OPTION_DHCP_SERVER_ID_LEN
+    ldi   zl, lo8(SRAM_DHCP_SERVER_IP_ADDR)
+    ldi   zh, hi8(SRAM_DHCP_SERVER_IP_ADDR)
+    ldi   a1, DHCP_OPTION_DHCP_SERVER_ID_LEN
     rcall ETH_WRITE_Z_TO_TRANSMIT_BUFFER
 
 DHCP_END_OP: /* End Options */
-    ldi   x1, DHCP_OPTION_END
+    ldi   a1, DHCP_OPTION_END
     rcall SPI_MASTER_TRANSMIT
     /* }}}3 */
     ETH_END_LISTEN_ON_SPI
@@ -422,19 +430,19 @@ DHCP_END_OP: /* End Options */
 /* Handle dhcp packet {{{2 -----------------------------------------------------
  * BEWARE, EXPECTING ETH MODULE LISTENING TO SPI */
 DHCP_HANDLE_PKT:
-    push YL
-    push YH
+    push xl
+    push xh
 
     DEBUG(PRINT_STR_SAFE STR_DHCP_HANDLE_START)
     /* Check OP, HTYPE, HLEN, HOPS and XID  {{{3 */
     ETH_READ_NEXT_BYTE
-    cpi   x4, DHCP_OP_BOOTREPLY
+    cpi   a4, DHCP_OP_BOOTREPLY
     brne  DHCP_HANDLE_EXIT_SUCCESS
 
     /* Compare beginning of header */
-    ldi   YL, lo8(EEPROM_DHCP_HEADER + 1)
-    ldi   YH, hi8(EEPROM_DHCP_HEADER + 1)
-    ldi   x1, 6
+    ldi   xl, lo8(EEPROM_DHCP_HEADER + 1)
+    ldi   xh, hi8(EEPROM_DHCP_HEADER + 1)
+    ldi   a1, 6
     rcall EN_MEMCMP
     brne  DHCP_HANDLE_EXIT_SUCCESS
 
@@ -442,14 +450,14 @@ DHCP_HANDLE_PKT:
     ETH_READ_NEXT_BYTE
     lds   t1, SRAM_DHCP_XID_LAST_BYTE
     DEBUG(rcall PRINT_INCOMING_N_EXPECTED_XID)
-    cp    t1, x4
+    cp    t1, a4
     brne  DHCP_HANDLE_EXIT_SUCCESS
 
     /* Jump to YIADDR {{{3 */
 #if USE_MOVE_RDPT
     ETH_READ_BUFFER_END
-    ldi   x1, 0
-    ldi   x2, 8 /* SECS + FLAGS + CIADDR */
+    ldi   a1, 0
+    ldi   a2, 8 /* SECS + FLAGS + CIADDR */
     rcall ETH_MOVE_RDPT
     rcall ETH_READ_BUFFER_START
 #else
@@ -461,11 +469,11 @@ DHCP_HANDLE_PKT:
 
     /* Read offered IP and write it into EEPROM {{{3 */
     ldi   t3, IPV4_ADDR_LEN
-    ldi   YL, lo8(EEPROM_IP_ADDR)
-    ldi   YH, hi8(EEPROM_IP_ADDR)
+    ldi   xl, lo8(EEPROM_IP_ADDR)
+    ldi   xh, hi8(EEPROM_IP_ADDR)
 UPDATE_EEPROM_IP_ADDR:
     ETH_READ_NEXT_BYTE
-    mov   x1, x4
+    mov   a1, a4
     rcall EEPROM_WRITE_N_INC
     dec   t3
     brne  UPDATE_EEPROM_IP_ADDR
@@ -473,8 +481,8 @@ UPDATE_EEPROM_IP_ADDR:
     /* Jump from siaddr ip addr to magic cookie {{{3 */
 #if USE_MOVE_RDPT
     ETH_READ_BUFFER_END
-    ldi   x1, 0
-    ldi   x2, 216
+    ldi   a1, 0
+    ldi   a2, 216
     rcall ETH_MOVE_RDPT
     rcall ETH_READ_BUFFER_START
 #else
@@ -485,9 +493,9 @@ UPDATE_EEPROM_IP_ADDR:
 #endif
 
     /* Check magic cookie {{{3 */
-    ldi   YL, lo8(EEPROM_DHCP_MAGIC_COOKIE)
-    ldi   YH, hi8(EEPROM_DHCP_MAGIC_COOKIE)
-    ldi   x1, (EEPROM_DHCP_MAGIC_COOKIE_END - EEPROM_DHCP_MAGIC_COOKIE)
+    ldi   xl, lo8(EEPROM_DHCP_MAGIC_COOKIE)
+    ldi   xh, hi8(EEPROM_DHCP_MAGIC_COOKIE)
+    ldi   a1, (EEPROM_DHCP_MAGIC_COOKIE_END - EEPROM_DHCP_MAGIC_COOKIE)
     rcall EN_MEMCMP
     brne  DHCP_HANDLE_EXIT_FAILURE
     /* Jump to start reading options (skipping exit block) */
@@ -495,39 +503,39 @@ UPDATE_EEPROM_IP_ADDR:
 
 DHCP_HANDLE_EXIT_SUCCESS: /* {{{3 */
 NO_MORE_OPTIONS:
-    ldi  x4, 0
+    ldi  a4, 0
 DHCP_HANDLE_EXIT:
     ETH_READ_BUFFER_END
-    pop  YH
-    pop  YL
+    pop  xh
+    pop  xl
     ret
 DHCP_HANDLE_EXIT_FAILURE:
     DEBUG(PRINT_STR_SAFE STR_FAILURE)
-    ldi  x4, 1
+    ldi  a4, 1
     rjmp DHCP_HANDLE_EXIT
 
 START_READING_DHCP_OPTIONS: /* {{{3 */
 KEEP_READING_DHCP_OPTIONS:
     ETH_READ_NEXT_BYTE
     /* Check if end of options */
-    cpi   x4, DHCP_OPTION_END
+    cpi   a4, DHCP_OPTION_END
     breq  NO_MORE_OPTIONS
     /* Check if padding, which doesn't have length. Go to read next byte */
-    cpi   x4, DHCP_OPTION_PAD
+    cpi   a4, DHCP_OPTION_PAD
     breq  KEEP_READING_DHCP_OPTIONS
     /* DHCP message {{{4 */
-    cpi   x4, DHCP_OPTION_DHCP_MSG_TYPE
+    cpi   a4, DHCP_OPTION_DHCP_MSG_TYPE
     brne  TRY_DHCP_OPTION_DHCP_SERVER_ID
     /* DHCP message, we care about dhcp offer */
     ETH_READ_NEXT_BYTE /* read size of option, must be 1 */
     ETH_READ_NEXT_BYTE
-    cpi   x4, DHCP_OPTION_DHCP_MSG_TYPE_DHCP_OFFER
+    cpi   a4, DHCP_OPTION_DHCP_MSG_TYPE_DHCP_OFFER
     brne  TRY_DHCP_ACK
     ldi   t1, (1 << DHCP_STATE_REQUESTING)
     sts   SRAM_DHCP_STATE, t1
     rjmp  KEEP_READING_DHCP_OPTIONS
 TRY_DHCP_ACK:
-    cpi   x4, DHCP_OPTION_DHCP_MSG_TYPE_DHCP_ACK
+    cpi   a4, DHCP_OPTION_DHCP_MSG_TYPE_DHCP_ACK
     brne  KEEP_READING_DHCP_OPTIONS
     DEBUG(PRINT_STR_SAFE STR_OPT_ACK)
     /* Set states {{{5 */
@@ -539,54 +547,54 @@ TRY_DHCP_ACK:
     rjmp  KEEP_READING_DHCP_OPTIONS
 
 TRY_DHCP_OPTION_DHCP_SERVER_ID: /* {{{4 */
-    cpi   x4, DHCP_OPTION_DHCP_SERVER_ID
+    cpi   a4, DHCP_OPTION_DHCP_SERVER_ID
     brne  TRY_DHCP_OPTION_ADDRESS_TIME
     ETH_READ_NEXT_BYTE /* must be 4 */
     ldi   t3, DHCP_OPTION_DHCP_SERVER_ID_LEN
-    ldi   YL, lo8(SRAM_DHCP_SERVER_IP_ADDR)
-    ldi   YH, hi8(SRAM_DHCP_SERVER_IP_ADDR)
+    ldi   xl, lo8(SRAM_DHCP_SERVER_IP_ADDR)
+    ldi   xh, hi8(SRAM_DHCP_SERVER_IP_ADDR)
 STORE_DHCP_SERVER_IP_ADDR:
     ETH_READ_NEXT_BYTE
-    st    Y+, x4
+    st    x+, a4
     dec   t3
     brne  STORE_DHCP_SERVER_IP_ADDR
     rjmp  KEEP_READING_DHCP_OPTIONS
 
 TRY_DHCP_OPTION_ADDRESS_TIME: /* {{{4 */
-    cpi   x4, DHCP_OPTION_ADDRESS_TIME
+    cpi   a4, DHCP_OPTION_ADDRESS_TIME
     brne  TRY_DHCP_OPTION_SUBNET_MASK
     ETH_READ_NEXT_BYTE /* must be 4 */
     ldi   t3, DHCP_OPTION_ADDRESS_TIME_LEN
-    ldi   YL, lo8(SRAM_DHCP_ADDRESS_TIME)
-    ldi   YH, hi8(SRAM_DHCP_ADDRESS_TIME)
+    ldi   xl, lo8(SRAM_DHCP_ADDRESS_TIME)
+    ldi   xh, hi8(SRAM_DHCP_ADDRESS_TIME)
 STORE_DHCP_ADDRESS_TIME:
     ETH_READ_NEXT_BYTE
-    st    Y+, x4
+    st    x+, a4
     dec   t3
     brne  STORE_DHCP_ADDRESS_TIME
     rjmp  KEEP_READING_DHCP_OPTIONS
 
 TRY_DHCP_OPTION_SUBNET_MASK: /* {{{4 */
-    cpi   x4, DHCP_OPTION_SUBNET_MASK
+    cpi   a4, DHCP_OPTION_SUBNET_MASK
     brne  TRY_DHCP_OPTION_DOMAIN_SERVER
     ETH_READ_NEXT_BYTE /* must be 4 */
     ldi   t3, DHCP_OPTION_SUBNET_MASK_LEN
-    ldi   YL, lo8(SRAM_DHCP_SUBNET_MASK)
-    ldi   YH, hi8(SRAM_DHCP_SUBNET_MASK)
+    ldi   xl, lo8(SRAM_DHCP_SUBNET_MASK)
+    ldi   xh, hi8(SRAM_DHCP_SUBNET_MASK)
 STORE_DHCP_OPTION_SUBNET_MASK:
     ETH_READ_NEXT_BYTE
-    st    Y+, x4
+    st    x+, a4
     dec   t3
     brne  STORE_DHCP_OPTION_SUBNET_MASK
     rjmp  KEEP_READING_DHCP_OPTIONS
 
 TRY_DHCP_OPTION_DOMAIN_SERVER: /* {{{4 */
-    cpi   x4, DHCP_OPTION_DOMAIN_SERVER
+    cpi   a4, DHCP_OPTION_DOMAIN_SERVER
     brne  IGNORE_DHCP_OP
     ETH_READ_NEXT_BYTE
-    mov   t3, x4
-    ldi   YL, lo8(SRAM_DHCP_DOMAIN_SERVER)
-    ldi   YH, hi8(SRAM_DHCP_DOMAIN_SERVER)
+    mov   t3, a4
+    ldi   xl, lo8(SRAM_DHCP_DOMAIN_SERVER)
+    ldi   xh, hi8(SRAM_DHCP_DOMAIN_SERVER)
     /* BEWARE NOT TO CALL ANY ROUTINE THAT CHANGES t1 */
     /* TODO: break this constraint */
     ldi   t1, DHCP_DOMAIN_SERVER_LEN
@@ -594,7 +602,7 @@ STORE_DHCP_OPTION_DOMAIN_SERVER:
     ETH_READ_NEXT_BYTE
     tst   t1
     breq  SKIP_DHCP_OPTION_DOMAIN_SERVER_ST
-    st    Y+, x4
+    st    x+, a4
     dec   t1
 SKIP_DHCP_OPTION_DOMAIN_SERVER_ST:
     dec   t3
@@ -603,7 +611,7 @@ SKIP_DHCP_OPTION_DOMAIN_SERVER_ST:
 
 IGNORE_DHCP_OP: /* {{{4 */
     ETH_READ_NEXT_BYTE /* read size of option */
-    mov   t3, x4
+    mov   t3, a4
 DHCP_OP_READ_CONTENT:
     ETH_READ_NEXT_BYTE
     dec   t3
@@ -613,22 +621,22 @@ DHCP_OP_READ_CONTENT:
 /* Timer handlers {{{2 ---------------------------------------------------------
  * Carry will be set when timer expires */
 DHCP_TIMERS:
-    lds   YL, SRAM_DHCP_TIMER_SUBTRAHEND_PTR_L
-    sbrc  YL, DHCP_TIMER_LAP
+    lds   xl, SRAM_DHCP_TIMER_SUBTRAHEND_PTR_L
+    sbrc  xl, DHCP_TIMER_LAP
     rjmp  DHCP_SET_COUNTDOWN
     rjmp  DHCP_COUNTDOWN
 DHCP_SET_COUNTDOWN: /* {{{3 */
     /* Clear lap bit, increment pointer by 1 {{{4 */
-    cbr   YL, (1 << DHCP_TIMER_LAP)
-    sts   SRAM_DHCP_TIMER_SUBTRAHEND_PTR_L, YL
+    cbr   xl, (1 << DHCP_TIMER_LAP)
+    sts   SRAM_DHCP_TIMER_SUBTRAHEND_PTR_L, xl
 
     /* Copy lease time to dhcp seconds {{{4 */
-    ldi   ZL, lo8(SRAM_DHCP_ADDRESS_TIME)
-    ldi   ZH, hi8(SRAM_DHCP_ADDRESS_TIME)
+    ldi   zl, lo8(SRAM_DHCP_ADDRESS_TIME)
+    ldi   zh, hi8(SRAM_DHCP_ADDRESS_TIME)
     ldi   t3, 4
 DHCP_SET_COUNTDOWN_LOOP:
-    ld    t2, Z+
-    std   Z + (SRAM_DHCP_SECONDS - SRAM_DHCP_ADDRESS_TIME - 1), t2
+    ld    t2, z+
+    std   z + (SRAM_DHCP_SECONDS - SRAM_DHCP_ADDRESS_TIME - 1), t2
     dec   t3
     brne  DHCP_SET_COUNTDOWN_LOOP
     /* }}} */
@@ -638,17 +646,17 @@ DHCP_COUNTDOWN: /* {{{3 */
      * All subtraction are with carry
      */
     /* Loading 1 address beyond because of ld with pre-decrement */
-    ldi   ZL, lo8(SRAM_DHCP_SECONDS + 4)
-    ldi   ZH, hi8(SRAM_DHCP_SECONDS + 4)
+    ldi   zl, lo8(SRAM_DHCP_SECONDS + 4)
+    ldi   zh, hi8(SRAM_DHCP_SECONDS + 4)
     ldi   t3, 4
-    clr   YH
+    clr   xh
     rcall EEPROM_READ_N_INC
     clc
 DHCP_TIMERS_DEC:
-    ld    t1, -Z
-    sbc   t1, x4
-    clr   x4
-    st    Z, t1
+    ld    t1, -z
+    sbc   t1, a4
+    clr   a4
+    st    z, t1
     dec   t3
     brne  DHCP_TIMERS_DEC
     /* }}} */
@@ -663,7 +671,9 @@ DHCP_TIMERS_DEC:
 DHCP_TIMERS_EXIT:
     ret
 
-/* Simple counter to add waiting time {{{2 -----------------------------------*/
+/* Simple counter to add waiting time {{{2 -------------------------------------
+ * Beware that SRAM_DHCP_TIMER_SUBTRAHEND_PTR_L may be used uninitialized, but
+ * should not be a problem */ 
 DHCP_WAITING_IN_STATE:
     lds   t1, SRAM_DHCP_TIMER_SUBTRAHEND_PTR_L
     inc   t1
@@ -683,7 +693,7 @@ DHCP_XID_INCREMENT:
 PRINT_CURRENT_XID:
     DEBUG_PUSH
     PRINT_STR STR_LOCAL_XID
-    PRINT_REG x1
+    PRINT_REG a1
     PRINT_NEWLINE
     DEBUG_POP
     ret
@@ -694,7 +704,7 @@ PRINT_INCOMING_N_EXPECTED_XID:
     PRINT_REG t1
     PRINT_NEWLINE
     PRINT_STR STR_INCOMING_XID
-    PRINT_REG x4
+    PRINT_REG a4
     PRINT_NEWLINE
     DEBUG_POP
     ret
@@ -702,8 +712,8 @@ PRINT_INCOMING_N_EXPECTED_XID:
 PRINT_STATE:
     DEBUG_PUSH
     PRINT_STR STR_STATE
-    lds   x1, SRAM_DHCP_STATE
-    PRINT_REG x1
+    lds   a1, SRAM_DHCP_STATE
+    PRINT_REG a1
     PRINT_NEWLINE
     DEBUG_POP
     ret

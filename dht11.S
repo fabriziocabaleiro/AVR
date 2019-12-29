@@ -94,8 +94,8 @@ DHT11_INIT:
  * BEWARE: Calling this routine at 1Hz causes issues, DHT11 sensor should not be
  * read more than once per second */
 DHT11_READ:
-    push  ZL
-    push  ZH
+    push  zl
+    push  zh
 
     /* Setup initial Step, used when receiving stream of data */
     ldi   t3, DHT11_RESPONSE_INIT
@@ -112,8 +112,8 @@ DHT11_READ:
     out   _SFR_IO_ADDR(TCNT2), zero
     /* Pulling Down data line for at least 18ms */
 DHT11_READ_WAIT_START_SIGNAL:
-    in    ZL, _SFR_IO_ADDR(TCNT2)
-    cpi   ZL, WAIT_20uS
+    in    zl, _SFR_IO_ADDR(TCNT2)
+    cpi   zl, WAIT_20uS
     brlo  DHT11_READ_WAIT_START_SIGNAL
 
     /* Set clock prescaler to 8, which gives good precision to differentiate
@@ -133,9 +133,9 @@ DHT11_READ_WAIT_START_SIGNAL:
     sbr   t2, (1 << TOIE2)
     out   _SFR_IO_ADDR(TIMSK), t2
 
-    /* Set Z to point to DHT11 payload */
-    ldi   ZH, hi8(SRAM_DHT11_PAYLOAD)
-    ldi   ZL, lo8(SRAM_DHT11_PAYLOAD)
+    /* Set z to point to DHT11 payload */
+    ldi   zh, hi8(SRAM_DHT11_PAYLOAD)
+    ldi   zl, lo8(SRAM_DHT11_PAYLOAD)
 
     /* Now the DHT11 will take control of the data line, enable signal and wait
      * to change down */
@@ -154,17 +154,18 @@ DHT11_TRANSMISSION_LOOP:
     cbr   t2, (1 << TOIE2)
     out   _SFR_IO_ADDR(TIMSK), t2
 
-    pop   ZH
-    pop   ZL
+    pop   zh
+    pop   zl
     ret
 
 /* Handle INT1 interrupt {{{2 --------------------------------------------------
  * Get and process data in every falling edge.
- * Use Z as pointer to the memory. */
+ * Use z as pointer to the memory. */
 TIMER2_OVF_vect:
 INT1_vect:
     /* Read counter and reset it */
-    in    x3, _SFR_IO_ADDR(TCNT2) /* Using x3 as temporary reg */
+    /* TODO: Do we need to use a3 as temporary reg? */
+    in    a3, _SFR_IO_ADDR(TCNT2) /* Using a3 as temporary reg */
     out   _SFR_IO_ADDR(TCNT2), zero
 
     inc   t3
@@ -175,22 +176,22 @@ INT1_vect:
 DATA_IS_COMING:
     /* Load data from SRAM, shift left, decode incoming data, set LSB in case of
      * a one, save data back to SRAM */
-    ld    t2, Z
+    ld    t2, z
     lsl   t2
 
-    cpi   x3, INTERVAL_THRESHOLD
+    cpi   a3, INTERVAL_THRESHOLD
     brlo  DHT11_SENT_0
 
 DHT11_SENT_1:
     sbr   t2, 0x01
 DHT11_SENT_0:
-    st    Z, t2
+    st    z, t2
 
-    /* Increment Z if we finished writing a byte */
+    /* Increment z if we finished writing a byte */
     mov   t2, t3
     andi  t2, 0x07
     brne  DHT11_INT1_vect_EXIT
-    adiw  ZL, 1
+    adiw  zl, 1
 DHT11_INT1_vect_EXIT:
     reti
 

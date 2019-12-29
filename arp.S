@@ -40,9 +40,9 @@ SRAM_ARP_TABLE:     .skip (ARP_TABLE_LEN + ARP_TABLE_CURRENT_ENTRY_LEN)
 
 /* ARP init {{{2 -------------------------------------------------------------*/
 ARP_INIT:
-    ldi   ZL, lo8(SRAM_ARP_TABLE)
-    ldi   ZH, hi8(SRAM_ARP_TABLE)
-    ldi   x1, (ARP_TABLE_LEN + ARP_TABLE_CURRENT_ENTRY_LEN)
+    ldi   zl, lo8(SRAM_ARP_TABLE)
+    ldi   zh, hi8(SRAM_ARP_TABLE)
+    ldi   a1, (ARP_TABLE_LEN + ARP_TABLE_CURRENT_ENTRY_LEN)
     rcall BZERO
     ret
 
@@ -52,60 +52,60 @@ ARP_INIT:
  * 3. Modify ARP payload for response
  * 4. Write ARP response into Ethernet module */
 ARP_HANDLE_PKT:
-    push  ZH
-    push  ZL
-    push  YH
-    push  YL
+    push  zh
+    push  zl
+    push  xh
+    push  xl
 
     /* Read ARP payload (28 bytes) into SRAM {{{3 */
     rcall ETH_READ_BUFFER_START
-    ldi   ZH, hi8(SRAM_ARP_PAYLOAD)
-    ldi   ZL, lo8(SRAM_ARP_PAYLOAD)
-    ldi   x1, ARP_PAYLOAD_LEN
+    ldi   zh, hi8(SRAM_ARP_PAYLOAD)
+    ldi   zl, lo8(SRAM_ARP_PAYLOAD)
+    ldi   a1, ARP_PAYLOAD_LEN
     rcall SPI_MEMCPY
 
     ETH_READ_BUFFER_END
     /* Check that ARP is for me  {{{3 */
-    sbiw  ZL, (ARP_PAYLOAD_LEN - ARP_TPA) /* Z was at the end of ARP payload */
-    ldi   YH, hi8(EEPROM_IP_ADDR)
-    ldi   YL, lo8(EEPROM_IP_ADDR)
-    ldi   x1, IPV4_ADDR_LEN
+    sbiw  zl, (ARP_PAYLOAD_LEN - ARP_TPA) /* z was at the end of ARP payload */
+    ldi   xh, hi8(EEPROM_IP_ADDR)
+    ldi   xl, lo8(EEPROM_IP_ADDR)
+    ldi   a1, IPV4_ADDR_LEN
     rcall ES_MEMCMP
     brne  ARP_PROCESS_EXIT_SUCCESS /* Not for me, just return */
     /* Check if Request or Reply {{{3 */
-    /* Z was at TPA. First byte of OPER not used */
-    sbiw  ZL, (ARP_TPA - ARP_OPER - 1)
-    ld    t1, Z
+    /* z was at TPA. First byte of OPER not used */
+    sbiw  zl, (ARP_TPA - ARP_OPER - 1)
+    ld    t1, z
     cpi   t1, ARP_OPER_REPLY
     breq  ARP_IS_REPLY
 ARP_IS_REQUEST: /* {{{3 */
     /* Set OPER {{{4 */
     ldi   t2, ARP_OPER_REPLY
-    st    Z+, t2  /* Z ends up in the first address of the sender's MAC (SHA) */
+    st    z+, t2  /* z ends up in the first address of the sender's MAC (SHA) */
 
     /* Set SHA and THA at the same time {{{4 */
     ldi   t3, MAC_ADDR_LEN
-    ldi   YH, hi8(EEPROM_MAC_ADDR)
-    ldi   YL, lo8(EEPROM_MAC_ADDR)
+    ldi   xh, hi8(EEPROM_MAC_ADDR)
+    ldi   xl, lo8(EEPROM_MAC_ADDR)
     /* Write previous target MAC into destination MAC */
-0:  ld    t2, Z
-    std   Z+(ARP_THA - ARP_SHA), t2
+0:  ld    t2, z
+    std   z+(ARP_THA - ARP_SHA), t2
     /* Read from EEPROM and write into SRAM */
     rcall EEPROM_READ_N_INC
-    st    Z+, x4
+    st    z+, a4
     dec   t3
     brne  0b
 
     /* Set SPA and TPA at the same time {{{4 */
     ldi   t3, IPV4_ADDR_LEN
-    ldi   YH, hi8(EEPROM_IP_ADDR)
-    ldi   YL, lo8(EEPROM_IP_ADDR)
+    ldi   xh, hi8(EEPROM_IP_ADDR)
+    ldi   xl, lo8(EEPROM_IP_ADDR)
     /* Copy IP from src to dst */
-0:  ld    t2, Z
-    std   Z+(ARP_TPA - ARP_SPA), t2
+0:  ld    t2, z
+    std   z+(ARP_TPA - ARP_SPA), t2
     /* Read from EEPROM and write it into SRAM */
     rcall EEPROM_READ_N_INC
-    st    Z+, x4
+    st    z+, a4
     dec   t3
     brne  0b
     /* Send ARP packet back {{{4 */
@@ -114,65 +114,65 @@ ARP_IS_REQUEST: /* {{{3 */
 
 ARP_IS_REPLY: /* {{{3 */
     /* Using Round Robin, insert the ARP reply into the ARP table */
-    /* Set Z, then load current offset using Z, update current offset and stored
-     * back using Z, then update Z to point to the entry to write to. We are
+    /* Set z, then load current offset using z, update current offset and stored
+     * back using z, then update z to point to the entry to write to. We are
      * going to start writing in the second slot, but it has a smallest
      * footprint than other options */
-    ldi   ZL, lo8(SRAM_ARP_TABLE)
-    ldi   ZH, hi8(SRAM_ARP_TABLE)
-    ldd   t1, Z + (ARP_TABLE_LEN) /* Load current entry offset */
+    ldi   zl, lo8(SRAM_ARP_TABLE)
+    ldi   zh, hi8(SRAM_ARP_TABLE)
+    ldd   t1, z + (ARP_TABLE_LEN) /* Load current entry offset */
     subi  t1, -(ARP_TABLE_ENTRY_LEN) /* Add entry length to offset */
     cpi   t1, ARP_TABLE_LEN /* check if reached end of table */
     brne  0f
     clr   t1
-0:  std   Z + (ARP_TABLE_LEN), t1 /* Store value back */
+0:  std   z + (ARP_TABLE_LEN), t1 /* Store value back */
     DEBUG(rcall PRINT_CURRENT_ENTRY)
-    add   ZL, t1
-    adc   ZH, zero
+    add   zl, t1
+    adc   zh, zero
 
     /* Copy SPA {{{4 */
-    ldi   YL, lo8(SRAM_ARP_PAYLOAD + ARP_SPA)
-    ldi   YH, hi8(SRAM_ARP_PAYLOAD + ARP_SPA)
-    ldi   x1, IPV4_ADDR_LEN
+    ldi   xl, lo8(SRAM_ARP_PAYLOAD + ARP_SPA)
+    ldi   xh, hi8(SRAM_ARP_PAYLOAD + ARP_SPA)
+    ldi   a1, IPV4_ADDR_LEN
     rcall MEMCPY
 
     /* Copy SHA {{{4 */
-    sbiw  YL, (ARP_THA - ARP_SHA) /* Y was at THA */
-    ldi   x1, MAC_ADDR_LEN
+    sbiw  xl, (ARP_THA - ARP_SHA) /* x was at THA */
+    ldi   a1, MAC_ADDR_LEN
     rcall MEMCPY
 
     /* }}}3 */
 ARP_PROCESS_EXIT_SUCCESS:
-    pop   YL
-    pop   YH
-    pop   ZL
-    pop   ZH
+    pop   xl
+    pop   xh
+    pop   zl
+    pop   zh
     ret
 
 /* ARP request {{{2 ------------------------------------------------------------
- * Y: Pointer to Targer Protocol Address (TPA) */
+ * x: Pointer to Targer Protocol Address (TPA) */
 ARP_REQUEST:
-    push  YL
-    push  YH
+    push  xl
+    push  xh
     /* Copy default ARP request from EEPROM {{{3
      * default ARP doesn't include TPA */
-    ldi   YL, lo8(EEPROM_ARP_REQUEST)
-    ldi   YH, hi8(EEPROM_ARP_REQUEST)
-    ldi   ZL, lo8(SRAM_ARP_PAYLOAD)
-    ldi   ZH, hi8(SRAM_ARP_PAYLOAD)
-    ldi   x1, EEPROM_ARP_REQUEST_END - EEPROM_ARP_REQUEST
+    ldi   xl, lo8(EEPROM_ARP_REQUEST)
+    ldi   xh, hi8(EEPROM_ARP_REQUEST)
+    ldi   zl, lo8(SRAM_ARP_PAYLOAD)
+    ldi   zh, hi8(SRAM_ARP_PAYLOAD)
+    ldi   a1, EEPROM_ARP_REQUEST_END - EEPROM_ARP_REQUEST
     rcall ES_MEMCPY
 
     /* TPA Copy Target IP Address {{{3 */
-    pop   YH
-    pop   YL
-    ldi   x1, IPV4_ADDR_LEN
+    pop   xh
+    pop   xl
+    ldi   a1, IPV4_ADDR_LEN
     rcall MEMCPY
 
     /* SPA Copy SRC IP Address  {{{3 */
-    sbiw  ZL, (ARP_TPA - ARP_SPA + IPV4_ADDR_LEN)
-    ldi   YL, lo8(EEPROM_IP_ADDR)
-    ldi   YH, hi8(EEPROM_IP_ADDR)
+    sbiw  zl, (ARP_TPA - ARP_SPA + IPV4_ADDR_LEN)
+    ldi   xl, lo8(EEPROM_IP_ADDR)
+    ldi   xh, hi8(EEPROM_IP_ADDR)
     rcall ES_MEMCPY
 
     /* Set Ethernet Dst address and Type/Len {{{3 */
@@ -186,29 +186,29 @@ ARP_REQUEST:
      * else can be done between ARP_SEND_PACKET and ret */
 ARP_SEND_PACKET:
     rcall ETH_WRITE_BUFFER_PACKET_HEADER
-    sbiw  ZL, ARP_THA /* Z was left at THA */
-    ldi   x1, ARP_PAYLOAD_LEN
+    sbiw  zl, ARP_THA /* z was left at THA */
+    ldi   a1, ARP_PAYLOAD_LEN
     rcall ETH_WRITE_Z_TO_TRANSMIT_BUFFER
     rcall ETH_WRITE_BUFFER_PACKET_PAYLOAD_FINISH
     ret
 
 /* ARP Get MAC PTR {{{2 --------------------------------------------------------
- * Look for the IP address pointed by Y
- *   If found, set [x4:x3] to address of corresponding MAC address
- *   and set SREG(Z). Else, [x4:x3] is unchanged and clear SREG(Z)
+ * Look for the IP address pointed by x
+ *   If found, set [a4:a3] to address of corresponding MAC address
+ *   and set SREG(Z). Else, [a4:a3] is unchanged and clear SREG(Z)
  */
 ARP_GET_MAC_ADDR_PTR:
-    push  ZL
-    push  ZH
+    push  zl
+    push  zh
 
-    ldi   ZL, lo8(SRAM_ARP_TABLE + ARP_TABLE_IPV4)
-    ldi   ZH, hi8(SRAM_ARP_TABLE + ARP_TABLE_IPV4)
+    ldi   zl, lo8(SRAM_ARP_TABLE + ARP_TABLE_IPV4)
+    ldi   zh, hi8(SRAM_ARP_TABLE + ARP_TABLE_IPV4)
     ldi   t3, ARP_TABLE_SIZE
-    ldi   x1, IPV4_ADDR_LEN
+    ldi   a1, IPV4_ADDR_LEN
     /* Loop through ARP table looking for IP Address */
 0:  rcall MEMCMP
     breq  ARP_ENTRY_FOUND
-    adiw  ZL, ARP_TABLE_ENTRY_LEN
+    adiw  zl, ARP_TABLE_ENTRY_LEN
     dec   t3
     brne  0b
     /* ARP entry not found */
@@ -216,13 +216,13 @@ ARP_GET_MAC_ADDR_PTR:
     clz
     rjmp  ARP_GET_MAC_ADDR_EXIT
 ARP_ENTRY_FOUND:
-    adiw  ZL, (ARP_TABLE_MAC - ARP_TABLE_IPV4)
-    movw  x3, ZL
+    adiw  zl, (ARP_TABLE_MAC - ARP_TABLE_IPV4)
+    movw  a3, zl
     sez
 
 ARP_GET_MAC_ADDR_EXIT:
-    pop   ZH
-    pop   ZL
+    pop   zh
+    pop   zl
     ret
 
 #ifndef NDEBUG

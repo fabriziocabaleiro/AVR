@@ -53,25 +53,25 @@ UART_INIT:
     ret
 
 /* Uart Transmit {{{2 ----------------------------------------------------------
- * x1 Byte to be transmitted
+ * a1 Byte to be transmitted
  */
 UART_TRANSMIT:
     /* Wait for empty transmit buffer */
 0:  sbis  _SFR_IO_ADDR(UCSRA), UDRE
     rjmp  0b
-    out   _SFR_IO_ADDR(UDR), x1
+    out   _SFR_IO_ADDR(UDR), a1
     ret
 
 /* Uart Transmit register as hexadecimal {{{2 ----------------------------------
  */
 UART_TRANSMIT_HEX:
     clr   t2
-    swap  x1
+    swap  a1
 
     /* Wait for empty transmit buffer */
 0:  sbis  _SFR_IO_ADDR(UCSRA), UDRE
     rjmp  0b
-    mov   t1, x1
+    mov   t1, a1
     andi  t1, 0x0F
     cpi   t1, 10
     brsh  1f
@@ -83,25 +83,26 @@ UART_TRANSMIT_HEX:
     sbrc  t2, 0
     ret
     sbr   t2, 0x01
-    swap  x1
+    swap  a1
     rjmp  0b
 
 /* Uart Transmit string {{{2  --------------------------------------------------
- * Z points to a string
+ * z points to a string.
+ * Only z can be used with lpm
  */
 UART_TRANSMIT_STR:
-    push  x1
+    push  a1
     /* Wait for empty transmit buffer */
 0:  sbis  _SFR_IO_ADDR(UCSRA), UDRE
     rjmp  0b
     /* Read next byte, check if end of string, if not, write to UART, else jump
      * to the end */
-    lpm   x1, Z+
-    tst   x1
+    lpm   a1, z+
+    tst   a1
     breq  0f
-    out   _SFR_IO_ADDR(UDR), x1
+    out   _SFR_IO_ADDR(UDR), a1
     rjmp  0b
-0:  pop   x1
+0:  pop   a1
     ret
 
 .end

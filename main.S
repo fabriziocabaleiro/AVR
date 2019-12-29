@@ -88,22 +88,22 @@ LOOP:
 
     rcall ADC_ENABLE_N_START
 
-    ldi   YH, hi8(SRAM_DHT11_PAYLOAD)
-    ldi   YL, lo8(SRAM_DHT11_PAYLOAD)
-    ldi   ZL, lo8(SRAM_COMM_PAYLOAD)
-    ldi   ZH, hi8(SRAM_COMM_PAYLOAD)
-    ldi   x1, DHT11_PAYLOAD_LEN
+    ldi   xh, hi8(SRAM_DHT11_PAYLOAD)
+    ldi   xl, lo8(SRAM_DHT11_PAYLOAD)
+    ldi   zl, lo8(SRAM_COMM_PAYLOAD)
+    ldi   zh, hi8(SRAM_COMM_PAYLOAD)
+    ldi   a1, DHT11_PAYLOAD_LEN
     rcall MEMCPY
 
-    ldi   YH, hi8(SRAM_ADC0)
-    ldi   YL, lo8(SRAM_ADC0)
-    ldi   x1, MQ135_PAYLOAD_LEN
+    ldi   xh, hi8(SRAM_ADC0)
+    ldi   xl, lo8(SRAM_ADC0)
+    ldi   a1, MQ135_PAYLOAD_LEN
     cli   /* Avoid race condition with SRAM_ADC0 */
     rcall MEMCPY
     sei
 
     /* Send data */
-    ldi   x1, (DHT11_PAYLOAD_LEN + MQ135_PAYLOAD_LEN)
+    ldi   a1, (DHT11_PAYLOAD_LEN + MQ135_PAYLOAD_LEN)
     rcall SEND_PACKET
     /* }}} */
     rjmp  LOOP
@@ -121,9 +121,9 @@ ENC_INTERRUPT_HANDLE:
     push  s1 /* Not really necessary as LOOP is not using s1 at all */
     /* Read Global interrupt register from ENC28J60 and execute routines
      * accordingly */
-    ldi   x1, ENC_COMMON_EIR
+    ldi   a1, ENC_COMMON_EIR
     rcall ETH_READ_CONTROL_REGISTER
-    mov   s1, x4
+    mov   s1, a4
 
     /* First check for errors */
 #if USE_DMAIF
@@ -160,7 +160,7 @@ HANDLE_PACKET:
     /* TODO: merge ETH_READ_RECEIVE_HEADER and ETH_READ_MAC_ADDRS_N_LEN_TYPE */
     rcall ETH_READ_RECEIVE_HEADER
     rcall ETH_CHECK_RECEIVE_STATUS_VECTOR
-    cpi   x4, 0
+    cpi   a4, 0
     /* Error seen commonly after programming */
     brne  RESET_ETH
 
@@ -171,11 +171,11 @@ HANDLE_PACKET:
     rjmp  CHK_RPKT_STATUS2
 
     /* Check if broadcast was sent by me */
-    ldi   YH, hi8(EEPROM_MAC_ADDR)
-    ldi   YL, lo8(EEPROM_MAC_ADDR)
-    ldi   ZH, hi8(SRAM_ENC_SRC_ADDR)
-    ldi   ZL, lo8(SRAM_ENC_SRC_ADDR)
-    ldi   x1, MAC_ADDR_LEN
+    ldi   xh, hi8(EEPROM_MAC_ADDR)
+    ldi   xl, lo8(EEPROM_MAC_ADDR)
+    ldi   zh, hi8(SRAM_ENC_SRC_ADDR)
+    ldi   zl, lo8(SRAM_ENC_SRC_ADDR)
+    ldi   a1, MAC_ADDR_LEN
     rcall ES_MEMCMP
     brne  CHK_RPKT_STATUS2
     rjmp  SKIP_ETH_PKT
@@ -216,7 +216,7 @@ SKIP_ETH_PKT:
 
 RESET_ETH:
     DEBUG(PRINT_STR STR_ENC_STATUS_VECTOR_ERROR)
-    DEBUG(PRINT_REG x4)
+    DEBUG(PRINT_REG a4)
     DEBUG(PRINT_NEWLINE)
     rcall ETH_INIT
     ret

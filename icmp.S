@@ -15,29 +15,29 @@
 
 /* TEXT {{{1 -----------------------------------------------------------------*/
 /* Handle ICMP packet {{{2 -----------------------------------------------------
- * Z has been set to SRAM_IPV4_HEADER in the previous routine
+ * z has been set to SRAM_IPV4_HEADER in the previous routine
  * Not supporting ping with total length greater than 255 */
 ICMP_HANDLE_PKT:
     push  s1
-    push  ZL
-    push  ZH
-    push  YL
-    push  YH
+    push  zl
+    push  zh
+    push  xl
+    push  xh
 
     /* Read message type, if not ICMP_MSG_TYPE_ECHO, then ignore packet {{{3 */
     rcall ETH_READ_BUFFER_START
     ETH_READ_NEXT_BYTE
-    cpi   x4, ICMP_MSG_TYPE_ECHO
+    cpi   a4, ICMP_MSG_TYPE_ECHO
     brne  ICMP_HANDLE_PKT_EXIT
 
     /* Swap Src and Dst IP addresses {{{3 */
     ldi   t3, IPV4_ADDR_LEN
-    adiw  ZL, IPV4_SRC_ADDR
+    adiw  zl, IPV4_SRC_ADDR
 SWAP_IP_ADDR:
-    ld    t1, Z
-    ldd   t2, Z + (IPV4_DST_ADDR - IPV4_SRC_ADDR)
-    std   Z + (IPV4_DST_ADDR - IPV4_SRC_ADDR), t1
-    st    Z+, t2
+    ld    t1, z
+    ldd   t2, z + (IPV4_DST_ADDR - IPV4_SRC_ADDR)
+    std   z + (IPV4_DST_ADDR - IPV4_SRC_ADDR), t1
+    st    z+, t2
     dec   t3
     brne  SWAP_IP_ADDR
 
@@ -47,12 +47,12 @@ SWAP_IP_ADDR:
     lds   t1, SRAM_IPV4_IHL_IN_BYTES
     sub   t3, t1
     /* Plus 1 as we already read ICMP MSG TYPE */
-    ldi   ZL, lo8(SRAM_IPV4_PAYLOAD + 1)
-    ldi   ZH, hi8(SRAM_IPV4_PAYLOAD + 1)
+    ldi   zl, lo8(SRAM_IPV4_PAYLOAD + 1)
+    ldi   zh, hi8(SRAM_IPV4_PAYLOAD + 1)
     /* TODO: SPI_MEMCPY ? */
 READ_PAYLOAD:
     ETH_READ_NEXT_BYTE
-    st    Z+, x4
+    st    z+, a4
     dec   t3
     brne  READ_PAYLOAD
     ETH_READ_BUFFER_END
@@ -61,11 +61,11 @@ READ_PAYLOAD:
     rcall ETH_WRITE_BUFFER_PACKET_HEADER
 
     /* Write IPv4 Header into transmit buffer {{{3 */
-    ldi   ZL, lo8(SRAM_IPV4_HEADER)
-    ldi   ZH, hi8(SRAM_IPV4_HEADER)
-    lds   x1, SRAM_IPV4_IHL_IN_BYTES
+    ldi   zl, lo8(SRAM_IPV4_HEADER)
+    ldi   zh, hi8(SRAM_IPV4_HEADER)
+    lds   a1, SRAM_IPV4_IHL_IN_BYTES
     /* Taking the change to store IPv4 Total Length */
-    ldd   s1, Z + IPV4_TOTAL_LENGTH + 1
+    ldd   s1, z + IPV4_TOTAL_LENGTH + 1
     rcall ETH_WRITE_Z_TO_TRANSMIT_BUFFER
 
     /* Prepare ICMP packet {{{3 */
@@ -79,29 +79,29 @@ READ_PAYLOAD:
     /* Calculate ICMP packet size (IPv4 total length - IHL (in bytes)) */
     lds   t1, SRAM_IPV4_IHL_IN_BYTES
     sub   s1, t1
-    mov   x1, s1
-    ldi   ZL, lo8(SRAM_IPV4_PAYLOAD)
-    ldi   ZH, hi8(SRAM_IPV4_PAYLOAD)
+    mov   a1, s1
+    ldi   zl, lo8(SRAM_IPV4_PAYLOAD)
+    ldi   zh, hi8(SRAM_IPV4_PAYLOAD)
 
     /* Could check that received checksum is correct, but, why should I care? */
     /* Clear received checksum */
-    std   Z + IPV4_ICMP_CHECKSUM + 0, zero
-    std   Z + IPV4_ICMP_CHECKSUM + 1, zero
-    /* x1 & Z must be not changed by INTERNET_CHECKSUM_RFC1071 */
-    ldi   x2, 0
+    std   z + IPV4_ICMP_CHECKSUM + 0, zero
+    std   z + IPV4_ICMP_CHECKSUM + 1, zero
+    /* a1 & z must be not changed by INTERNET_CHECKSUM_RFC1071 */
+    ldi   a2, 0
     rcall INTERNET_CHECKSUM_RFC1071
-    std   Z + IPV4_ICMP_CHECKSUM + 0, x3
-    std   Z + IPV4_ICMP_CHECKSUM + 1, x4
+    std   z + IPV4_ICMP_CHECKSUM + 0, a3
+    std   z + IPV4_ICMP_CHECKSUM + 1, a4
 
     /* Write IPv4 payload and finalize ETH transmission {{{3 */
     rcall ETH_WRITE_Z_TO_TRANSMIT_BUFFER
     rcall ETH_WRITE_BUFFER_PACKET_PAYLOAD_FINISH
     /* }}}3 */
 ICMP_HANDLE_PKT_EXIT:
-    pop   YH
-    pop   YL
-    pop   ZH
-    pop   ZL
+    pop   xh
+    pop   xl
+    pop   zh
+    pop   zl
     pop   s1
     ret
 
