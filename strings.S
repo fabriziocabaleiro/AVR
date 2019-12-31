@@ -12,6 +12,15 @@
 .global STR_START
 .global STR_DHCP_HANDLE_START
 .global STR_DHCP_SEND_START
+.global STR_DHCP_VARS
+.global STR_DHCP_SERVER_IP_ADDR
+.global STR_DHCP_XID_LAST_BYTE
+.global STR_DHCP_ADDRESS_TIME
+.global STR_DHCP_SECONDS
+.global STR_DHCP_SUBNET_MASK
+.global STR_DHCP_DOMAIN_SERVER
+.global STR_DHCP_STATE
+.global STR_DHCP_TIMER_SUBTRAHEND_PTR_L
 .global STR_INCOMING_XID
 .global STR_LOCAL_XID
 .global STR_OPT_SERVER_ID
@@ -42,6 +51,24 @@ STR_DHCP_HANDLE_START:
 .string "-DHCP handle-\r\n"
 STR_DHCP_SEND_START:
 .string "-DHCP send-\r\n"
+STR_DHCP_VARS:
+.string "DHCP VARS\r\n"
+STR_DHCP_SERVER_IP_ADDR:
+.string "Server IP ADDR : "
+STR_DHCP_XID_LAST_BYTE:
+.string "XID Last Byte  : "
+STR_DHCP_ADDRESS_TIME:
+.string "Address Time   : "
+STR_DHCP_SECONDS:
+.string "Seconds        : "
+STR_DHCP_SUBNET_MASK:
+.string "Subnet Mask    : "
+STR_DHCP_DOMAIN_SERVER:
+.string "Domain Server  : "
+STR_DHCP_STATE:
+.string "State          : "
+STR_DHCP_TIMER_SUBTRAHEND_PTR_L:
+.string "Timer Sub Ptr L: "
 STR_INCOMING_XID:
 .string "Incoming XID "
 STR_LOCAL_XID:

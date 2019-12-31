@@ -19,6 +19,11 @@
     push  a1
     push  t1
     push  t2
+    push  t3
+    push  xl
+    push  xh
+    push  yl
+    push  yh
     push  zl
     push  zh
 #endif
@@ -28,6 +33,11 @@
 #ifndef NDEBUG
     pop   zh
     pop   zl
+    pop   yh
+    pop   yl
+    pop   xh
+    pop   xl
+    pop   t3
     pop   t2
     pop   t1
     pop   a1
