@@ -51,12 +51,10 @@ EEPROM_IP_HEADER: /* {{{2 */
     /* Type of service 0 */
     .byte 0x00
     /* Total length, 60 bytes */
-    .byte 0x00
-    .byte 0x3C
+    .byte 0x00, 0x3C
     /* Identification */
-    .byte 0xDA
-    .byte 0xD1
-    /* Don't fragment, fragment offset 0 */
+    .byte 0xDA, 0xD1
+    /* Flags: Don't fragment. Fragment offset 0 */
     .byte 0x40
     .byte 0x00
     /* Time to leave max */
@@ -64,19 +62,12 @@ EEPROM_IP_HEADER: /* {{{2 */
     /* Protocol 17 (UDP) */
     .byte 0x11
     /* Checksum to zero, so it can be calculated and set when necessary */
-    .byte 0x00
-    .byte 0x00
+    .byte 0x00, 0x00
 EEPROM_IP_HEADER_TIL_SRC_IP_ADDR:
     /* Source IP address, non-routable meta address */
-    .byte 0x00
-    .byte 0x00
-    .byte 0x00
-    .byte 0x00
+    .byte 0x00, 0x00, 0x00, 0x00
     /* Destination IP address broadcast */
-    .byte 0xFF
-    .byte 0xFF
-    .byte 0xFF
-    .byte 0xFF
+    .byte 0xFF, 0xFF, 0xFF, 0xFF
 EEPROM_IP_HEADER_END:
 EEPROM_UDP_DHCP_PORT: /* {{{2 */
     /* Must be next to EEPROM_IP_HEADER_END because we used in DHCP_SEND as a
@@ -96,15 +87,10 @@ EEPROM_DHCP_HEADER: /* {{{2 */
     /* HOPS */
     .byte 0x00
     /* XID is four bytes, but, we use the last one for counter */
-    .byte 0xCA
-    .byte 0xCA
-    .byte 0x00
+    .byte 0xCA, 0xCA, 0x00
 EEPROM_DHCP_HEADER_END:
 EEPROM_DHCP_MAGIC_COOKIE: /* {{{2 */
-    .byte 0x63
-    .byte 0x82
-    .byte 0x53
-    .byte 0x63
+    .byte 0x63, 0x82, 0x53, 0x63
 EEPROM_DHCP_MAGIC_COOKIE_END:
 EEPROM_DHCP_OPTION_MSG_N_LEN: /* {{{2 */
     .byte DHCP_OPTION_DHCP_MSG_TYPE
@@ -265,18 +251,15 @@ EEPROM_HTTP_DST_PORT: /* {{{2 */
 EEPROM_HTTP_DST_PORT_END:
 EEPROM_ARP_REQUEST: /* {{{2 */
     /* HTYPE 0x0001 for Ethernet */
-    .byte 0x00
-    .byte 0x01
+    .byte 0x00, 0x01
     /* PTYPE 0x0800 protocol type IPv4 */
-    .byte 0x08
-    .byte 0x00
+    .byte 0x08, 0x00
     /* HLEN Hardware address length 6 */
-    .byte    6
+    .byte 6
     /* PLEN Protocol address length 4 */
-    .byte    4
+    .byte 4
     /* Operation (request or reply) */
-    .byte 0
-    .byte ARP_OPER_REQUEST
+    .byte 0, ARP_OPER_REQUEST
     /* SHA Sender HW address */
     .byte MAC_ADDR_0
     .byte MAC_ADDR_1
@@ -303,11 +286,5 @@ EEPROM_HTTP_RH_OFFSET:
     .byte '\n'
 EEPROM_HTTP_BODY_END:
 EEPROM_HTTP_RESPONSE_END:
-EEPROM_DEBUG_PREFIX: /* {{{2 */
-    .byte 0xAB
-    .byte 0xAB
-    .byte 0xAB
-    .byte 0xAB
-EEPROM_DEBUG:
 
 .end
