@@ -37,6 +37,7 @@
 .global STR_ARP_WR_TBL_ENTRY
 .global STR_ARP_REPLACE
 .global STR_TIMER_CURRENT_TIME
+.global STR_DHT11_DATA
 
 /* DATA  {{{1 ----------------------------------------------------------------*/
 .section .data
@@ -91,6 +92,8 @@ STR_ARP_REPLACE:
 .string "ARP replacing oldest entry in ARP table\r\n"
 STR_TIMER_CURRENT_TIME:
 .string "TIMER current time: "
+STR_DHT11_DATA:
+.string "DHT11 data: "
 
 .align 1
 #endif

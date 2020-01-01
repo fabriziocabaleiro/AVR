@@ -4,6 +4,7 @@
 #include <avr/io.h>
 #include "dht11.h"
 #include "defs.h"
+#include "macros.S"
 .LIST
 
 /* MACORS {{{1 ---------------------------------------------------------------*/
@@ -94,9 +95,6 @@ DHT11_INIT:
  * BEWARE: Calling this routine at 1Hz causes issues, DHT11 sensor should not be
  * read more than once per second */
 DHT11_READ:
-    push  zl
-    push  zh
-
     /* Setup initial Step, used when receiving stream of data */
     ldi   t3, DHT11_RESPONSE_INIT
 
@@ -111,10 +109,9 @@ DHT11_READ:
     /* Clear the counter */
     out   _SFR_IO_ADDR(TCNT2), zero
     /* Pulling Down data line for at least 18ms */
-DHT11_READ_WAIT_START_SIGNAL:
-    in    zl, _SFR_IO_ADDR(TCNT2)
+0:  in    zl, _SFR_IO_ADDR(TCNT2)
     cpi   zl, WAIT_20uS
-    brlo  DHT11_READ_WAIT_START_SIGNAL
+    brlo  0b
 
     /* Set clock prescaler to 8, which gives good precision to differentiate
      * between a ZERO or ONE sent by the DHT11 */
@@ -144,18 +141,17 @@ DHT11_READ_WAIT_START_SIGNAL:
 
     /* 40 cycles, one for each bit, plus 2 falling edges at the beginning */
     ldi   t1, 42
-DHT11_TRANSMISSION_LOOP:
-    sleep
+0:  sleep
     dec   t1
-    brne  DHT11_TRANSMISSION_LOOP
+    brne  0b
 
     /* Unset timer overflow interrupt enable */
     in    t2, _SFR_IO_ADDR(TIMSK)
     cbr   t2, (1 << TOIE2)
     out   _SFR_IO_ADDR(TIMSK), t2
 
-    pop   zh
-    pop   zl
+    DEBUG(rcall PRINT_VARIABLES)
+
     ret
 
 /* Handle INT1 interrupt {{{2 --------------------------------------------------
@@ -164,35 +160,44 @@ DHT11_TRANSMISSION_LOOP:
 TIMER2_OVF_vect:
 INT1_vect:
     /* Read counter and reset it */
-    /* TODO: Do we need to use a3 as temporary reg? */
     in    a3, _SFR_IO_ADDR(TCNT2) /* Using a3 as temporary reg */
     out   _SFR_IO_ADDR(TCNT2), zero
 
     inc   t3
     cpi   t3, DHT11_RESPONSE_DATA_COMING
     /* Return right away for the two falling edges before data transmission */
-    brmi  DHT11_INT1_vect_EXIT
+    brmi  1f
 
-DATA_IS_COMING:
     /* Load data from SRAM, shift left, decode incoming data, set LSB in case of
      * a one, save data back to SRAM */
     ld    t2, z
     lsl   t2
-
     cpi   a3, INTERVAL_THRESHOLD
-    brlo  DHT11_SENT_0
-
-DHT11_SENT_1:
+    brlo  0f
     sbr   t2, 0x01
-DHT11_SENT_0:
-    st    z, t2
+0:  st    z, t2
 
     /* Increment z if we finished writing a byte */
     mov   t2, t3
     andi  t2, 0x07
-    brne  DHT11_INT1_vect_EXIT
+    brne  1f
     adiw  zl, 1
-DHT11_INT1_vect_EXIT:
-    reti
+
+1:  reti
+
+#ifndef NDEBUG
+PRINT_VARIABLES:
+    DEBUG_PUSH
+    PRINT_STR STR_DHT11_DATA
+    ldi   xl, lo8(SRAM_DHT11_PAYLOAD)
+    ldi   xh, hi8(SRAM_DHT11_PAYLOAD)
+    ld    a1, x+
+    rcall UART_TRANSMIT_HEX
+    ld    a1, x
+    rcall UART_TRANSMIT_HEX
+    PRINT_NEWLINE
+    DEBUG_POP
+    ret
+#endif
 
 .end
