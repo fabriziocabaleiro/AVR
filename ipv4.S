@@ -61,6 +61,10 @@ IPV4_HANDLE_PKT:
     push  zl
     push  s1 /* IPv4 broadcast and unicast to me flags */
 
+    /* Set Ethernet Type/Len to IPv4 */
+    ldi   t2, (EEPROM_TYPE_LEN_IPV4 - EEPROM_TYPE_LEN)
+    sts   SRAM_ENC_TYPE_LEN, t2
+
     /* Read IPv4 Header */
     ldi   zl, lo8(SRAM_IPV4_HEADER)
     ldi   zh, hi8(SRAM_IPV4_HEADER)

@@ -221,12 +221,11 @@ DHCP_SEND:
     /* Ethernet Header {{{3 */
     ldi   t2, (1 << ENC_MAC_DST_PTR_BROADCAST_BIT)
     sts   SRAM_ENC_MAC_DST_PTR, t2
-    ldi   t2, (1 << ENC_TYPE_LEN_PTR_IPv4)
-    sts   SRAM_ENC_TYPE_LEN_PTR, t2
+    ldi   t2, (EEPROM_TYPE_LEN_IPV4 - EEPROM_TYPE_LEN)
+    sts   SRAM_ENC_TYPE_LEN, t2
     rcall ETH_WRITE_BUFFER_PACKET_HEADER
     /* }}}3 */
     rcall ETH_SET_LISTEN_ON_SPI
-    rcall ETH_SET_FLAG_KEEP_OPEN_AFTER_WRITE
     /* IPv4 Header {{{3
      * This header has src as 0.0.0.0, dst as 255.255.255.255, checksum and
      * total length have to be setup
@@ -277,6 +276,7 @@ DEFAULT_SRC_DST_ADDRESSES:
     /* Transmit IPv4 Header plus part of UDP {{{4 */
     ldi   a1, (EEPROM_UDP_DHCP_PORT_END - EEPROM_IP_HEADER)
     rcall ETH_WRITE_Z_TO_TRANSMIT_BUFFER
+    rcall ETH_SET_LISTEN_ON_SPI
 
     /* UDP Header {{{3 */
     /* SRC/DST already written */
@@ -411,13 +411,13 @@ DEFAULT_SRC_DST_ADDRESSES:
     ldi   zh, hi8(SRAM_DHCP_SERVER_IP_ADDR)
     ldi   a1, DHCP_OPTION_DHCP_SERVER_ID_LEN
     rcall ETH_WRITE_Z_TO_TRANSMIT_BUFFER
+    rcall ETH_SET_LISTEN_ON_SPI
 
 DHCP_END_OP: /* End Options */
     ldi   a1, DHCP_OPTION_END
     rcall SPI_MASTER_TRANSMIT
     /* }}}3 */
     ETH_END_LISTEN_ON_SPI
-    rcall ETH_UNSET_FLAG_KEEP_OPEN_AFTER_WRITE
     rcall ETH_WRITE_BUFFER_PACKET_PAYLOAD_FINISH
     ret
 

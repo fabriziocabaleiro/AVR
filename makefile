@@ -63,7 +63,7 @@ DEPOPTS = -MP -MD -MF ${DEPDIR}/$(notdir $@).d
 
 ${TARGET}.elf: $(addprefix ${OBJDIR}/, ${OBJS})
 	avr-gcc ${GCCOPT} $^ -o $@
-	./post_checks.sh ${TARGET}
+	./post_checks.sh ${TARGET} || rm $@
 	avr-objcopy -O ihex -R .data -R .eeprom -R .fuse -R .lock -R .signature $@ ${TARGET}.hex
 	@echo Sizes:
 	@avr-size -B $@

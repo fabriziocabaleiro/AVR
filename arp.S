@@ -175,16 +175,18 @@ ARP_REQUEST:
     ldi   xh, hi8(EEPROM_IP_ADDR)
     rcall ES_MEMCPY
 
-    /* Set Ethernet Dst address and Type/Len {{{3 */
+    /* Set Ethernet Dst Address to Broadcast {{{3 */
     ldi   t1, (1 << ENC_MAC_DST_PTR_BROADCAST_BIT)
     sts   SRAM_ENC_MAC_DST_PTR, t1
-    ldi   t1, (1 << ENC_TYPE_LEN_PTR_ARP)
-    sts   SRAM_ENC_TYPE_LEN_PTR, t1
 
     /* Send ARP packet back {{{3 */
     /* BEWARE, ARP_SEND_PACKET is called from ARP_HANDLE_PKT, therefore nothing
      * else can be done between ARP_SEND_PACKET and ret */
 ARP_SEND_PACKET:
+    /* Set Ethernet Type/Len to ARP */
+    ldi   t1, (EEPROM_TYPE_LEN_ARP - EEPROM_TYPE_LEN)
+    sts   SRAM_ENC_TYPE_LEN, t1
+
     rcall ETH_WRITE_BUFFER_PACKET_HEADER
     sbiw  zl, ARP_THA /* z was left at THA */
     ldi   a1, ARP_PAYLOAD_LEN

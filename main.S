@@ -157,67 +157,51 @@ ENC_INTERRUPT_HANDLE:
  * enc28j60 will trigger an interrupt whenever a packet is received. */
 HANDLE_PACKET:
     /* Packet and Ethernet headers */
-    /* TODO: merge ETH_READ_RECEIVE_HEADER and ETH_READ_MAC_ADDRS_N_LEN_TYPE */
-    rcall ETH_READ_RECEIVE_HEADER
-    rcall ETH_CHECK_RECEIVE_STATUS_VECTOR
-    cpi   a4, 0
-    /* Error seen commonly after programming */
-    brne  RESET_ETH
+    rcall ETH_READ_RECEIVE_N_ETHERNET_HEADER
+    sbrs  a4, RPKT_STATUS1_RECEIVED_OK
+    rjmp  RESET_ETH /* Error seen commonly after programming */
 
-    rcall ETH_READ_MAC_ADDRS_N_LEN_TYPE
+    sbrs  a4, RPKT_STATUS1_LENGTH_OUT_OF_RANGE
+    rjmp  9f /* no support for type/length = length packets */
 
-    lds   t2, SRAM_RPKT_STATUS3
-    sbrs  t2, RPKT_STATUS3_RECEIVE_BROADCAST_PACKET
-    rjmp  CHK_RPKT_STATUS2
+    sbrs  a3, RPKT_STATUS2_RECEIVE_BROADCAST_PACKET
+    rjmp  0f
 
     /* Check if broadcast was sent by me */
     ldi   xh, hi8(EEPROM_MAC_ADDR)
     ldi   xl, lo8(EEPROM_MAC_ADDR)
-    ldi   zh, hi8(SRAM_ENC_SRC_ADDR)
-    ldi   zl, lo8(SRAM_ENC_SRC_ADDR)
+    ldi   zh, hi8(SRAM_ENC_ETH_SRC_ADDR)
+    ldi   zl, lo8(SRAM_ENC_ETH_SRC_ADDR)
     ldi   a1, MAC_ADDR_LEN
     rcall ES_MEMCMP
-    brne  CHK_RPKT_STATUS2
-    rjmp  SKIP_ETH_PKT
+    breq  9f
 
-CHK_RPKT_STATUS2:
-    lds   t2, SRAM_RPKT_STATUS2
-    sbrc  t2, RPKT_STATUS2_LENGTH_OUT_OF_RANGE
-    rjmp  TYPE_LEN_TYPE
-    rjmp  SKIP_ETH_PKT /* no support for type/length = length packets */
+    /* Check with memcmp which type/len was sent and call handler accordingly */
+0:  ldi   zl, lo8(SRAM_ENC_ETH_TYPE_LEN)
+    ldi   zh, hi8(SRAM_ENC_ETH_TYPE_LEN)
+    ldi   a1, 2 /* Type/len is 2 bytes */
 
-TYPE_LEN_TYPE: /* Call handler based on TYPE */
-    lds   t1, SRAM_TYPE_LEN_H
-    lds   t2, SRAM_TYPE_LEN_L
-TYPE_LEN_IPV4:
-    /* Check Type/Len is IPv4 or jump to next type/len */
-    cpi   t1, hi8(ETHER_TYPE_IPV4)
-    brne  TYPE_LEN_ARP
-    cpi   t2, lo8(ETHER_TYPE_IPV4)
-    brne  TYPE_LEN_ARP
+    ldi   xl, lo8(EEPROM_TYPE_LEN_IPV4)
+    ldi   xh, hi8(EEPROM_TYPE_LEN_IPV4)
+    rcall ES_MEMCMP
+    brne  0f
 
+    /* IPv4 Handler */
     rcall IPV4_HANDLE_PKT
-    rjmp  PACKET_END
+    rjmp  9f
 
-TYPE_LEN_ARP:
-    /* Check Type/Len is ARP or jump to next type/len */
-    cpi   t1, hi8(ETHER_TYPE_ARP)
-    brne  TYPE_LEN_UNKNOWN
-    cpi   t2, lo8(ETHER_TYPE_ARP)
-    brne  TYPE_LEN_UNKNOWN
+0:  adiw  xl, (EEPROM_TYPE_LEN_ARP - EEPROM_TYPE_LEN_IPV4)
+    rcall ES_MEMCMP
+    brne  9f
 
+    /* ARP Handler */
     rcall ARP_HANDLE_PKT
 
-TYPE_LEN_UNKNOWN:
-PACKET_END:
-SKIP_ETH_PKT:
-    rcall ETH_PKT_PROCESSED
+9:  rcall ETH_PKT_PROCESSED
     ret
 
 RESET_ETH:
     DEBUG(PRINT_STR STR_ENC_STATUS_VECTOR_ERROR)
-    DEBUG(PRINT_REG a4)
-    DEBUG(PRINT_NEWLINE)
     rcall ETH_INIT
     ret
 

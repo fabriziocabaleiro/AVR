@@ -41,8 +41,6 @@
 SRAM_COMM_TABLE:       .skip (COMM_DST_TBL_LEN)
 SRAM_COMM_RR_ITERATOR: .skip 1
 SRAM_COMM_PAYLOAD:     .skip (DHT11_PAYLOAD_LEN + MQ135_PAYLOAD_LEN)
-/* XXX: Order dependency in COMM_INIT */
-SRAM_COMM_TYPE_LEN:    .skip 2
 
 /* TEXT {{{1 -----------------------------------------------------------------*/
 .section .text
@@ -52,13 +50,8 @@ SRAM_COMM_TYPE_LEN:    .skip 2
 COMM_INIT:
     ldi   zl, lo8(SRAM_COMM_TABLE)
     ldi   zh, hi8(SRAM_COMM_TABLE)
-    ldi   a1, (COMM_DST_TBL_LEN + DHT11_PAYLOAD_LEN + MQ135_PAYLOAD_LEN + 1 + 2)
+    ldi   a1, (COMM_DST_TBL_LEN + DHT11_PAYLOAD_LEN + MQ135_PAYLOAD_LEN + 1)
     rcall BZERO
-    sbiw  zl, 2
-    ldi   t1, hi8(ETHER_TYPE_IPV4)
-    st    z+, t1
-    ldi   t1, lo8(ETHER_TYPE_IPV4)
-    st    z+, t1
     ret
 
 /* Send a packet to IP registered in COMM table {{{2 ---------------------------
@@ -86,10 +79,8 @@ SEND_PACKET_FOR_ALL_ENTRIES:
     sts   SRAM_ENC_MAC_DST_PTR + 1, a3
 
     /* Set Type/Len pointer {{{3 */
-    ldi   t2, hi8(SRAM_COMM_TYPE_LEN)
-    sts   SRAM_ENC_TYPE_LEN_PTR + 0, t2
-    ldi   t2, lo8(SRAM_COMM_TYPE_LEN)
-    sts   SRAM_ENC_TYPE_LEN_PTR + 1, t2
+    ldi   t1, (EEPROM_TYPE_LEN_IPV4 - EEPROM_TYPE_LEN)
+    sts   SRAM_ENC_TYPE_LEN, t1
     /* }}}3 */
     /* Write Ethernet Header */
     rcall ETH_WRITE_BUFFER_PACKET_HEADER

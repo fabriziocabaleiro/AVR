@@ -486,7 +486,7 @@ System Reset Command (Soft Reset)
 #define ETH_SPI_CMD_BFC 0xA0
 #define ETH_SPI_CMD_SRC 0xFF
 
-/* RPKT_STATUS3 {{{1 -----------------------------------------------------------
+/* RPKT_STATUS2 {{{1 -----------------------------------------------------------
     31  Zero
         0
     30  Receive VLAN Type Detected
@@ -508,14 +508,14 @@ System Reset Command (Soft Reset)
     24  Receive Multicast Packet
         Indicates packet received had a valid Multicast address. */
 
-#define RPKT_STATUS3_ZERO                           7
-#define RPKT_STATUS3_RECEIVE_VLAN_TYPE_DETECTED     6
-#define RPKT_STATUS3_RECEIVE_UNKNOWN_OPCODE         5
-#define RPKT_STATUS3_RECEIVE_PAUSE_CONTROL_FRAME    4
-#define RPKT_STATUS3_RECEIVE_CONTROL_FRAME          3
-#define RPKT_STATUS3_DRIBBLE_NIBBLE                 2
-#define RPKT_STATUS3_RECEIVE_BROADCAST_PACKET       1
-#define RPKT_STATUS3_RECEIVE_MULTICAST_PACKET       0
+#define RPKT_STATUS2_ZERO                           7
+#define RPKT_STATUS2_RECEIVE_VLAN_TYPE_DETECTED     6
+#define RPKT_STATUS2_RECEIVE_UNKNOWN_OPCODE         5
+#define RPKT_STATUS2_RECEIVE_PAUSE_CONTROL_FRAME    4
+#define RPKT_STATUS2_RECEIVE_CONTROL_FRAME          3
+#define RPKT_STATUS2_DRIBBLE_NIBBLE                 2
+#define RPKT_STATUS2_RECEIVE_BROADCAST_PACKET       1
+#define RPKT_STATUS2_RECEIVE_MULTICAST_PACKET       0
 
 /* RPKT_STATUS2 {{{1 -----------------------------------------------------------
     23  Received Ok
@@ -540,14 +540,14 @@ System Reset Command (Soft Reset)
         Indicates a packet over 50,000 bit times occurred or that a packet was
         dropped since the last receive. */
 
-#define RPKT_STATUS2_RECEIVED_OK                    7
-#define RPKT_STATUS2_LENGTH_OUT_OF_RANGE            6
-#define RPKT_STATUS2_LENGTH_CHECK_ERROR             5
-#define RPKT_STATUS2_CRC_ERROR                      4
-//#define RPKT_STATUS2_RESERVED                       3
-#define RPKT_STATUS2_CARRIER_EVENT_PREVIOUSLY_SEEN  2
-//#define RPKT_STATUS2_RESERVED                       1
-#define RPKT_STATUS2_LONG_EVENT_DROP_EVENT          0
+#define RPKT_STATUS1_RECEIVED_OK                    7
+#define RPKT_STATUS1_LENGTH_OUT_OF_RANGE            6
+#define RPKT_STATUS1_LENGTH_CHECK_ERROR             5
+#define RPKT_STATUS1_CRC_ERROR                      4
+//#define RPKT_STATUS1_RESERVED                       3
+#define RPKT_STATUS1_CARRIER_EVENT_PREVIOUSLY_SEEN  2
+//#define RPKT_STATUS1_RESERVED                       1
+#define RPKT_STATUS1_LONG_EVENT_DROP_EVENT          0
 
 /* [RPKT_BYTE_COUNT_H:RPKT_BYTE_COUNT_L] {{{1 ----------------------------------
     15-0  Received Byte Count

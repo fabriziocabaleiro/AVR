@@ -38,6 +38,7 @@
 .global STR_ARP_REPLACE
 .global STR_TIMER_CURRENT_TIME
 .global STR_DHT11_DATA
+.global STR_ENC_RECEIVE_VECTOR
 
 /* DATA  {{{1 ----------------------------------------------------------------*/
 .section .data
@@ -81,7 +82,9 @@ STR_DONE:
 STR_FAILURE:
 .string "Failure\r\n"
 STR_ENC_STATUS_VECTOR_ERROR:
-.string "ENC status vector error: "
+.string "ENC received packet with error\r\n"
+STR_ENC_RECEIVE_VECTOR:
+.string "ENC rcv vec [npkt l:h], [bc l:h], st1/2\r\n"
 STR_TIMER0:
 .string "*Timer0 interrupt handler*"
 STR_STATE:
