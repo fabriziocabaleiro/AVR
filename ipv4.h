@@ -11,7 +11,7 @@
 #define IPV4_DEFAULT_HEADER_LEN             20
 #define IPV4_PAYLOAD_LEN                   200
 
-/* IPv4 header  {{{1 -----------------------------------------------------------
+/* IPv4 header
     0               1               2               3
     1 2 3 4 5 6 7 8 1 2 3 4 5 6 7 8 1 2 3 4 5 6 7 8 1 2 3 4 5 6 7 8
    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
@@ -42,11 +42,36 @@
 #define IPV4_DST_ADDR        16
 #define IPV4_OPTIONS         20
 
-#define IPV4_ICMP_TOM         0 /* Type of message */
-#define IPV4_ICMP_CODE        1
-#define IPV4_ICMP_CHECKSUM    2
-#define IPV4_ICMP_HEADER      4
-#define IPV4_ICMP_PAYLOAD     8 /* Optional */
+/* Pseudo header
+ * +--------+--------+--------+--------+
+ * |           Source Address          |
+ * +--------+--------+--------+--------+
+ * |         Destination Address       |
+ * +--------+--------+--------+--------+
+ * |  zero  |  PTCL  |    TCP Length   |
+ * +--------+--------+--------+--------+
+ *
+ * TCP Length does NOT include Pseudo header length
+*/
+
+/* Data offset to use ldd/std with Y */
+#define IPV4_DO_IHL_IN_BYTES              0
+#define IPV4_DO_PAYLOAD_LENGTH_IN_BYTES   1
+#define IPV4_DO_DST_IP_ADDR               3
+#define IPV4_DO_G_FLAGS                   7
+#define IPV4_DO_VERSION                  (8 + IPV4_VERSION       )
+#define IPV4_DO_IHL                      (8 + IPV4_IHL           )
+#define IPV4_DO_TOS                      (8 + IPV4_TOS           )
+#define IPV4_DO_TOTAL_LENGTH             (8 + IPV4_TOTAL_LENGTH  )
+#define IPV4_DO_IDENTIFICATION           (8 + IPV4_IDENTIFICATION)
+#define IPV4_DO_FLAGS                    (8 + IPV4_FLAGS         )
+#define IPV4_DO_FRAG_OFFSET              (8 + IPV4_FRAG_OFFSET   )
+#define IPV4_DO_TTL                      (8 + IPV4_TTL           )
+#define IPV4_DO_PROTOCOL                 (8 + IPV4_PROTOCOL      )
+#define IPV4_DO_H_CHECKSUM               (8 + IPV4_H_CHECKSUM    )
+#define IPV4_DO_SRC_ADDR                 (8 + IPV4_SRC_ADDR      )
+#define IPV4_DO_DST_ADDR                 (8 + IPV4_DST_ADDR      )
+#define IPV4_DO_OPTIONS                  (8 + IPV4_OPTIONS       )
 
 /* https://tools.ietf.org/html/rfc790 {{{1 */
 // #define INTERNET_PROTOCOL_NUMBER_RESERVED 0

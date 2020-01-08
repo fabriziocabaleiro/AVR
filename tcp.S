@@ -199,7 +199,7 @@ TCP_HANDLE_PKT_TO_NETWORK:
     ldi   zh, hi8(SRAM_TCP_HEADER)
     mov   a1, TCP_HEADER_LEN_REG
     add   a1, TCP_PAYLOAD_LEN_REG
-    ldi   a2, 1
+    ldi   a2, INTERNET_PROTOCOL_NUMBER_TCP
     rcall INTERNET_CHECKSUM_RFC1071
     std   z + (TCP_HEADER_CHKSUM + 0), a3
     std   z + (TCP_HEADER_CHKSUM + 1), a4

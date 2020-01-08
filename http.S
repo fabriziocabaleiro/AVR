@@ -46,6 +46,8 @@ HTTP_HANDLE_PKT:
     ret
 
 /* Fill 8.8 value into xx.x placeholder on HTTP body {{{2 ----------------------
+ * X points to 8.8 value
+ * Z points to http payload to write to
  */
 FILL_8_DOT_8_VALUE:
     /* RH */
@@ -57,8 +59,10 @@ FILL_8_DOT_8_VALUE:
     st    z+, a4
     st    z+, a3
 
+    /* Skip the dot xx.x */
     adiw  zl, 1
 
+    /* Decimal part from DHT11 ranges from 0 to 9, so just add '0' */
     ld    a1, x+
     subi  a1, -ASCII_ZERO /* + '0' */
     st    z+, a1

@@ -185,7 +185,7 @@ ARP_REQUEST:
 ARP_SEND_PACKET:
     /* Set Ethernet Type/Len to ARP */
     ldi   t1, (EEPROM_TYPE_LEN_ARP - EEPROM_TYPE_LEN)
-    sts   SRAM_ENC_TYPE_LEN, t1
+    sts   SRAM_ENC_TYPE_LEN_OFFSET, t1
 
     rcall ETH_WRITE_BUFFER_PACKET_HEADER
     sbiw  zl, ARP_THA /* z was left at THA */

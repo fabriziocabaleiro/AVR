@@ -28,6 +28,7 @@ endif
 ifeq (${TARGET}, main)
     WRITE_EEPROM = 
     OBJS = main.o          \
+           tcp.o           \
            eeprom.o        \
            spi.o           \
            timer.o         \
@@ -38,7 +39,6 @@ ifeq (${TARGET}, main)
            ipv4.o          \
            udp.o           \
            dhcp.o          \
-           tcp.o           \
            icmp.o          \
            utils.o         \
            http.o          \

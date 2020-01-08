@@ -36,7 +36,7 @@ then
     NADDR=$(printf "%08x" $((0x$ADDR + 60)))
     if test "${ADDR:5:1}" != "${NADDR:5:1}"
     then
-        echo Error: SRAM_TCP_HEADER is going to wrap around ZL, reading of options may not work
+        echo "Error: SRAM_TCP_HEADER ($ADDR) is going to wrap around ZL, reading of options may not work"
         exit 1
     fi
 

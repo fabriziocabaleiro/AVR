@@ -39,33 +39,33 @@
 .global SRAM_ENC_ETH_SRC_ADDR
 .global SRAM_ENC_ETH_TYPE_LEN
 .global SRAM_ENC_MAC_DST_PTR
-.global SRAM_ENC_TYPE_LEN
+.global SRAM_ENC_TYPE_LEN_OFFSET
 
 /* DATA  {{{1 ----------------------------------------------------------------*/
 .section .data
 /* Status vector, added by ENC28J60 HW before Ethernet header */
 SRAM_ENC_DATA:
 SRAM_ENC_RPKT_HEADER:
-SRAM_ENC_RPKT_N_PKT_L:   .skip 1
-SRAM_ENC_RPKT_N_PKT_H:   .skip 1
-SRAM_ENC_RPKT_BC_L:      .skip 1
-SRAM_ENC_RPKT_BC_H:      .skip 1
-SRAM_ENC_RPKT_STATUS1:   .skip 1
-SRAM_ENC_RPKT_STATUS2:   .skip 1
+SRAM_ENC_RPKT_N_PKT_L:    .skip 1
+SRAM_ENC_RPKT_N_PKT_H:    .skip 1
+SRAM_ENC_RPKT_BC_L:       .skip 1
+SRAM_ENC_RPKT_BC_H:       .skip 1
+SRAM_ENC_RPKT_STATUS1:    .skip 1
+SRAM_ENC_RPKT_STATUS2:    .skip 1
 /* SRAM_ENC_ETH_HEADER must be right after SRAM_ENC_RPKT_STATUS2, check PCC0002 */
 /* Ethernet header, this fields are updated every time we start processing a
  * packet */
 SRAM_ENC_ETH_HEADER:
-SRAM_ENC_ETH_DST_ADDR:   .skip 6
-SRAM_ENC_ETH_SRC_ADDR:   .skip 6
+SRAM_ENC_ETH_DST_ADDR:    .skip 6
+SRAM_ENC_ETH_SRC_ADDR:    .skip 6
 SRAM_ENC_ETH_TYPE_LEN:
-SRAM_ENC_ETH_TYPE_LEN_H: .skip 1
-SRAM_ENC_ETH_TYPE_LEN_L: .skip 1
+SRAM_ENC_ETH_TYPE_LEN_H:  .skip 1
+SRAM_ENC_ETH_TYPE_LEN_L:  .skip 1
 /* Pointer to Dst MAC address */
 /* SRAM_TYPE_LEN_L Must be right before SRAM_ENC_MAC_DST_PTR, check PCC0003 */
-SRAM_ENC_MAC_DST_PTR:    .skip 2
+SRAM_ENC_MAC_DST_PTR:     .skip 2
 /* Pointer to TYPE/LEN value */
-SRAM_ENC_TYPE_LEN:       .skip 1
+SRAM_ENC_TYPE_LEN_OFFSET: .skip 1
 
 /* TEXT {{{1 -----------------------------------------------------------------*/
 .section .text
@@ -342,7 +342,7 @@ ETH_WRITE_BUFFER_PACKET_HEADER:
     /* Write Type/Len */
     ldi   xl, lo8(EEPROM_TYPE_LEN)
     ldi   xh, hi8(EEPROM_TYPE_LEN)
-    lds   t1, SRAM_ENC_TYPE_LEN
+    lds   t1, SRAM_ENC_TYPE_LEN_OFFSET
     add   xl, t1
     adc   xh, zero
     ldi   a1, 2

@@ -80,14 +80,14 @@ SEND_PACKET_FOR_ALL_ENTRIES:
 
     /* Set Type/Len pointer {{{3 */
     ldi   t1, (EEPROM_TYPE_LEN_IPV4 - EEPROM_TYPE_LEN)
-    sts   SRAM_ENC_TYPE_LEN, t1
+    sts   SRAM_ENC_TYPE_LEN_OFFSET, t1
     /* }}}3 */
     /* Write Ethernet Header */
     rcall ETH_WRITE_BUFFER_PACKET_HEADER
 
     /* Set Dst IP address {{{3 */
-    ldi   zl, lo8(SRAM_IP_ADDR_DST)
-    ldi   zh, hi8(SRAM_IP_ADDR_DST)
+    ldi   zl, lo8(SRAM_IPV4_DST_IP_ADDR)
+    ldi   zh, hi8(SRAM_IPV4_DST_IP_ADDR)
     ldi   a1, IPV4_ADDR_LEN
     rcall MEMCPY
 
@@ -112,8 +112,8 @@ SEND_PACKET_FOR_ALL_ENTRIES:
     rcall UDP_PREPARE_PACKET
 
     /* Prepare IPv4 header {{{3 */
-    ldi   a1, (IPV4_DEFAULT_HEADER_LEN + UDP_HEADER_LEN)
-    add   a1, s2
+    ldi   a2, (IPV4_DEFAULT_HEADER_LEN + UDP_HEADER_LEN)
+    add   a2, s2
     rcall IPV4_PREPARE_DEFAULT_HEADER_20_40_BYTES
 
     /* Write IPv4 header into Ethernet module {{{3 */
@@ -162,6 +162,7 @@ COMM_REGISTER_IP:
     adc   zh, zero
 
     /* From start of entry till COMM_DST_IPV4_TIME */
+    /* TODO: SPI_MEMCPY */
     ldi   t3, COMM_DST_IPV4_TIME
 COMM_REGISTER_IP_LOOP:
     ETH_READ_NEXT_BYTE
