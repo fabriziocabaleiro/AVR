@@ -39,6 +39,7 @@
 .global STR_TIMER_CURRENT_TIME
 .global STR_DHT11_DATA
 .global STR_ENC_RECEIVE_VECTOR
+.global STR_TCP_OPTION_ERR
 
 /* DATA  {{{1 ----------------------------------------------------------------*/
 .section .data
@@ -97,6 +98,8 @@ STR_TIMER_CURRENT_TIME:
 .string "TIMER current time: "
 STR_DHT11_DATA:
 .string "DHT11 data: "
+STR_TCP_OPTION_ERR:
+.string "TCP Unknown option\r\n"
 
 .align 1
 #endif
