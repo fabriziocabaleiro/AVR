@@ -40,7 +40,7 @@ ICMP_HANDLE_PKT:
     ldi   zh, hi8(SRAM_IPV4_PAYLOAD)
     st    z+, a1
     ldd   a1, y + (IPV4_DO_PAYLOAD_LENGTH_IN_BYTES + 1)
-    rcall SPI_MEMCPY
+    rcall S_MEMCPY
 
     ETH_READ_BUFFER_END
 

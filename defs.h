@@ -34,6 +34,11 @@
 #define t2     R21
 #define t3     R22 /* Used normally as counter */
 
+#define t4     R2
+#define t5     R3
+#define t6     R4
+#define t7     R5
+
 /* Register that hold saved values, we guarantee that this register will have
  * the same value after calling a routine */
 #define s3     R23

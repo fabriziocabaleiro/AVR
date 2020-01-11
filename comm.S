@@ -68,7 +68,7 @@ SEND_PACKET:
 SEND_PACKET_FOR_ALL_ENTRIES:
     ldi   a1, IPV4_ADDR_LEN
     clr   a2
-    rcall REG_MEMCMP
+    rcall R_MEMCMP
     breq  SEND_PACKET_NEXT_ENTRY
     push  xl
     push  xh
@@ -162,7 +162,7 @@ COMM_REGISTER_IP:
     adc   zh, zero
 
     /* From start of entry till COMM_DST_IPV4_TIME */
-    /* TODO: SPI_MEMCPY */
+    /* TODO: S_MEMCPY */
     ldi   t3, COMM_DST_IPV4_TIME
 COMM_REGISTER_IP_LOOP:
     ETH_READ_NEXT_BYTE

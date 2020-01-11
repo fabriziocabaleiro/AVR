@@ -87,13 +87,12 @@ TIMER1_COMPA_vect:
 0:  ld    t1, -z
     inc   t1
     st    z, t1
-    brne  0f
+    brne  0f /* break */
     dec   t2
     brne  0b
-0:
 
     /* XXX: ldd instead of "lds t1, SRAM_TIMER1_EVENTS" for smaller footprint */
-    ldi   zl, lo8(SRAM_TIMER1_SECONDS)
+0:  ldi   zl, lo8(SRAM_TIMER1_SECONDS)
     ldi   zh, hi8(SRAM_TIMER1_SECONDS)
     ldd   t1, z + TIMER1_SECONDS_LEN
 

@@ -91,7 +91,7 @@ IPV4_HANDLE_PKT:
     /* We already read one byte (version|IHL), so, subtract 1 */
     subi  a1, 1
     /* Read the rest of the IPv4 header */
-    rcall SPI_MEMCPY
+    rcall S_MEMCPY
 
     ETH_READ_BUFFER_END
 
@@ -102,14 +102,14 @@ IPV4_HANDLE_PKT:
     ldi   zl, lo8(SRAM_IPV4_HEADER + IPV4_DST_ADDR)
     ldi   zh, hi8(SRAM_IPV4_HEADER + IPV4_DST_ADDR)
     ldi   a1, IPV4_ADDR_LEN
-    rcall ES_MEMCMP
+    rcall E_MEMCMP
     brne  0f
     sbr   s1, (1 << RECEIVED_IP_IS_MINE_BIT)
 
     /* Check if Dst IP Address is broadcast */
 0:  movw  xl, zl
     ldi   a2, 0xFF
-    rcall REG_MEMCMP
+    rcall R_MEMCMP
     brne  0f
     sbr   s1, (1 << RECEIVED_IP_IS_BROADCAST_BIT)
 
@@ -231,13 +231,13 @@ IPV4_PREPARE_DEFAULT_HEADER_20_40_BYTES:
     ldi   zl, lo8(SRAM_IPV4_HEADER)
     ldi   zh, hi8(SRAM_IPV4_HEADER)
     ldi   a1, (EEPROM_IP_HEADER_TIL_SRC_IP_ADDR - EEPROM_IP_HEADER)
-    rcall ES_MEMCPY
+    rcall E_MEMCPY
 
     /* SRC IP Address */
     ldi   xl, lo8(EEPROM_IP_ADDR)
     ldi   xh, hi8(EEPROM_IP_ADDR)
     ldi   a1, IPV4_ADDR_LEN
-    rcall ES_MEMCPY
+    rcall E_MEMCPY
 
     /* DST IP Address */
     ldi   xl, lo8(SRAM_IPV4_DST_IP_ADDR)

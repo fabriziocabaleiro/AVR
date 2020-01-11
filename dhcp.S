@@ -240,7 +240,7 @@ DHCP_SEND:
     ldi   xl, lo8(EEPROM_IP_HEADER)
     ldi   xh, hi8(EEPROM_IP_HEADER)
     ldi   a1, (EEPROM_UDP_DHCP_PORT_END - EEPROM_IP_HEADER)
-    rcall ES_MEMCPY
+    rcall E_MEMCPY
     /* Set z back to SRAM_IPV4_HEADER */
     sbiw  zl, (EEPROM_UDP_DHCP_PORT_END - EEPROM_IP_HEADER)
 
@@ -257,7 +257,7 @@ DHCP_SEND:
     ldi   a1, IPV4_ADDR_LEN
     ldi   xl, lo8(EEPROM_IP_ADDR)
     ldi   xh, hi8(EEPROM_IP_ADDR)
-    rcall ES_MEMCPY
+    rcall E_MEMCPY
     /* Copy DHCP server IP address */
     ldi   xl, lo8(SRAM_DHCP_SERVER_IP_ADDR)
     ldi   xh, hi8(SRAM_DHCP_SERVER_IP_ADDR)
@@ -437,7 +437,7 @@ DHCP_HANDLE_PKT:
     ldi   xl, lo8(EEPROM_DHCP_HEADER + 1)
     ldi   xh, hi8(EEPROM_DHCP_HEADER + 1)
     ldi   a1, 6
-    rcall EN_MEMCMP
+    rcall SE_MEMCMP
     brne  DHCP_HANDLE_EXIT_SUCCESS
 
     /* Check last byte of the XID */
@@ -486,7 +486,7 @@ UPDATE_EEPROM_IP_ADDR:
     ldi   xl, lo8(EEPROM_DHCP_MAGIC_COOKIE)
     ldi   xh, hi8(EEPROM_DHCP_MAGIC_COOKIE)
     ldi   a1, (EEPROM_DHCP_MAGIC_COOKIE_END - EEPROM_DHCP_MAGIC_COOKIE)
-    rcall EN_MEMCMP
+    rcall SE_MEMCMP
     brne  DHCP_HANDLE_EXIT_FAILURE
     /* Jump to start reading options (skipping exit block) */
     rjmp  START_READING_DHCP_OPTIONS

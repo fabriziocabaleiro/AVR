@@ -62,7 +62,7 @@ ARP_HANDLE_PKT:
     ldi   zh, hi8(SRAM_ARP_PAYLOAD)
     ldi   zl, lo8(SRAM_ARP_PAYLOAD)
     ldi   a1, ARP_PAYLOAD_LEN
-    rcall SPI_MEMCPY
+    rcall S_MEMCPY
 
     ETH_READ_BUFFER_END
     /* Check that ARP is for me  {{{3 */
@@ -70,7 +70,7 @@ ARP_HANDLE_PKT:
     ldi   xh, hi8(EEPROM_IP_ADDR)
     ldi   xl, lo8(EEPROM_IP_ADDR)
     ldi   a1, IPV4_ADDR_LEN
-    rcall ES_MEMCMP
+    rcall E_MEMCMP
     brne  ARP_PROCESS_EXIT_SUCCESS /* Not for me, just return */
     /* Check if Request or Reply {{{3 */
     /* z was at TPA. First byte of OPER not used */
@@ -161,7 +161,7 @@ ARP_REQUEST:
     ldi   zl, lo8(SRAM_ARP_PAYLOAD)
     ldi   zh, hi8(SRAM_ARP_PAYLOAD)
     ldi   a1, EEPROM_ARP_REQUEST_END - EEPROM_ARP_REQUEST
-    rcall ES_MEMCPY
+    rcall E_MEMCPY
 
     /* TPA Copy Target IP Address {{{3 */
     pop   xh
@@ -173,7 +173,7 @@ ARP_REQUEST:
     sbiw  zl, (ARP_TPA - ARP_SPA + IPV4_ADDR_LEN)
     ldi   xl, lo8(EEPROM_IP_ADDR)
     ldi   xh, hi8(EEPROM_IP_ADDR)
-    rcall ES_MEMCPY
+    rcall E_MEMCPY
 
     /* Set Ethernet Dst Address to Broadcast {{{3 */
     ldi   t1, (1 << ENC_MAC_DST_PTR_BROADCAST_BIT)

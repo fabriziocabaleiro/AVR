@@ -44,7 +44,7 @@ TCP_HANDLE_PKT:
     ldi   zl, lo8(SRAM_TCP_HEADER)
     ldi   zh, hi8(SRAM_TCP_HEADER)
     ldi   a1, TCP_HEADER_OPTIONS
-    rcall SPI_MEMCPY
+    rcall S_MEMCPY
 
     /* Get the TCP header length in bytes */
     /* Load (Data Offset|Flags). Swap and remove Flags */
@@ -58,7 +58,7 @@ TCP_HANDLE_PKT:
 
     /* Read the TCP options, remove constant TCP header length */
     subi  a1, TCP_HEADER_OPTIONS
-    rcall SPI_MEMCPY
+    rcall S_MEMCPY
 
     /* Common modification from incoming packet to outgoing packet */
     /* Swap Src/Dst ports */

@@ -44,7 +44,7 @@ READ_HEADER:
     dec   t3
     brne  READ_HEADER
 
-    /* Set common argument for ES_MEMCMP */
+    /* Set common argument for E_MEMCMP */
     ldi   zl, lo8(SRAM_UDP_HEADER)
     ldi   zh, hi8(SRAM_UDP_HEADER)
     ldi   a1, 4
@@ -52,7 +52,7 @@ READ_HEADER:
     /* DHCP */
     ldi   xl, lo8(EEPROM_DHCP_SRC_DST_PORT)
     ldi   xh, hi8(EEPROM_DHCP_SRC_DST_PORT)
-    rcall ES_MEMCMP
+    rcall E_MEMCMP
     brne  TRY_COMM
     rcall DHCP_HANDLE_PKT
     rjmp  UDP_HANDLE_PKT_END
@@ -62,7 +62,7 @@ TRY_COMM:
     /* TODO: ADIW instead of 2 x LDI */
     ldi   xl, lo8(EEPROM_COMM_SRC_DST_PORT)
     ldi   xh, hi8(EEPROM_COMM_SRC_DST_PORT)
-    rcall ES_MEMCMP
+    rcall E_MEMCMP
     brne  UDP_HANDLE_PKT_END
     rcall COMM_REGISTER_IP
 
