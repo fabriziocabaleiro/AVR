@@ -65,7 +65,7 @@
  *
  * Note: SPI_MASTER_TRANSMIT and EEPROM_READ_N_INC don't modify many register,
  * only a4, xl, and xh. Modifying those two routines may break MEMCMP family.
- *----------------------------------------------------------------------------*/
+ * ---------------------------------------------------------------------------*/
 /* MEMCMP, R_MEMCMP, E_MEMCMP and SE_MEMCMP {{{3 -----------------------------*/
 #ifndef OFAST
 /* 32 bytes of FLASH less than OFAST implementation */
@@ -363,7 +363,7 @@ SDIV:
  * After routine:
  * z += a1
  * a1 = 0
- */
+ * ---------------------------------------------------------------------------*/
 BZERO:
     st    z+, zero
     dec   a1

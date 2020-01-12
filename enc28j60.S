@@ -10,17 +10,6 @@
 .LIST
 
 /* MACORS {{{1 ---------------------------------------------------------------*/
-#define RPKT_N_PKT_L        0
-#define RPKT_N_PKT_H        1
-#define RPKT_BYTE_COUNT_L   2
-#define RPKT_BYTE_COUNT_H   3
-#define ENC_RPKT_STATUS1    4
-#define ENC_RPKT_STATUS2    5
-#define ENC_DST_ADDR        6
-#define ENC_SRC_ADDR       12
-#define TYPE_LEN           18
-#define ENC_MAC_DST_PTR    20
-#define ENC_TYPE_LEN       22
 
 /* GLOBAL {{{1 ---------------------------------------------------------------*/
 .global ETH_INIT
@@ -36,6 +25,7 @@
 .global ETH_MOVE_RDPT
 #endif
 
+.global SRAM_ENC_DATA
 .global SRAM_ENC_ETH_SRC_ADDR
 .global SRAM_ENC_ETH_TYPE_LEN
 .global SRAM_ENC_MAC_DST_PTR
@@ -226,7 +216,7 @@ ETH_READ_RECEIVE_N_ETHERNET_HEADER:
     st    z+, t1
 
     /* Move Z to SRAM_ENC_DATA */
-    sbiw  zl, ENC_TYPE_LEN
+    sbiw  zl, ENC_TYPE_LEN_OFFSET
     ldd   a4, z + ENC_RPKT_STATUS1
     ldd   a3, z + ENC_RPKT_STATUS2
 
@@ -529,15 +519,15 @@ PRINT_RECEIVE_VECTOR:
     PRINT_STR STR_ENC_RECEIVE_VECTOR
     ldi   zl, lo8(SRAM_ENC_DATA)
     ldi   zh, hi8(SRAM_ENC_DATA)
-    ldd   a1, z + RPKT_N_PKT_H
+    ldd   a1, z + ENC_RPKT_N_PKT_H
     rcall UART_TRANSMIT_HEX
-    ldd   a1, z + RPKT_N_PKT_L
+    ldd   a1, z + ENC_RPKT_N_PKT_L
     rcall UART_TRANSMIT_HEX
     ldi   a1, ' '
     rcall UART_TRANSMIT
-    ldd   a1, z + RPKT_BYTE_COUNT_H
+    ldd   a1, z + ENC_RPKT_BC_H
     rcall UART_TRANSMIT_HEX
-    ldd   a1, z + RPKT_BYTE_COUNT_L
+    ldd   a1, z + ENC_RPKT_BC_L
     rcall UART_TRANSMIT_HEX
     ldi   a1, ' '
     rcall UART_TRANSMIT

@@ -28,56 +28,49 @@ SRAM_UDP_CHKSUM:   .skip 2
 /* TEXT {{{1 -----------------------------------------------------------------*/
 .section .text
 
-/* Handle received UDP packet {{{2 -------------------------------------------*/
+/* UDP_HANDLE_PKT {{{2 ---------------------------------------------------------
+ * The UDP handler will copy the UDP header into SRAM and deliver the packet to
+ * the corresponding handler based on the Src/Dst UDP port.
+ *
+ * UDP header is going to be copy from SPI.
+ * ---------------------------------------------------------------------------*/
 UDP_HANDLE_PKT:
-    push  xl
-    push  xh
-
     rcall ETH_READ_BUFFER_START
     /* Read UDP header */
-    ldi   t3, UDP_HEADER_LEN
     ldi   zl, lo8(SRAM_UDP_HEADER)
     ldi   zh, hi8(SRAM_UDP_HEADER)
-READ_HEADER:
-    ETH_READ_NEXT_BYTE
-    st    z+, a4
-    dec   t3
-    brne  READ_HEADER
+    ldi   a1, UDP_HEADER_LEN
+    rcall S_MEMCPY
 
     /* Set common argument for E_MEMCMP */
-    ldi   zl, lo8(SRAM_UDP_HEADER)
-    ldi   zh, hi8(SRAM_UDP_HEADER)
+    sbiw  zl, UDP_HEADER_LEN
     ldi   a1, 4
 
     /* DHCP */
     ldi   xl, lo8(EEPROM_DHCP_SRC_DST_PORT)
     ldi   xh, hi8(EEPROM_DHCP_SRC_DST_PORT)
     rcall E_MEMCMP
-    brne  TRY_COMM
+    brne  0f
     rcall DHCP_HANDLE_PKT
-    rjmp  UDP_HANDLE_PKT_END
+    rjmp  9f
 
     /* COMM */
-TRY_COMM:
-    /* TODO: ADIW instead of 2 x LDI */
-    ldi   xl, lo8(EEPROM_COMM_SRC_DST_PORT)
-    ldi   xh, hi8(EEPROM_COMM_SRC_DST_PORT)
+0:  adiw  xl, EEPROM_COMM_SRC_DST_PORT - EEPROM_DHCP_SRC_DST_PORT
     rcall E_MEMCMP
-    brne  UDP_HANDLE_PKT_END
+    brne  9f
     rcall COMM_REGISTER_IP
 
-UDP_HANDLE_PKT_END:
-    ETH_READ_BUFFER_END
-    pop   xh
-    pop   xl
+9:  ETH_READ_BUFFER_END
     ret
 
-/* Prepare UDP packet {{{2 -----------------------------------------------------
- * Note: UDP header and payload in IPv4 payload
- * z, pointer to start writing the UDP packet to.
- * x, pointer to the data that is going to be read from
- * This routine should write no more than 200 bytes of data */
+/* UDP_PREPARE_PACKET {{{2 -----------------------------------------------------
+ * Copy/Set UDP header and copy UDP payload.
+ *
+ * x: Pointer to UDP payload (read from).
+ * z: Pointer to write to, e.g. IPv4 payload.
+ * ---------------------------------------------------------------------------*/
 UDP_PREPARE_PACKET:
+    /* Save x for later */
     push  xl
     push  xh
 

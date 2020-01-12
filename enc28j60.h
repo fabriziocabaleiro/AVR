@@ -3,6 +3,20 @@
 #define _ENC28J60_H_
 
 /* MACROS {{{1 */
+/* Data offset with respecto to SRAM_ENC_DATA */
+#define ENC_RPKT_N_PKT_L      0
+#define ENC_RPKT_N_PKT_H      1
+#define ENC_RPKT_BC_L         2
+#define ENC_RPKT_BC_H         3
+#define ENC_RPKT_STATUS1      4
+#define ENC_RPKT_STATUS2      5
+#define ENC_ETH_DST_ADDR      6
+#define ENC_ETH_SRC_ADDR     12
+#define ENC_ETH_TYPE_LEN_H   18
+#define ENC_ETH_TYPE_LEN_L   19
+#define ENC_MAC_DST_PTR      20
+#define ENC_TYPE_LEN_OFFSET  22
+
 /* Use move read pointer
  * Respose for DHCP may be faster, as it can jump through BOOTP legacy, but it
  * uses a big amount of instructions, so preferring smaller footprint */
@@ -549,7 +563,7 @@ System Reset Command (Soft Reset)
 //#define RPKT_STATUS1_RESERVED                       1
 #define RPKT_STATUS1_LONG_EVENT_DROP_EVENT          0
 
-/* [RPKT_BYTE_COUNT_H:RPKT_BYTE_COUNT_L] {{{1 ----------------------------------
+/* [ENC_RPKT_BC_H:ENC_RPKT_BC_L] {{{1 ----------------------------------
     15-0  Received Byte Count
     Indicates length of the received frame. This includes the destination
     address, source address, type/length, data, padding and CRC fields. This
