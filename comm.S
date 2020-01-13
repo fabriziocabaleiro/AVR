@@ -32,7 +32,7 @@
 #define COMM_RR_ITERATOR   (COMM_DST_TBL_LEN)
 #define COMM_PAYLOAD       (COMM_RR_ITERATOR + 1)
 /* GLOBAL {{{1 ---------------------------------------------------------------*/
-.global SEND_PACKET
+.global COMM_SEND_PKT
 .global COMM_REGISTER_IP
 .global COMM_INIT
 
@@ -58,7 +58,7 @@ COMM_INIT:
     rcall BZERO
     ret
 
-/* SEND_PACKET {{{2 ------------------------------------------------------------
+/* COMM_SEND_PKT {{{2 ----------------------------------------------------------
  * Send a packet to each registered IP Address in SRAM_COMM_TABLE.
  *
  * a1: UDP length.
@@ -66,7 +66,7 @@ COMM_INIT:
  * After routine:
  * a1: undefined.
  * ---------------------------------------------------------------------------*/
-SEND_PACKET:
+COMM_SEND_PKT:
     push  s1 /* Counter for all entries of comm table */
     push  s2 /* Save a1 to be used later within loop */
 

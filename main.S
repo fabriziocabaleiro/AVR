@@ -104,7 +104,7 @@ LOOP:
 
     /* Send data */
     ldi   a1, (DHT11_PAYLOAD_LEN + MQ135_PAYLOAD_LEN)
-    rcall SEND_PACKET
+    rcall COMM_SEND_PKT
     /* }}} */
     rjmp  LOOP
 

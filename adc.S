@@ -66,18 +66,20 @@ SRAM_ADC0: .skip ADC0_DATA_LEN
 /* TEXT {{{1 -----------------------------------------------------------------*/
 .section .text
 
-/* Enable ADC and start conversion {{{2 ----------------------------------------
- * Also setting at the same time:
- *   Enable ADC interrupt
- *   ADC prescaler to 8 (expecting running at 1MHz) */
+/* ADC_ENABLE_N_START {{{2 -----------------------------------------------------
+ * Enable ADC and start conversion. Also setting at the same time "Enable ADC
+ * interrupt" and "ADC prescaler" based on F_CPU.
+ * ---------------------------------------------------------------------------*/
 ADC_ENABLE_N_START:
     in    t1, _SFR_IO_ADDR(ADCSRA)
     sbr   t1, (1 << ADEN)|(1 << ADSC)|(1 << ADIE)|(ADC_PRESCALER)
     out   _SFR_IO_ADDR(ADCSRA), t1
     ret
 
-/* ADC interrupt routine {{{2 --------------------------------------------------
- * Read the content of [ADCH:ADCL] and store it into SRAM */
+/* ADC_vect {{{2 ---------------------------------------------------------------
+ * ADC interrupt routine.
+ * Read the content of [ADCH:ADCL] and store it into SRAM.
+ * ---------------------------------------------------------------------------*/
 ADC_vect:
     push  t1
     in    t1, _SFR_IO_ADDR(SREG)
