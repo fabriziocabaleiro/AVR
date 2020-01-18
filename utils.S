@@ -17,6 +17,9 @@
 #define FROM_SRAM    0
 #define FROM_EEPROM  1
 #define FROM_SPI     2
+#define TO_SRAM      3
+#define TO_EEPROM    4
+#define TO_SPI       5
 
 #define CP_Rd_SRAM   0
 #define CP_Rd_SPI    1
@@ -33,6 +36,9 @@
 .global MEMCPY
 .global E_MEMCPY
 .global S_MEMCPY
+.global SE_MEMCPY
+.global SEE_MEMCPY
+.global SRAM_SPI_MEMCPY
 
 .global MEMSWAP
 .global ADD_UINT32_BIG_ENDIAN
@@ -55,7 +61,7 @@
  * R_MEMCMP  : REG     vs SRAM(x)
  * E_MEMCMP  : SRAM(z) vs EEPROM(x)
  * SE_MEMCMP : SPI     vs EEPROM(x)
- * 
+ *
  * a1: Number of bytes to compare
  * x:  Address from SRAM or EEPROM
  * z:  Address from SRAM
@@ -82,14 +88,14 @@ SE_MEMCMP:
     ldi   t1, (1 << CP_Rd_SPI)  | (1 << CP_Rr_EEPROM)
 
 0:  push  a1
-    movw  t4, xl
-    movw  t6, zl
+    movw  p1, xl
+    movw  p2, zl
 
 0:  subi  a1, 1
     brlo  0f
 
     /* Rd         Rr
-     * SRAM(z) vs SRAM(x) 
+     * SRAM(z) vs SRAM(x)
      * REG     vs SRAM(x)
      * SRAM(z) vs EEPROM(x)
      * SPI     vs EEPROM(x)
@@ -117,16 +123,16 @@ SE_MEMCMP:
      * Zero flag to 0 */
 0:  inc   a1
 
-    movw  xl, t4
-    movw  zl, t6
+    movw  xl, p1
+    movw  zl, p2
     pop   a1
     ret
 #else
 /* MEMCMP {{{3 ---------------------------------------------------------------*/
 MEMCMP:
     push  a1
-    movw  t4, xl
-    movw  t6, zl
+    movw  p1, xl
+    movw  p2, zl
 
 0:  subi  a1, 1
     brlo  0f
@@ -139,8 +145,8 @@ MEMCMP:
 /* reusing instructions, reducing 8 bytes of FLASH
 0:  inc   a1
 
-    movw  zl, t6
-    movw  xl, t4
+    movw  zl, p2
+    movw  xl, p1
     pop   a1
     ret
 */
@@ -148,7 +154,7 @@ MEMCMP:
 /* R_MEMCMP {{{3 -----------------------------------------------------------*/
 R_MEMCMP:
     push  a1
-    movw  t4, xl
+    movw  p1, xl
 
 0:  subi  a1, 1
     brlo  0f
@@ -160,7 +166,7 @@ R_MEMCMP:
 /* reusing instructions, reducing 6 bytes of FLASH
 0:  inc   a1
 
-    movw  xl, t4
+    movw  xl, p1
     pop   a1
     ret
 */
@@ -168,8 +174,8 @@ R_MEMCMP:
 /* E_MEMCMP {{{3 ------------------------------------------------------------*/
 E_MEMCMP:
     push  a1
-    movw  t4, xl
-    movw  t6, zl
+    movw  p1, xl
+    movw  p2, zl
 
 0:  subi  a1, 1
     brlo  0f
@@ -181,15 +187,15 @@ E_MEMCMP:
 E_MEMCMP_EXIT:
 0:  inc   a1
 
-    movw  zl, t6
-    movw  xl, t4
+    movw  zl, p2
+    movw  xl, p1
     pop   a1
     ret
 
 /* SE_MEMCMP {{{3 ------------------------------------------------------------*/
 SE_MEMCMP:
     push  a1
-    movw  t4, xl
+    movw  p1, xl
 
 0:  subi  a1, 1
     brlo  0f
@@ -202,7 +208,7 @@ SE_MEMCMP:
 SE_MEMCMP_EXIT:
 0:  inc   a1
 
-    movw  xl, t4
+    movw  xl, p1
     pop   a1
     ret
 #endif
@@ -210,9 +216,12 @@ SE_MEMCMP_EXIT:
 /* MEMCPY variants {{{2 --------------------------------------------------------
  * Copy a1 bytes from (SRAM|EEPROM|SPI) to SRAM.
  *
- * MEMCPY:   SRAM(x+)   -> SRAM(z+)
- * E_MEMCPY: EEPROM(x+) -> SRAM(z+)
- * S_MEMCPY: SPI        -> SRAM(z+)
+ * MEMCPY:          SRAM(x+)   -> SRAM(z+)
+ * SRAM_SPI_MEMCPY: SRAM(x+)   -> SPI
+ * E_MEMCPY:        EEPROM(x+) -> SRAM(z+)
+ * SE_MEMCPY:       SRAM(x+)   -> EEPROM(z+)
+ * S_MEMCPY:        SPI        -> SRAM(z+)
+ * SEE_MEMCPY:      SPI        -> EEPROM(z+)
  *
  * After routine:
  * a1 unchanged.
@@ -223,28 +232,45 @@ SE_MEMCMP_EXIT:
 #ifndef OFAST
 /* Difference is 4 bytes in FLASH... Maybe not worth it. */
 MEMCPY:
-    ldi   t1, (1 << FROM_SRAM)
+    ldi   t1, (1 << FROM_SRAM)|(1 << TO_SRAM)
     rjmp  0f
-E_MEMCPY:
-    ldi   t1, (1 << FROM_EEPROM)
+SRAM_SPI_MEMCPY:
+    ldi   t1, (1 << FROM_SRAM)|(1 << TO_SPI)
+    rjmp  0f
+E_MEMCPY: /* TODO: CHANGE NAME, align with next one */
+    ldi   t1, (1 << FROM_EEPROM)|(1 << TO_SRAM)
+    rjmp  0f
+SE_MEMCPY:
+    ldi   t1, (1 << FROM_SRAM)|(1 << TO_EEPROM)
     rjmp  0f
 S_MEMCPY:
-    ldi   t1, (1 << FROM_SPI)
+    ldi   t1, (1 << FROM_SPI)|(1 << TO_SRAM)
+    rjmp  0f
+SEE_MEMCPY:
+    ldi   t1, (1 << FROM_SPI)|(1 << TO_EEPROM)
+
 0:  push  a1
 
-0:  subi  a1, 1
+    mov   t3, a1
+0:  subi  t3, 1
     brlo  0f
-    /* SRAM => a4 */
-    sbrc  t1, FROM_SRAM
+    /* From: */
+    sbrc  t1, FROM_SRAM       /* a4 <- SRAM */
     ld    a4, x+
-    /* SPI => a4 */
-    sbrc  t1, FROM_SPI
+    sbrc  t1, FROM_SPI        /* a4 <- SPI */
     rcall SPI_MASTER_TRANSMIT
-    /* EEPROM => a4 */
-    sbrc  t1, FROM_EEPROM
+    sbrc  t1, FROM_EEPROM     /* a4 <- EEPROM */
     rcall EEPROM_READ_N_INC
-    /* a4 => z */
+    /* To: */
+    sbrc  t1, TO_SRAM         /* z <- a4 */
     st    z+, a4
+    sbrs  t1, TO_EEPROM       /* (TO_EEPROM|TO_SPI) ? a1 <- a4 */
+    sbrc  t1, TO_SPI
+    mov   a1, a4
+    sbrc  t1, TO_EEPROM
+    rcall EEPROM_WRITE_N_INC  /* EEPROM(z) <- a4 */
+    sbrc  t1, TO_SPI
+    rcall SPI_MASTER_TRANSMIT /* SPI <- a4 */
     rjmp  0b
 
 0:  pop   a1

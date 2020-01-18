@@ -14,6 +14,7 @@
 .global STR_DHCP_SEND_START
 .global STR_DHCP_VARS
 .global STR_DHCP_SERVER_IP_ADDR
+.global STR_DHCP_IP_ADDR
 .global STR_DHCP_XID_LAST_BYTE
 .global STR_DHCP_ADDRESS_TIME
 .global STR_DHCP_SECONDS
@@ -56,6 +57,8 @@ STR_DHCP_SEND_START:
 .string "-DHCP send-\r\n"
 STR_DHCP_VARS:
 .string "DHCP VARS\r\n"
+STR_DHCP_IP_ADDR:
+.string "IP Address     : "
 STR_DHCP_SERVER_IP_ADDR:
 .string "Server IP ADDR : "
 STR_DHCP_XID_LAST_BYTE:

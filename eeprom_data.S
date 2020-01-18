@@ -18,7 +18,7 @@
 /* DATA  {{{1 ----------------------------------------------------------------*/
 .section .data
 
-EEPROM_DHCP_REQUEST_OPS: /* {{{2 */
+EEPROM_DHCP_REQUEST_OPS_1: /* {{{2 */
     /* Name of the device */
     .byte DHCP_OPTION_HOSTNAME
     .byte 4
@@ -27,7 +27,7 @@ EEPROM_DHCP_REQUEST_OPS: /* {{{2 */
      * address */
     .byte DHCP_OPTION_ADDRESS_REQUEST
     .byte DHCP_OPTION_ADDRESS_REQUEST_LEN
-EEPROM_DHCP_REQUEST_OPS_END:
+EEPROM_DHCP_REQUEST_OPS_END_1:
 EEPROM_IP_ADDR: /* {{{2 */
     /* Initial IP address, this one gets overwritten by DHCP */
 #if 0
@@ -36,14 +36,10 @@ EEPROM_IP_ADDR: /* {{{2 */
     .byte   0,   0, 0, 0
 #endif
 EEPROM_IP_ADDR_END:
-EEPROM_MAC_ADDR: /* {{{2 */
-    .byte MAC_ADDR_0
-    .byte MAC_ADDR_1
-    .byte MAC_ADDR_2
-    .byte MAC_ADDR_3
-    .byte MAC_ADDR_4
-    .byte MAC_ADDR_5
-EEPROM_MAC_ADDR_END:
+EEPROM_DHCP_REQUEST_OPS_2: /* {{{2 */
+    .byte DHCP_OPTION_DHCP_SERVER_ID
+    .byte DHCP_OPTION_DHCP_SERVER_ID_LEN
+EEPROM_DHCP_REQUEST_OPS_2_END:
 EEPROM_IP_HEADER: /* {{{2 */
     /* Default header for UDP packages */
     /* Version 4, IHL 5 */
@@ -283,12 +279,14 @@ EEPROM_ARP_REQUEST: /* {{{2 */
     /* Operation (request or reply) */
     .byte 0, ARP_OPER_REQUEST
     /* SHA Sender HW address */
+EEPROM_MAC_ADDR:
     .byte MAC_ADDR_0
     .byte MAC_ADDR_1
     .byte MAC_ADDR_2
     .byte MAC_ADDR_3
     .byte MAC_ADDR_4
     .byte MAC_ADDR_5
+EEPROM_MAC_ADDR_END:
     /* SPA Sender IP address, putting here a placeholder */
     .skip IPV4_ADDR_LEN, 0
     /* THA Target hardware address, all zeros as unknown */

@@ -30,6 +30,8 @@ BIT_FIELD_1: .skip 1
 main:
     /* Keep register with zero value to avoid using clr over and over */
     clr   zero
+    DEBUG(rcall UART_INIT)
+    DEBUG(PRINT_STR STR_START)
 
     /* Set LED errors */
     ERR_SET_DDR
@@ -53,9 +55,6 @@ main:
     rcall DHCP_INIT
     rcall SPI_MASTER_INIT
     rcall ETH_INIT
-    DEBUG(rcall UART_INIT)
-
-    DEBUG(PRINT_STR STR_START)
 
     /* Enable external interrupt 0 and 1 */
     in    t1, _SFR_IO_ADDR(GICR)

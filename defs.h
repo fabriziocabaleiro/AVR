@@ -12,6 +12,12 @@
 #define ml     R0
 #define mh     R1
 
+/* Push Word, register used instead of push xl + push xh, then pop xh + pop xl.
+ * These aren't push to stack, just using regular register to store X, Y and Z
+ * values during a routine call. Be extremely careful when using them. */
+#define p1     R2
+#define p2     R4
+
 /* This register is set to zero at the beginning of main and must stay like that
  * forever */
 #define zero   R10
@@ -34,11 +40,6 @@
 #define t2     R21
 #define t3     R22 /* Used normally as counter */
 
-#define t4     R2
-#define t5     R3
-#define t6     R4
-#define t7     R5
-
 /* Register that hold saved values, we guarantee that this register will have
  * the same value after calling a routine */
 #define s3     R23
@@ -55,6 +56,10 @@
  * avoid using them */
 #pragma GCC poison R0
 #pragma GCC poison R1
+#pragma GCC poison R2
+#pragma GCC poison R3
+#pragma GCC poison R4
+#pragma GCC poison R5
 #pragma GCC poison R10
 #pragma GCC poison R15
 #pragma GCC poison R16

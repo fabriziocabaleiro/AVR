@@ -16,35 +16,36 @@
 /* TEXT {{{1 -----------------------------------------------------------------*/
 .section .text
 
-EEPROM_COMMON:
-    /* Wait for previous write to finish */
-    sbic  _SFR_IO_ADDR(EECR), EEWE
-    rjmp  EEPROM_COMMON
-    /* Set address */
-    out   _SFR_IO_ADDR(EEARH), xh
-    out   _SFR_IO_ADDR(EEARL), xl
-    /* Increment x for continuous EEPROM reading/writing */
-    adiw  xl, 1
-    ret
-
 /* Read bytes pointed by x and return them on a4 {{{2 -------------------
  * x gets incremented after every call */
 EEPROM_READ_N_INC:
-    rcall EEPROM_COMMON
+    /* Wait for previous write to finish */
+0:  sbic  _SFR_IO_ADDR(EECR), EEWE
+    rjmp  0b
+    /* Set address */
+    out   _SFR_IO_ADDR(EEARL), xl
+    out   _SFR_IO_ADDR(EEARH), xh
     /* Set Read Enable and read */
     sbi   _SFR_IO_ADDR(EECR), EERE
     in    a4, _SFR_IO_ADDR(EEDR)
+    adiw  xl, 1 /* Increment x for continuous EEPROM reading */
     ret
 
-/* Write a1 to EEPROM pointer by x {{{2 ----------------------------------
- * x gets incremented after every call */
+/* Write a1 to EEPROM pointer by z {{{2 ----------------------------------
+ * z gets incremented after every call */
 EEPROM_WRITE_N_INC:
-    rcall EEPROM_COMMON
+    /* Wait for previous write to finish */
+0:  sbic  _SFR_IO_ADDR(EECR), EEWE
+    rjmp  0b
+    /* Set address */
+    out   _SFR_IO_ADDR(EEARL), zl
+    out   _SFR_IO_ADDR(EEARH), zh
     /* Set data */
     out    _SFR_IO_ADDR(EEDR), a1
     /* Set master write enable and write enable */
     sbi   _SFR_IO_ADDR(EECR), EEMWE
     sbi   _SFR_IO_ADDR(EECR), EEWE
+    adiw  zl, 1 /* Increment z for continuous EEPROM writing */
     ret
 
 .end
