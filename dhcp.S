@@ -269,7 +269,7 @@ DHCP_SEND:
 
     /* Transmit IPv4 Header plus part of UDP */
     ldi   a1, (EEPROM_UDP_DHCP_PORT_END - EEPROM_IP_HEADER)
-    rcall ETH_WRITE_Z_TO_TRANSMIT_BUFFER
+    rcall ETH_WRITE_TO_TRANSMIT_BUFFER
     rcall ETH_SET_LISTEN_ON_SPI
 
     /* UDP Header */
@@ -379,7 +379,7 @@ DHCP_SEND:
     ldi   zl, lo8(SRAM_DHCP_SERVER_IP_ADDR)
     ldi   zh, hi8(SRAM_DHCP_SERVER_IP_ADDR)
     ldi   a1, DHCP_OPTION_DHCP_SERVER_ID_LEN
-    rcall ETH_WRITE_Z_TO_TRANSMIT_BUFFER
+    rcall ETH_WRITE_TO_TRANSMIT_BUFFER
     rcall ETH_SET_LISTEN_ON_SPI
 
 0:  ldi   a1, DHCP_OPTION_END /* End Options */

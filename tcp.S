@@ -35,7 +35,9 @@ SRAM_TCP_PAYLOAD:  .skip TCP_PAYLOAD_LEN
 /* TEXT {{{1 -----------------------------------------------------------------*/
 .section .text
 
-/* TCP Handle {{{2 -----------------------------------------------------------*/
+/* TCP_HANDLE_PKT {{{2 ---------------------------------------------------------
+ * Handle TCP packet.
+ * ---------------------------------------------------------------------------*/
 TCP_HANDLE_PKT:
     push  s1 /* TCP header length */
     rcall ETH_READ_BUFFER_START
@@ -195,13 +197,13 @@ TCP_HANDLE_PKT:
 
     /* Write IPv4 header into ENC buffer */
     ldd   a1, y + IPV4_DO_IHL_IN_BYTES
-    rcall ETH_WRITE_Z_TO_TRANSMIT_BUFFER
+    rcall ETH_WRITE_TO_TRANSMIT_BUFFER
 
     /* Write TCP header + payload into ENC buffer */
     ldi   zl, lo8(SRAM_TCP_HEADER)
     ldi   zh, hi8(SRAM_TCP_HEADER)
     mov   a1, s1 /* TCP header + payload */
-    rcall ETH_WRITE_Z_TO_TRANSMIT_BUFFER
+    rcall ETH_WRITE_TO_TRANSMIT_BUFFER
     rcall ETH_WRITE_BUFFER_PACKET_PAYLOAD_FINISH
 
 9:  pop   s1 /* TCP header length */

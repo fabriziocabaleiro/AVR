@@ -131,14 +131,14 @@ COMM_SEND_PKT:
     ldi   zl, lo8(SRAM_IPV4_HEADER)
     ldi   zh, hi8(SRAM_IPV4_HEADER)
     ldi   a1, IPV4_DEFAULT_HEADER_LEN
-    rcall ETH_WRITE_Z_TO_TRANSMIT_BUFFER
+    rcall ETH_WRITE_TO_TRANSMIT_BUFFER
 
     /* Write IPv4 payload into Ethernet module */
     ldi   zh, hi8(SRAM_IPV4_PAYLOAD)
     ldi   zl, lo8(SRAM_IPV4_PAYLOAD)
     mov   a1, s2
     subi  a1, -(UDP_HEADER_LEN) /* UDP payload + UDP header */
-    rcall ETH_WRITE_Z_TO_TRANSMIT_BUFFER
+    rcall ETH_WRITE_TO_TRANSMIT_BUFFER
 
     /* Send the packet */
     rcall ETH_WRITE_BUFFER_PACKET_PAYLOAD_FINISH

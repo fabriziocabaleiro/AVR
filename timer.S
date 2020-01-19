@@ -42,9 +42,11 @@ SRAM_TIMER1_EVENTS:  .skip EVENT_LEN
 
 /* TEXT {{{1 -----------------------------------------------------------------*/
 .section .text
-/* INIT {{{2 -------------------------------------------------------------------
- * With a prescaler of 1024 and a OCR1A of 7812, then we will have a match every
- * 8 seconds for a clock of 1Mhz */
+
+/* TIMER_INIT {{{2 -------------------------------------------------------------
+ * Initialize timer.
+ * With a prescaler of 1024, OCR1A set to match every second.
+ * ---------------------------------------------------------------------------*/
 TIMER_INIT:
     /* Set CTC with top OCR1A, prescaler clk_io/1024 */
     in    t1, _SFR_IO_ADDR(TCCR1B)
@@ -70,8 +72,11 @@ TIMER_INIT:
     ret
 
 /* TIMER1_COMPA_vect {{{2 ------------------------------------------------------
- * With a prescaler of 1024 and a OCR1A of OCR1A_VAL, we will have a match every
- * second. */
+ * Timer comparator interrupt handler.
+ *
+ * Increment SRAM_TIMER1_SECONDS by one, SRAM_TIMER1_SECONDS holds a uint32
+ * value, big endian.
+ * ---------------------------------------------------------------------------*/
 TIMER1_COMPA_vect:
     push  t1
     in    t1, _SFR_IO_ADDR(SREG)
@@ -114,6 +119,7 @@ TIMER1_COMPA_vect:
 
     reti
 
+/* DEBUG {{{1 ----------------------------------------------------------------*/
 #ifndef NDEBUG
 PRINT_CURRENT_TIME:
     ldi   t1, 4

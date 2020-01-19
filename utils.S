@@ -62,6 +62,7 @@
  * Table of comparisons:
  *
  *                     a2         a4        <--- Register where byte is stored
+ * TODO: MEMCMP from x to z??
  * MEMCMP_SRAM_SRAM:   SRAM(z) vs SRAM(x)
  * MEMCMP_SRAM_EEPROM: SRAM(z) vs EEPROM(x)
  * MEMCMP_SPI_EEPROM:  SPI     vs EEPROM(x)
@@ -460,6 +461,7 @@ SDIV:
  * z += a1
  * a1 = 0
  * ---------------------------------------------------------------------------*/
+/* TODO: use MEMCPY_ZERO_SRAM */
 BZERO:
     st    z+, zero
     dec   a1

@@ -96,9 +96,11 @@
 #ifndef NDEBUG
     push  zl
     push  zh
+    push  a1
     ldi   zl, lo8(\x)
     ldi   zh, hi8(\x)
     rcall UART_TRANSMIT_STR
+    pop   a1
     pop   zh
     pop   zl
 #endif

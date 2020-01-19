@@ -19,7 +19,7 @@
 .global ETH_PKT_PROCESSED
 .global ETH_WRITE_BUFFER_PACKET_HEADER
 .global ETH_SET_LISTEN_ON_SPI
-.global ETH_WRITE_Z_TO_TRANSMIT_BUFFER
+.global ETH_WRITE_TO_TRANSMIT_BUFFER
 .global ETH_WRITE_BUFFER_PACKET_PAYLOAD_FINISH
 #if USE_MOVE_RDPT
 .global ETH_MOVE_RDPT
@@ -360,7 +360,7 @@ ETH_SET_LISTEN_ON_SPI:
     rcall SPI_MASTER_TRANSMIT
     ret
 
-/* ETH_WRITE_Z_TO_TRANSMIT_BUFFER {{{2 -----------------------------------------
+/* ETH_WRITE_TO_TRANSMIT_BUFFER {{{2 -------------------------------------------
  * Write a1 bytes from SRAM pointed by z to ENC28J60 transmit buffer.
  *
  * a1: Number of byte to transmit.
@@ -370,7 +370,7 @@ ETH_SET_LISTEN_ON_SPI:
  * a1: unchanged.
  * z += a1
  * ---------------------------------------------------------------------------*/
-ETH_WRITE_Z_TO_TRANSMIT_BUFFER:
+ETH_WRITE_TO_TRANSMIT_BUFFER:
     /* Send write command */
     mov   t1, a1
     SPI_SKIP_IF_SELECTED_ETH
@@ -392,7 +392,7 @@ ETH_WRITE_BUFFER_PACKET_PAYLOAD_FINISH:
     ldi   a2, ENC_COMMON_ECON1_BSEL0 | ENC_COMMON_ECON1_BSEL1
     rcall ETH_SEND_CMD
 
-    /* read EWRPT */
+    /* Read EWRPT */
     ldi   a1, ENC_BANK0_EWRPTH | ETH_SPI_CMD_RCR
     rcall ETH_SEND_CMD
     mov   a3, a4
@@ -411,11 +411,9 @@ ETH_WRITE_BUFFER_PACKET_PAYLOAD_FINISH:
     mov   a2, a3
     rcall ETH_SEND_CMD
 
-    /* Clear ENC_COMMON_EIR.TXIF, set ENC_COMMON_EIE.TXIE and set ENC_COMMON_EIE.INTIE
-     *   to enable an interrupt when done (if desired).
-     *   Start the transmission process by setting
-     */
 #if USE_TXIF
+    /* Clear ENC_COMMON_EIR.TXIF, set ENC_COMMON_EIE.TXIE and set ENC_COMMON_EIE.INTIE
+     * to enable an interrupt when done (if desired).  */
     ldi   a1, ENC_COMMON_EIR | ETH_SPI_CMD_BFC
     ldi   a2, (1 << ENC_COMMON_EIR_TXIF)
     rcall ETH_SEND_CMD

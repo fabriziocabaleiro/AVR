@@ -38,10 +38,11 @@
 /* TEXT {{{1 -----------------------------------------------------------------*/
 .section .text
 
-/* Initialize USART {{{2  ------------------------------------------------------
-   Asynchronous normal mode
-   UBRR => Baud rate 4800, error 0.2%
- */
+/* UART_INIT {{{2 --------------------------------------------------------------
+ * Initialize UART.
+ * Asynchronous normal mode.
+ * UBRR => Baud rate 4800, error 0.2%
+ * ---------------------------------------------------------------------------*/
 UART_INIT:
     out   _SFR_IO_ADDR(UBRRH), zero
     ldi   t1, UBRRL_VAL
@@ -52,9 +53,14 @@ UART_INIT:
     out   _SFR_IO_ADDR(UCSRB), t1
     ret
 
-/* Uart Transmit {{{2 ----------------------------------------------------------
- * a1 Byte to be transmitted
- */
+/* UART_TRANSMIT {{{2 ----------------------------------------------------------
+ * Transmit a1 through UART.
+ *
+ * a1: Byte to be transmitted
+ *
+ * After routine:
+ * a1: unchanged.
+ * ---------------------------------------------------------------------------*/
 UART_TRANSMIT:
     /* Wait for empty transmit buffer */
 0:  sbis  _SFR_IO_ADDR(UCSRA), UDRE
@@ -62,8 +68,14 @@ UART_TRANSMIT:
     out   _SFR_IO_ADDR(UDR), a1
     ret
 
-/* Uart Transmit register as hexadecimal {{{2 ----------------------------------
- */
+/* UART_TRANSMIT_HEX {{{2 ------------------------------------------------------
+ * Transmit register as hexadecimal through UART.
+ *
+ * a1: Byte to transmit as hexadecimal.
+ *
+ * After routine:
+ * a1: unchanged.
+ * ---------------------------------------------------------------------------*/
 UART_TRANSMIT_HEX:
     clr   t2
     swap  a1
@@ -86,12 +98,17 @@ UART_TRANSMIT_HEX:
     swap  a1
     rjmp  0b
 
-/* Uart Transmit string {{{2  --------------------------------------------------
- * z points to a string.
- * Only z can be used with lpm
- */
+/* UART_TRANSMIT_STR {{{2 ------------------------------------------------------
+ * Transmit string through UART.
+ *
+ * z: Pointer to string in FLASH.
+ *
+ * After routine:
+ * z: undefined.
+ *
+ * Note: Only z can be used with lpm.
+ * ---------------------------------------------------------------------------*/
 UART_TRANSMIT_STR:
-    push  a1
     /* Wait for empty transmit buffer */
 0:  sbis  _SFR_IO_ADDR(UCSRA), UDRE
     rjmp  0b
@@ -102,8 +119,7 @@ UART_TRANSMIT_STR:
     breq  0f
     out   _SFR_IO_ADDR(UDR), a1
     rjmp  0b
-0:  pop   a1
-    ret
+0:  ret
 
 .end
 #endif

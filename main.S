@@ -26,7 +26,9 @@ BIT_FIELD_1: .skip 1
 /* TEXT {{{1 -----------------------------------------------------------------*/
 .section .text
 
-/* main, initialize everything {{{2 ------------------------------------------*/
+/* main {{{2 -------------------------------------------------------------------
+ * Initialize everything.
+ * ---------------------------------------------------------------------------*/
 main:
     /* Keep register with zero value to avoid using clr over and over */
     clr   zero
@@ -61,13 +63,18 @@ main:
     sbr   t1, (1 << INT1)|(1 << INT0)
     out   _SFR_IO_ADDR(GICR), t1
 
-/* LOOP {{{2 -----------------------------------------------------------------*/
+/* LOOP {{{2 -------------------------------------------------------------------
+ * Main loop.
+ * Sleeps most of the time.
+ * ENC28J60 will wake-up system when a packet is ready to be processed.
+ * Timer will wake-up system every second.
+ * ---------------------------------------------------------------------------*/
 LOOP:
     sbic  _SFR_IO_ADDR(PIND), PD2
     sleep
     sbis  _SFR_IO_ADDR(PIND), PD2
     rcall ENC_INTERRUPT_HANDLE
-    /* Event triggered by timer {{{ */
+    /* Event triggered by timer */
     lds   t1, SRAM_TIMER1_EVENTS
     sbrs  t1, TIMER1_EVENTS_SECOND
     rjmp  LOOP
@@ -104,18 +111,21 @@ LOOP:
     /* Send data */
     ldi   a1, (DHT11_PAYLOAD_LEN + MQ135_PAYLOAD_LEN)
     rcall COMM_SEND_PKT
-    /* }}} */
+
     rjmp  LOOP
 
-/* INT0 handle. {{{2 ----------------------------------------------------------
- * Don't do anything within the routine, we want the system to wake up and
- * within LOOP to do everything */
+/* INT0_vect {{{2 -------------------------------------------------------------
+ * Interrupt INT0 handle.
+ * Don't do anything within this routine, we want to wake-up the system and then
+ * do everything else within LOOP.
+ * ---------------------------------------------------------------------------*/
 INT0_vect:
     reti
 
-/* ENC28J60 INTERRUPT HANDLE {{{2  ---------------------------------------------
+/* ENC_INTERRUPT_HANDLE {{{2 ---------------------------------------------------
  * ENC28J60 has multiple sources of interrupt, but only one output pin, this pin
- * will be held down until all sources of interrupts are cleared */
+ * will be held down until all sources of interrupts are cleared.
+ * ---------------------------------------------------------------------------*/
 ENC_INTERRUPT_HANDLE:
     push  s1 /* Not really necessary as LOOP is not using s1 at all */
     /* Read Global interrupt register from ENC28J60 and execute routines
@@ -152,13 +162,15 @@ ENC_INTERRUPT_HANDLE:
     pop   s1
     ret
 
-/* Handle received packet {{{2 -------------------------------------------------
- * enc28j60 will trigger an interrupt whenever a packet is received. */
+/* HANDLE_PACKET {{{2 ----------------------------------------------------------
+ * Handle received packet.
+ * ENC28J60 will trigger an interrupt whenever a packet is received.
+ * ---------------------------------------------------------------------------*/
 HANDLE_PACKET:
     /* Packet and Ethernet headers */
     rcall ETH_READ_RECEIVE_N_ETHERNET_HEADER
     sbrs  a4, RPKT_STATUS1_RECEIVED_OK
-    rjmp  RESET_ETH /* Error seen commonly after programming */
+    rjmp  8f /* Error seen commonly after programming */
 
     sbrs  a4, RPKT_STATUS1_LENGTH_OUT_OF_RANGE
     rjmp  9f /* no support for type/length = length packets */
@@ -175,10 +187,10 @@ HANDLE_PACKET:
     rcall MEMCMP_SRAM_EEPROM
     breq  9f
 
-    /* Check with memcmp which type/len was sent and call handler accordingly */
+    /* Check with memcmp which Type/Len was sent and call handler accordingly */
 0:  ldi   zl, lo8(SRAM_ENC_ETH_TYPE_LEN)
     ldi   zh, hi8(SRAM_ENC_ETH_TYPE_LEN)
-    ldi   a1, 2 /* Type/len is 2 bytes */
+    ldi   a1, 2 /* Type/Len is 2 bytes */
 
     ldi   xl, lo8(EEPROM_TYPE_LEN_IPV4)
     ldi   xh, hi8(EEPROM_TYPE_LEN_IPV4)
@@ -199,8 +211,7 @@ HANDLE_PACKET:
 9:  rcall ETH_PKT_PROCESSED
     ret
 
-RESET_ETH:
-    DEBUG(PRINT_STR STR_ENC_STATUS_VECTOR_ERROR)
+8:  DEBUG(PRINT_STR STR_ENC_STATUS_VECTOR_ERROR)
     rcall ETH_INIT
     ret
 

@@ -49,9 +49,13 @@ SRAM_IPV4_PAYLOAD:                 .skip  IPV4_PAYLOAD_LEN
 /* TEXT {{{1 -----------------------------------------------------------------*/
 .section .text
 
-/* Handle IPv4 packet {{{2 -----------------------------------------------------
- * Check protocol (tcp, udp, etc) and port to deliver to corresponding routine
- * IP version != 4 will be ignore */
+/* IPV4_HANDLE_PKT {{{2 --------------------------------------------------------
+ * Handle IPv4 packet.
+ *
+ * Check protocol (TCP, UDP, etc) and port to deliver to corresponding routine
+ *
+ * IP version != 4 will be ignore
+ * ---------------------------------------------------------------------------*/
 IPV4_HANDLE_PKT:
     push  yl
     push  yh
@@ -157,17 +161,20 @@ IPV4_HANDLE_PKT:
     pop   yl
     ret
 
-/* Internet Checksum RFC 1071 {{{2 ---------------------------------------------
- * Byte order independent
+/* INTERNET_CHECKSUM_RFC1071 {{{2 ----------------------------------------------
+ * Internet Checksum. Byte order independent
  *
- * Z and a1 must not be modified.
+ * z: Pointer to SRAM address.
+ * a1: Number of bytes to include in the checksum.
+ * a2: When different than zero, it holds the protocol and Pseudo header is
+ *  included when calculating the checksum.
  *
- * Input:
- *   zh:zl Address to start reading from
- *   a1    Bytes to read.
- *   a2 != 0, then include Pseudo header and a2 <= Protocol
- *
- * Return value (checksum) in [a3:a4] */
+ * After routine:
+ * [a3:a4]: Checksum result.
+ * z: unchanged.
+ * a1: unchanged.
+ * a2: zero.
+ * ---------------------------------------------------------------------------*/
 INTERNET_CHECKSUM_RFC1071:
     push  zl
     push  zh
@@ -221,10 +228,17 @@ INTERNET_CHECKSUM_RFC1071:
     pop   zl
     ret
 
-/* Prepare IPv4 header {{{2 ----------------------------------------------------
- * a2: total size
- * By using a2 instead of a1 we avoid the need of saving the value of the input
- * register till the point that is used */
+/* IPV4_PREPARE_DEFAULT_HEADER_20_40_BYTES {{{2 --------------------------------
+ * Prepare default IPv4 header.
+ *
+ * a2: Total size.
+ *
+ * After routine:
+ * a2 = 0
+ *
+ * Note: By using a2 instead of a1 we avoid the need of saving the value of the
+ * input register till the point that is used.
+ * ---------------------------------------------------------------------------*/
 IPV4_PREPARE_DEFAULT_HEADER_20_40_BYTES:
     /* Get default header from EEPROM (don't include src/dst ip addresses */
     ldi   xl, lo8(EEPROM_IP_HEADER)
@@ -259,11 +273,17 @@ IPV4_PREPARE_DEFAULT_HEADER_20_40_BYTES:
 
     ret
 
-/* Using incoming IPv4 header for outgoing IPv4 header {{{2 --------------------
-   a1: IPv4 Total Length in bytes
-   y must be set to SRAM_IPV4_DATA by calling routine
-   z will be left pointing to SRAM_IPV4_HEADER
-   */
+/* IPV4_PREPARE_INCOMING_HEADER_FOR_RESPONSE {{{2 ------------------------------
+ * Use incoming IPv4 header for outgoing IPv4 header.
+ *
+ * a1: IPv4 Total Length in bytes.
+ * y: Pointer to SRAM_IPV4_DATA.
+ *
+ * After routine:
+ * a1: undefined.
+ * y: unchanged.
+ * z: Points to SRAM_IPV4_HEADER
+ * ---------------------------------------------------------------------------*/
 IPV4_PREPARE_INCOMING_HEADER_FOR_RESPONSE:
     /* IPv4 payload length */
     ldi   zl, lo8(SRAM_IPV4_HEADER)

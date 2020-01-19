@@ -7,12 +7,6 @@
 .LIST
 
 /* MACORS {{{1 ---------------------------------------------------------------*/
-//#define SPI_SLOW
-#ifdef  SPI_SLOW
-#   define SPI_SCK ((1 << SPR1)|(1 << SPR0))
-#else
-#   define SPI_SCK (1 << SPR0)
-#endif
 
 /* GLOBAL {{{1 ---------------------------------------------------------------*/
 .global SPI_MASTER_INIT
@@ -21,33 +15,44 @@
 /* TEXT {{{1 -----------------------------------------------------------------*/
 .section .text
 
-/* Init SPI {{{2 ---------------------------------------------------------------
- * Set SS, so all slaves are not listening
+/* SPI_MASTER_INIT {{{2 --------------------------------------------------------
+ * Initialize SPI.
+ *
+ * Set SS, so slave is not listening.
  * Set pins as output:
  * - MOSI
  * - SCK
  * - SS (This must be handle by user code)
  * Set bits on register:
- * - SPE  enable SPI
- * - MSTR set as master
- * - SPR1 set, clock rate fck/64 */
+ * - SPE:   Enable SPI.
+ * - MSTR:  Set as master.
+ * - SPR0:  SCK to F_osc/16. If set to higher speed, then I get ping responding
+ *   with duplicated packets, maybe due to hardware.
+ *
+ * With better hardware we could also set
+ * - SPI2X: Double SPI speed.
+ * ---------------------------------------------------------------------------*/
 SPI_MASTER_INIT:
     SPI_END_ETH
     ldi t2, ((1 << SPI_MOSI_BIT) | \
-                   (1 << SPI_SCK_BIT)  | \
-                   (1 << SPI_SS_ETH))
+             (1 << SPI_SCK_BIT)  | \
+             (1 << SPI_SS_ETH))
     out _SFR_IO_ADDR(SPI_MOSI_DDR), t2
-    ldi t2, (1 << SPE)|(1 << MSTR)|SPI_SCK
+    ldi t2, (1 << SPE)|(1 << MSTR)|(1 << SPR0)
     out _SFR_IO_ADDR(SPCR), t2
+    /* sbis  _SFR_IO_ADDR(SPSR), SPI2X */
     ret
 
-/* Init SPI {{{2 ---------------------------------------------------------------
- * We need to:
- * - SS must be set previous to this routine
- * - Set data in register SPSR
- * - Wait for transmission to finish
- * - ? handle interrupt ?
- * - SS should be clear on the caller
+/* SPI_MASTER_TRANSMIT {{{2 ----------------------------------------------------
+ * Transmit a1.
+ *
+ * Caller needs to clear SS before calling this routine, also need to set SS
+ * after transmitting all bytes.
+ *
+ * a1: Byte to transmit.
+ *
+ * After routine:
+ * a4: Byte transmitted by slave.
  ******************************************************************************/
 SPI_MASTER_TRANSMIT:
     /* Start transmission of data on (a1) */

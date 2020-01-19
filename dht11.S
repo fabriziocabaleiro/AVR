@@ -59,9 +59,11 @@ SRAM_DHT11_PAYLOAD: .skip DHT11_PAYLOAD_LEN
 
 /* TEXT {{{1 -----------------------------------------------------------------*/
 .section .text
-/* DHT11 setup {{{2 ------------------------------------------------------------
- * Setup interrupt in falling edge
- * Setup interrupt port as Input with value Zero */
+
+/* DHT11_INIT {{{2 -------------------------------------------------------------
+ * Setup interrupt in falling edge.
+ * Setup interrupt port as Input with value Zero.
+ * ---------------------------------------------------------------------------*/
 DHT11_INIT:
     /* Disable interrupt */
     in    t1, _SFR_IO_ADDR(TIMSK)
@@ -87,11 +89,16 @@ DHT11_INIT:
     cbi   _SFR_IO_ADDR(PORTD), PD3
     ret
 
-/* Read data from sensor {{{2 --------------------------------------------------
- * Data is store in SRAM_DHT11_PAYLOAD
- * Interrupt are used with falling edge
+/* DHT11_READ {{{2 -------------------------------------------------------------
+ * Read data from sensor.
+ *
+ * Data is store in SRAM_DHT11_PAYLOAD.
+ *
+ * Interrupt are used with falling edge.
+ *
  * t3 used to count falling edge on interrupt pin, so we know when data
- *   start arriving and when bytes have been transmitted.
+ *   start arriving and when a whole byte has been transmitted.
+ *
  * BEWARE: Idle is the only sleep mode that support edge interrupts
  * BEWARE: Calling this routine at 1Hz causes issues, DHT11 sensor should not be
  * read more than once per second */
@@ -155,9 +162,16 @@ DHT11_READ:
 
     ret
 
-/* Handle INT1 interrupt {{{2 --------------------------------------------------
+/* TIMER2_OVF_vect INT1_vect {{{2 ----------------------------------------------
+ * Handle INT1/TIMER2_OVF interrupt.
+ *
  * Get and process data in every falling edge.
- * Use z as pointer to the memory. */
+ *
+ * z: Pointer to DHT11 payload.
+ *
+ * After routine:
+ * z += DHT11_PAYLOAD_LEN
+ * ---------------------------------------------------------------------------*/
 TIMER2_OVF_vect:
 INT1_vect:
     /* Read counter and reset it */

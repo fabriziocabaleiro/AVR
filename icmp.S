@@ -19,9 +19,13 @@
 .global ICMP_HANDLE_PKT
 
 /* TEXT {{{1 -----------------------------------------------------------------*/
-/* Handle ICMP packet {{{2 -----------------------------------------------------
- * y has been set to SRAM_IPV4_DATA in the previous routine
- * Not supporting ping with total length greater than 255 */
+.section .text
+
+/* ICMP_HANDLE_PKT {{{2 --------------------------------------------------------
+ * Handle ICMP packet
+ * Y has been set to SRAM_IPV4_DATA in the previous routine.
+ * Not supporting ping with total length greater than 255
+ * ---------------------------------------------------------------------------*/
 ICMP_HANDLE_PKT:
     /* Read message type, if not ICMP_MSG_TYPE_ECHO, then ignore packet */
     rcall ETH_READ_BUFFER_START
@@ -51,7 +55,7 @@ ICMP_HANDLE_PKT:
     ldi   zl, lo8(SRAM_IPV4_HEADER)
     ldi   zh, hi8(SRAM_IPV4_HEADER)
     ldd   a1, y + IPV4_DO_IHL_IN_BYTES
-    rcall ETH_WRITE_Z_TO_TRANSMIT_BUFFER
+    rcall ETH_WRITE_TO_TRANSMIT_BUFFER
 
     /* Should we check that received checksum is correct ? */
     /* Set checksum for reply */
@@ -68,7 +72,7 @@ ICMP_HANDLE_PKT:
     std   z + ICMP_CHECKSUM + 1, a4
 
     /* Write IPv4 payload and finalize ETH transmission */
-    rcall ETH_WRITE_Z_TO_TRANSMIT_BUFFER
+    rcall ETH_WRITE_TO_TRANSMIT_BUFFER
     rcall ETH_WRITE_BUFFER_PACKET_PAYLOAD_FINISH
 
 9:  ret

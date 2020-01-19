@@ -18,10 +18,15 @@
 /* TEXT {{{1 -----------------------------------------------------------------*/
 .section .text
 
-/* HTTP handle {{{2  -----------------------------------------------------------
- * z must be pointing to first byte of TCP payload
+/* HTTP_HANDLE_PKT {{{2 --------------------------------------------------------
+ * Handle HTTP packet.
+ *
+ * z: Pointer to TCP payload.
+ *
+ * After routine:
  * a4: output HTTP length in bytes
- */
+ * z: undefined.
+ * ---------------------------------------------------------------------------*/
 HTTP_HANDLE_PKT:
     ldi   xl, lo8(EEPROM_HTTP_RESPONSE)
     ldi   xh, hi8(EEPROM_HTTP_RESPONSE)
@@ -45,10 +50,16 @@ HTTP_HANDLE_PKT:
 
     ret
 
-/* Fill 8.8 value into xx.x placeholder on HTTP body {{{2 ----------------------
- * X points to 8.8 value
- * Z points to http payload to write to
- */
+/* FILL_8_DOT_8_VALUE {{{2 -----------------------------------------------------
+ * Fill 8.8 value into xx.x placeholder on HTTP body.
+ *
+ * x: Pointer to 8.8 input value.
+ * z: Pointer to xx.x placeholder.
+ *
+ * After routine:
+ * x += 2
+ * z += 4
+ * ---------------------------------------------------------------------------*/
 FILL_8_DOT_8_VALUE:
     /* RH */
     ld    a1, x+
