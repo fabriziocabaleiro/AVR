@@ -120,8 +120,8 @@ ENC_INTERRUPT_HANDLE:
     push  s1 /* Not really necessary as LOOP is not using s1 at all */
     /* Read Global interrupt register from ENC28J60 and execute routines
      * accordingly */
-    ldi   a1, ENC_COMMON_EIR
-    rcall ETH_READ_CONTROL_REGISTER
+    ldi   a1, ENC_COMMON_EIR | ETH_SPI_CMD_RCR
+    rcall ETH_SEND_CMD
     mov   s1, a4
 
     /* First check for errors */

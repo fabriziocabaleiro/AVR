@@ -181,7 +181,7 @@ ARP_REQUEST:
     rcall MEMCPY_EEPROM_SRAM
 
     /* Set Ethernet Dst Address to Broadcast */
-    /* TODO: Should main set Y to SRAM_ENC_DATA ? */
+    /* TODO: Should main set Y to SRAM_ENC ? */
     ldi   t1, (1 << ENC_MAC_DST_PTR_BROADCAST_BIT)
     sts   SRAM_ENC_MAC_DST_PTR, t1
 

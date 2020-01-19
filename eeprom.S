@@ -16,8 +16,15 @@
 /* TEXT {{{1 -----------------------------------------------------------------*/
 .section .text
 
-/* Read bytes pointed by x and return them on a4 {{{2 -------------------
- * x gets incremented after every call */
+/* EEPROM_READ_N_INC {{{2 ------------------------------------------------------
+ * Read the byte pointed by x.
+ *
+ * x: Pointer to EEPROM memory.
+ *
+ * After routine:
+ * x += 1
+ * a4: Byte pointed by x.
+ * ---------------------------------------------------------------------------*/
 EEPROM_READ_N_INC:
     /* Wait for previous write to finish */
 0:  sbic  _SFR_IO_ADDR(EECR), EEWE
@@ -31,8 +38,15 @@ EEPROM_READ_N_INC:
     adiw  xl, 1 /* Increment x for continuous EEPROM reading */
     ret
 
-/* Write a1 to EEPROM pointer by z {{{2 ----------------------------------
- * z gets incremented after every call */
+/* EEPROM_WRITE_N_INC {{{2 -----------------------------------------------------
+ * Write a1 to the EEPROM memory pointed by z.
+ *
+ * z: Pointer to EEPROM memory.
+ *
+ * After routine:
+ * z += 1
+ * a1: unchanged.
+ * ---------------------------------------------------------------------------*/
 EEPROM_WRITE_N_INC:
     /* Wait for previous write to finish */
 0:  sbic  _SFR_IO_ADDR(EECR), EEWE

@@ -29,12 +29,10 @@ EEPROM_DHCP_REQUEST_OPS_1: /* {{{2 */
     .byte DHCP_OPTION_ADDRESS_REQUEST_LEN
 EEPROM_DHCP_REQUEST_OPS_END_1:
 EEPROM_IP_ADDR: /* {{{2 */
-    /* Initial IP address, this one gets overwritten by DHCP */
-#if 0
-    .byte 192, 168, 2, 4
-#else
-    .byte   0,   0, 0, 0
-#endif
+    /* Initial IP address, this one gets overwritten by DHCP.
+     * To have an static IP Address, set the desired IP Address here and don't
+     * call the routine DHCP */
+    .byte   0, 0, 0, 0
 EEPROM_IP_ADDR_END:
 EEPROM_DHCP_REQUEST_OPS_2: /* {{{2 */
     .byte DHCP_OPTION_DHCP_SERVER_ID

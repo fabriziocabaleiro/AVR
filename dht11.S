@@ -50,6 +50,7 @@
 .global DHT11_READ
 .global INT1_vect
 .global TIMER2_OVF_vect
+
 .global SRAM_DHT11_PAYLOAD
 
 /* DATA  {{{1 ----------------------------------------------------------------*/

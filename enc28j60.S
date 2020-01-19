@@ -13,7 +13,7 @@
 
 /* GLOBAL {{{1 ---------------------------------------------------------------*/
 .global ETH_INIT
-.global ETH_READ_CONTROL_REGISTER
+.global ETH_SEND_CMD
 .global ETH_READ_BUFFER_START
 .global ETH_READ_RECEIVE_N_ETHERNET_HEADER
 .global ETH_PKT_PROCESSED
@@ -25,7 +25,7 @@
 .global ETH_MOVE_RDPT
 #endif
 
-.global SRAM_ENC_DATA
+.global SRAM_ENC
 .global SRAM_ENC_ETH_SRC_ADDR
 .global SRAM_ENC_ETH_TYPE_LEN
 .global SRAM_ENC_MAC_DST_PTR
@@ -34,7 +34,8 @@
 /* DATA  {{{1 ----------------------------------------------------------------*/
 .section .data
 /* Status vector, added by ENC28J60 HW before Ethernet header */
-SRAM_ENC_DATA:
+/* XXX: enc28j60.h offset definitions depends on this data section */
+SRAM_ENC:
 SRAM_ENC_RPKT_HEADER:
 SRAM_ENC_RPKT_N_PKT_L:    .skip 1
 SRAM_ENC_RPKT_N_PKT_H:    .skip 1
@@ -60,7 +61,14 @@ SRAM_ENC_TYPE_LEN_OFFSET: .skip 1
 /* TEXT {{{1 -----------------------------------------------------------------*/
 .section .text
 
-/* Initialize everything {{{2 ------------------------------------------------*/
+/* ETH_INIT {{{2 ---------------------------------------------------------------
+ * Initialize the ENC28J60 by:
+ * 1. Sending a software reset.
+ * 2. Wait until device is ready.
+ * 3. Initialize BUFFER and MAC.
+ * 4. Enable packet reception.
+ * 5. Enable interrupts (Optional).
+ * ---------------------------------------------------------------------------*/
 ETH_INIT:
     /* Software reset */
     ldi   a1, ETH_SPI_CMD_SRC
@@ -71,8 +79,8 @@ ETH_INIT:
     /* After a Power-on Reset, or the ENC28J60 is removed from Power-Down mode,
      * the CLKRDY bit must be polled before transmitting packets, enabling
      * packet reception or accessing any MAC, MII or PHY registers. */
-0:  ldi   a1, ENC_COMMON_ESTAT
-    rcall ETH_READ_CONTROL_REGISTER
+0:  ldi   a1, ENC_COMMON_ESTAT | ETH_SPI_CMD_RCR
+    rcall ETH_SEND_CMD
     sbrs  a4, ENC_COMMON_ESTAT_CLKRDY
     rjmp  0b
 
@@ -83,68 +91,46 @@ ETH_INIT:
     rcall ETH_CMDS_FROM_EEPROM
 
     /* Enable packet reception */
-    ldi   a1, ENC_COMMON_ECON1
+    ldi   a1, ENC_COMMON_ECON1 | ETH_SPI_CMD_BFS
     ldi   a2, ENC_COMMON_ECON1_RXEN
-    rcall ETH_BIT_FIELD_SET
+    rcall ETH_SEND_CMD
 
-    /* Enable recieve interrupt */
+    /* Enable receive interrupt */
 #if USE_INTIE
     rcall ETH_ENABLE_RECEIVE_INTERRUPT
 #endif
     ret
 
-/* Read Control Register {{{2 --------------------------------------------------
- * To read a control register first we send the command "000" together with the
- * address of the register, i.e. "000AAAAA" through SPI, ignoring the byte that
- * is being transmitted during the command + address transmission, then, we send
- * a dummy message to activate the SCK and read a byte.
+/* ETH_SEND_CMD {{{2 ---------------------------------------------
+ * Send a 2 bytes command through SPI.
  *
- * a1 is the register to be read */
-ETH_READ_CONTROL_REGISTER:
+ * Commands:
+ * Read Control Register  (RCR)
+ * Write Control Register (WCR)
+ * Bit Field Set          (BFS)
+ * Bit Field Clear        (BFC)
+ *
+ * a1: Register address.
+ * a2: Data to write/Bit field to set or clear. Ignored on RCR.
+ *
+ * After routine:
+ * a1 = a2
+ * a2: unchanged.
+ * a4: Data sent by ENC28J60.
+ *
+ * Note: Register bank must be correctly set before reading a control register.
+ * ---------------------------------------------------------------------------*/
+ETH_SEND_CMD:
     SPI_SELECT_ETH
-    rcall SPI_MASTER_TRANSMIT
-    rcall SPI_MASTER_TRANSMIT
-    SPI_END_ETH
-    ret
-
-/* Write control register  {{{2 ------------------------------------------------
- * Send command and address together, then send the new value of the space that
- * the address is pointing to
- *
- * a1 is the register to be written
- * a2 is the value of the register */
-ETH_WRITE_CONTROL_REGISTER:
-    /* command is 010AAAAA, then corresponding prefix */
-    sbr   a1, ETH_SPI_CMD_WCR
-    rjmp  0f
-
-/* Set the given bits into the register {{{2 -----------------------------------
- * Inputs:
- * - a1: Register address
- * - a2: Mask with bits that are going to be set */
-ETH_BIT_FIELD_SET:
-    /* command is 100AAAAA, then corresponding prefix */
-    sbr   a1, ETH_SPI_CMD_BFS
-    rjmp  0f
-
-/* Clear the given bits into the register {{{2 ---------------------------------
- * Inputs:
- * - a1: Register address
- * - a2: Mask with bits that are going to be clear */
-ETH_BIT_FIELD_CLEAR:
-    /* command is 101AAAAA, then corresponding prefix */
-    sbr   a1, ETH_SPI_CMD_BFC
-
-/* ETH_WRITE_CONTROL_REGISTER, ETH_BIT_FIELD_SET and ETH_BIT_FIELD_CLEAR {{{2 --
- * common part */
-0:  SPI_SELECT_ETH
     rcall SPI_MASTER_TRANSMIT
     mov   a1, a2
     rcall SPI_MASTER_TRANSMIT
     SPI_END_ETH
     ret
 
-/* Enable interrupts {{{2 ------------------------------------------------------
+/* ETH_ENABLE_RECEIVE_INTERRUPT {{{2 -------------------------------------------
+ * Enable interrupts.
+ *
  * The INT Interrupt Enable bit (INTIE) is a global enable bit which allows the
  * following interrupts to drive the INT pin:
  * - Receive Error Interrupt (RXERIF)
@@ -153,11 +139,13 @@ ETH_BIT_FIELD_CLEAR:
  * - Link Change Interrupt (LINKIF)
  * - DMA Interrupt (DMAIF)
  * - Receive Packet Pending Interrupt (PKTIF)
+ *
  * We are going to ignore some interrupts that we cannot do much about
- * - RXERIF trigger when received packed is full... not much that we can do */
+ * - RXERIF trigger when received packed is full... not much that we can do.
+ * ---------------------------------------------------------------------------*/
 #if USE_INTIE
 ETH_ENABLE_RECEIVE_INTERRUPT:
-    ldi   a1, ENC_COMMON_EIE
+    ldi   a1, ENC_COMMON_EIE | ETH_SPI_CMD_BFS
     ldi   a2, (1 << ENC_COMMON_EIE_INTIE)  | \
               (USE_PKTIF  << ENC_COMMON_EIE_PKTIE)  | \
               (USE_DMAIF  << ENC_COMMON_EIE_DMAIE)  | \
@@ -165,39 +153,49 @@ ETH_ENABLE_RECEIVE_INTERRUPT:
               (USE_TXIF   << ENC_COMMON_EIE_TXIE)   | \
               (USE_TXERIF << ENC_COMMON_EIE_TXERIE) | \
               (USE_RXERIF << ENC_COMMON_EIE_RXERIE)
-    rcall ETH_BIT_FIELD_SET
+    rcall ETH_SEND_CMD
     ret
 #endif
 
-/* Write commands from EEPROM {{{2 ---------------------------------------------
- * Read EEPROM pointed by x
- * a2 number of commands to read
- * Commands are 2 bytes long
- */
+/* ETH_CMDS_FROM_EEPROM {{{2 ---------------------------------------------------
+ * Write a2 number of commands from EEPROM pointed by x.
+ *
+ * a2: Number of commands to read
+ * x: Pointer to EEPROM memory with commands.
+ *
+ * Note: Commands are 2 bytes long
+ * ---------------------------------------------------------------------------*/
 ETH_CMDS_FROM_EEPROM:
-    SPI_SELECT_ETH
+0:  SPI_SELECT_ETH
     ldi   a1, 2
     rcall MEMCPY_EEPROM_SPI
     SPI_END_ETH
     dec   a2
-    brne  ETH_CMDS_FROM_EEPROM
+    brne  0b
     ret
 
-/* Start buffer read {{{2 ----------------------------------------------------*/
+/* ETH_READ_BUFFER_START {{{2 --------------------------------------------------
+ * Start buffer read, following SPI transmission will receive a byte of data.
+ * ---------------------------------------------------------------------------*/
 ETH_READ_BUFFER_START:
     ldi   a1, ETH_SPI_CMD_RBM
     SPI_SELECT_ETH
     rcall SPI_MASTER_TRANSMIT
     ret
 
-/* Read ENC28J60 header and Ethernet header {{{2 -------------------------------
- * Read ENC28J60 receive header
- * Read Ethernet header (Src/Dst Mac addresses + Type/len)
+/* ETH_READ_RECEIVE_N_ETHERNET_HEADER {{{2 -------------------------------------
+ * Read ENC28J60 header and Ethernet header.
+ *
+ * ENC28J60 header is 4 bytes long.
+ * Ethernet header: Dst Mac Addr, Src Mac Addr, Type/len.
  * Set SRAM_ENC_MAC_DST_PTR to default values
- * Return ENC28J60 [status1:status2] -> [a4:a3] */
+ *
+ * After routine:
+ * a4: ENC28J60 status1.
+ * a3: ENC28J60 status2.
+ * ---------------------------------------------------------------------------*/
 ETH_READ_RECEIVE_N_ETHERNET_HEADER:
-    /* Read the whole receive status vector + Src and Dst MAC Addresses +
-     * Type/len (2 bytes).
+    /* Read the ENC28J60 receive status vector + the Ethernet header.
      * Consecutive data checked with PCC0002 */
     rcall ETH_READ_BUFFER_START
     ldi   zh, hi8(SRAM_ENC_RPKT_HEADER)
@@ -208,92 +206,100 @@ ETH_READ_RECEIVE_N_ETHERNET_HEADER:
 
     DEBUG(rcall PRINT_RECEIVE_VECTOR)
 
-    /* Set default Mac Addr Dst */
-    /* After memcpy, Z points to correct data because check PCC0003 */
+    /* Set SRAM_ENC_MAC_DST_PTR to default value */
+    /* After memcpy, Z points to the correct data because check PCC0003 */
     ldi   t1, hi8(SRAM_ENC_ETH_SRC_ADDR)
     st    z+, t1
     ldi   t1, lo8(SRAM_ENC_ETH_SRC_ADDR)
     st    z+, t1
 
-    /* Move Z to SRAM_ENC_DATA */
-    sbiw  zl, ENC_TYPE_LEN_OFFSET
-    ldd   a4, z + ENC_RPKT_STATUS1
-    ldd   a3, z + ENC_RPKT_STATUS2
+    /* Move Z to SRAM_ENC */
+    sbiw  zl, SRAM_ENC_TYPE_LEN_OFFSET - SRAM_ENC
+    ldd   a4, z + SRAM_ENC_RPKT_STATUS1 - SRAM_ENC
+    ldd   a3, z + SRAM_ENC_RPKT_STATUS2 - SRAM_ENC
 
     ret
 
-/* Free the space of the packet that was processed {{{2 ----------------------*/
+/* ETH_PKT_PROCESSED {{{2 ------------------------------------------------------
+ * After processing and Ethernet packet, free the space that is was using, then
+ * move the RX Read Point and Read Pointer to the next packet space.
+ * ---------------------------------------------------------------------------*/
 ETH_PKT_PROCESSED:
     /* Set BANK 0 */
-    ldi   a1, ENC_COMMON_ECON1
+    ldi   a1, ENC_COMMON_ECON1 | ETH_SPI_CMD_BFC
     ldi   a2, ENC_COMMON_ECON1_BSEL0 | ENC_COMMON_ECON1_BSEL1
-    rcall ETH_BIT_FIELD_CLEAR
+    rcall ETH_SEND_CMD
 
     /* Move "RX Read Point" and "Read Pointer" to the next packet, reusing a2 to
      * write control register */
-    ldi   a1, ENC_BANK0_ERXRDPTL
+    ldi   a1, ENC_BANK0_ERXRDPTL | ETH_SPI_CMD_WCR
     lds   a2, SRAM_ENC_RPKT_N_PKT_L
-    rcall ETH_WRITE_CONTROL_REGISTER
+    rcall ETH_SEND_CMD
 
-    ldi   a1, ENC_BANK0_ERDPTL
-    rcall ETH_WRITE_CONTROL_REGISTER
+    ldi   a1, ENC_BANK0_ERDPTL | ETH_SPI_CMD_WCR
+    rcall ETH_SEND_CMD
 
 
-    ldi   a1, ENC_BANK0_ERXRDPTH
+    ldi   a1, ENC_BANK0_ERXRDPTH | ETH_SPI_CMD_WCR
     lds   a2, SRAM_ENC_RPKT_N_PKT_H
-    rcall ETH_WRITE_CONTROL_REGISTER
+    rcall ETH_SEND_CMD
 
-    ldi   a1, ENC_BANK0_ERDPTH
-    rcall ETH_WRITE_CONTROL_REGISTER
+    ldi   a1, ENC_BANK0_ERDPTH | ETH_SPI_CMD_WCR
+    rcall ETH_SEND_CMD
 
     /* Decrement received packet count */
-    ldi   a1, ENC_COMMON_ECON2
+    ldi   a1, ENC_COMMON_ECON2 | ETH_SPI_CMD_BFS
     ldi   a2, ENC_COMMON_ECON2_PKTDEC
-    rcall ETH_BIT_FIELD_SET
+    rcall ETH_SEND_CMD
 
     ret
 
-/* Write message header, Per packet control byte + Mac addresses + Type/Len {{{2
+/* ETH_WRITE_BUFFER_PACKET_HEADER {{{2 -----------------------------------------
+ * Write message header, Per packet control byte + Mac addresses + Type/Len
  * SRAM_ENC_MAC_DST_PTR pointer to Dst MAC address
  *   As we have 1k of SRAM, only the 11 LSB are used for addresses, then we have
  *   5 MBS to encode other options.
  *     If MSB of the pointer is set, then, the address is not a pointer and the
- *     MAC Dst is broadcast */
-/* Per packet control byte {{{3
-bit 7-4 Unused
-
-bit 3 PHUGEEN: Per Packet Huge Frame Enable bit
-When POVERRIDE = 1:
-     1 = The packet will be transmitted in whole
-     0 = The MAC will transmit up to the number of bytes specified by MAMXFL. If the packet is larger
-         than MAMXFL, it will be aborted after MAMXFL is reached.
-When POVERRIDE = 0:
-     This bit is ignored.
-
-bit 2 PPADEN: Per Packet Padding Enable bit
-When POVERRIDE = 1:
-     1 = The packet will be zero padded to 60 bytes if it is less than 60 bytes
-     0 = The packet will be transmitted without adding any padding bytes
-When POVERRIDE = 0:
-     This bit is ignored.
-
-bit 1 PCRCEN: Per Packet CRC Enable bit
-When POVERRIDE = 1:
-     1 = A valid CRC will be calculated and attached to the frame
-     0 = No CRC will be appended. The last 4 bytes of the frame will be checked for validity as a
-         CRC.
-When POVERRIDE = 0:
-     This bit is ignored.
-
-bit 0 POVERRIDE: Per Packet Override bit
-     1 = The values of PCRCEN, PPADEN and PHUGEEN will override the configuration defined by ENC_BANK2_MACON3
-     0 = The values in ENC_BANK2_MACON3 will be used to determine how the packet will be transmitted
-}}} */
+ *     MAC Dst is broadcast
+ *
+ * Per packet control byte:
+ * bit 7-4 Unused
+ * 
+ * bit 3 PHUGEEN: Per Packet Huge Frame Enable bit
+ * When POVERRIDE = 1:
+ *      1 = The packet will be transmitted in whole
+ *      0 = The MAC will transmit up to the number of bytes specified by MAMXFL.
+ *        If the packet is larger than MAMXFL, it will be aborted after MAMXFL
+ *        is reached.
+ * When POVERRIDE = 0:
+ *      This bit is ignored.
+ * 
+ * bit 2 PPADEN: Per Packet Padding Enable bit
+ * When POVERRIDE = 1:
+ *      1 = The packet will be zero padded to 60 bytes if it is less than 60
+ *        bytes
+ *      0 = The packet will be transmitted without adding any padding bytes
+ * When POVERRIDE = 0:
+ *      This bit is ignored.
+ * 
+ * bit 1 PCRCEN: Per Packet CRC Enable bit
+ * When POVERRIDE = 1:
+ *      1 = A valid CRC will be calculated and attached to the frame
+ *      0 = No CRC will be appended. The last 4 bytes of the frame will be
+ *        checked for validity as a CRC.
+ * When POVERRIDE = 0:
+ *      This bit is ignored.
+ * 
+ * bit 0 POVERRIDE: Per Packet Override bit
+ *      1 = The values of PCRCEN, PPADEN and PHUGEEN will override the
+ *        configuration defined by ENC_BANK2_MACON3
+ *      0 = The values in ENC_BANK2_MACON3 will be used to determine how the
+ *        packet will be transmitted
+ * ---------------------------------------------------------------------------*/
 #define PPCB_PHUGEEN   0x08
 #define PPCB_PPADEN    0x04
 #define PPCB_PCRCEN    0x02
 #define PPCB_POVERRIDE 0x01
-
 ETH_WRITE_BUFFER_PACKET_HEADER:
     push xl
     push xh
@@ -344,7 +350,9 @@ ETH_WRITE_BUFFER_PACKET_HEADER:
     pop xl
     ret
 
-/* Send write command and leave SPI waiting {{{2 -----------------------------*/
+/* ETH_SET_LISTEN_ON_SPI {{{2 --------------------------------------------------
+ * Send write command and leave SPI waiting.
+ * ---------------------------------------------------------------------------*/
 ETH_SET_LISTEN_ON_SPI:
     /* Send write command */
     ldi   a1, ETH_SPI_CMD_WBM
@@ -352,10 +360,16 @@ ETH_SET_LISTEN_ON_SPI:
     rcall SPI_MASTER_TRANSMIT
     ret
 
-/* Write z to transmit buffer {{{2 ---------------------------------------------
- * z is a pointer to memory to where start writing from
- * a1 is number of byte to write */
- /* TODO: Use MEMCPY_SRAM_SPI */
+/* ETH_WRITE_Z_TO_TRANSMIT_BUFFER {{{2 -----------------------------------------
+ * Write a1 bytes from SRAM pointed by z to ENC28J60 transmit buffer.
+ *
+ * a1: Number of byte to transmit.
+ * z: Pointer to data on SRAM to transmit.
+ *
+ * After routine:
+ * a1: unchanged.
+ * z += a1
+ * ---------------------------------------------------------------------------*/
 ETH_WRITE_Z_TO_TRANSMIT_BUFFER:
     /* Send write command */
     mov   t1, a1
@@ -369,54 +383,58 @@ ETH_WRITE_Z_TO_TRANSMIT_BUFFER:
     SPI_END_ETH
     ret
 
-/* Finish Write Payload {{{2 -------------------------------------------------*/
+/* ETH_WRITE_BUFFER_PACKET_PAYLOAD_FINISH {{{2 ---------------------------------
+ * Set ETXNDH:ETXNDL and set bit to transmit.
+ * ---------------------------------------------------------------------------*/
 ETH_WRITE_BUFFER_PACKET_PAYLOAD_FINISH:
     /* Set BANK 0 */
-    ldi   a1, ENC_COMMON_ECON1
+    ldi   a1, ENC_COMMON_ECON1 | ETH_SPI_CMD_BFC
     ldi   a2, ENC_COMMON_ECON1_BSEL0 | ENC_COMMON_ECON1_BSEL1
-    rcall ETH_BIT_FIELD_CLEAR
+    rcall ETH_SEND_CMD
 
     /* read EWRPT */
-    ldi   a1, ENC_BANK0_EWRPTH
-    rcall ETH_READ_CONTROL_REGISTER
+    ldi   a1, ENC_BANK0_EWRPTH | ETH_SPI_CMD_RCR
+    rcall ETH_SEND_CMD
     mov   a3, a4
 
-    ldi   a1, ENC_BANK0_EWRPTL
-    rcall ETH_READ_CONTROL_REGISTER
+    ldi   a1, ENC_BANK0_EWRPTL | ETH_SPI_CMD_RCR
+    rcall ETH_SEND_CMD
 
     /* Move pointer to last written byte */
     subi  a4, 1
     sbc   a3, zero
 
-    ldi   a1, ENC_BANK0_ETXNDL
+    ldi   a1, ENC_BANK0_ETXNDL | ETH_SPI_CMD_WCR
     mov   a2, a4
-    rcall ETH_WRITE_CONTROL_REGISTER
-    ldi   a1, ENC_BANK0_ETXNDH
+    rcall ETH_SEND_CMD
+    ldi   a1, ENC_BANK0_ETXNDH | ETH_SPI_CMD_WCR
     mov   a2, a3
-    rcall ETH_WRITE_CONTROL_REGISTER
+    rcall ETH_SEND_CMD
 
     /* Clear ENC_COMMON_EIR.TXIF, set ENC_COMMON_EIE.TXIE and set ENC_COMMON_EIE.INTIE
      *   to enable an interrupt when done (if desired).
      *   Start the transmission process by setting
      */
 #if USE_TXIF
-    ldi   a1, ENC_COMMON_EIR
+    ldi   a1, ENC_COMMON_EIR | ETH_SPI_CMD_BFC
     ldi   a2, (1 << ENC_COMMON_EIR_TXIF)
-    rcall ETH_BIT_FIELD_CLEAR
+    rcall ETH_SEND_CMD
 
-    ldi   a1, ENC_COMMON_EIE
+    ldi   a1, ENC_COMMON_EIE | ETH_SPI_CMD_BFS
     ldi   a2, (1 << ENC_COMMON_EIE_TXIE) | (1 << ENC_COMMON_EIE_INTIE)
-    rcall ETH_BIT_FIELD_SET
+    rcall ETH_SEND_CMD
 #endif
 
     /* Set bits to send packet */
-    ldi   a1, ENC_COMMON_ECON1
+    ldi   a1, ENC_COMMON_ECON1 | ETH_SPI_CMD_BFS
     ldi   a2, ENC_COMMON_ECON1_TXRTS
-    rcall ETH_BIT_FIELD_SET
+    rcall ETH_SEND_CMD
 
     ret
 
-/* Move the RDPT {{{2 ----------------------------------------------------------
+/* ETH_MOVE_RDPT {{{2 ----------------------------------------------------------
+ * Deprecated.
+ * Move the RDPT register.
  *
  * Increment/Decrement value in [a1:a2]
  *
@@ -426,7 +444,8 @@ ETH_WRITE_BUFFER_PACKET_PAYLOAD_FINISH:
  *   if Packet Start Address + Offset > ERXND, then
  *      ERDPT = Packet Start Address + Offset - (ERXND - ERXST + 1)
  *   else
- *      ERDPT = Packet Start Address + Offset */
+ *      ERDPT = Packet Start Address + Offset
+ * ---------------------------------------------------------------------------*/
 #if USE_MOVE_RDPT
 ETH_MOVE_RDPT:
     push  s1
@@ -437,16 +456,16 @@ ETH_MOVE_RDPT:
     /* Read the content of the Read Pointer into:
      * [ENC_BANK0_ERDPTH:ENC_BANK0_ERDPTL] -> [s1:s2] */
     /* Set BANK 0 */
-    ldi   a1, ENC_COMMON_ECON1
+    ldi   a1, ENC_COMMON_ECON1 | ETH_SPI_CMD_BFC
     ldi   a2, ENC_COMMON_ECON1_BSEL0 | ENC_COMMON_ECON1_BSEL1
-    rcall ETH_BIT_FIELD_CLEAR
+    rcall ETH_SEND_CMD
 
-    ldi   a1, ENC_BANK0_ERDPTH
-    rcall ETH_READ_CONTROL_REGISTER
+    ldi   a1, ENC_BANK0_ERDPTH | ETH_SPI_CMD_RCR
+    rcall ETH_SEND_CMD
     mov   s1, a4
 
-    ldi   a1, ENC_BANK0_ERDPTL
-    rcall ETH_READ_CONTROL_REGISTER
+    ldi   a1, ENC_BANK0_ERDPTL | ETH_SPI_CMD_RCR
+    rcall ETH_SEND_CMD
     mov   s2, a4
 
     pop   a2
@@ -501,13 +520,13 @@ OVERFLOW:
 
 UPDATE_ERDPT:
     /* Move the Read Pointer to the next packet */
-    ldi   a1, ENC_BANK0_ERDPTL
+    ldi   a1, ENC_BANK0_ERDPTL | ETH_SPI_CMD_WCR
     mov   a2, s2
-    rcall ETH_WRITE_CONTROL_REGISTER
+    rcall ETH_SEND_CMD
 
-    ldi   a1, ENC_BANK0_ERDPTH
+    ldi   a1, ENC_BANK0_ERDPTH | ETH_SPI_CMD_WCR
     mov   a2, s1
-    rcall ETH_WRITE_CONTROL_REGISTER
+    rcall ETH_SEND_CMD
 
     pop   s2
     pop   s1
@@ -519,25 +538,25 @@ UPDATE_ERDPT:
 PRINT_RECEIVE_VECTOR:
     DEBUG_PUSH
     PRINT_STR STR_ENC_RECEIVE_VECTOR
-    ldi   zl, lo8(SRAM_ENC_DATA)
-    ldi   zh, hi8(SRAM_ENC_DATA)
-    ldd   a1, z + ENC_RPKT_N_PKT_H
+    ldi   zl, lo8(SRAM_ENC)
+    ldi   zh, hi8(SRAM_ENC)
+    ldd   a1, z + SRAM_ENC_RPKT_N_PKT_H - SRAM_ENC
     rcall UART_TRANSMIT_HEX
-    ldd   a1, z + ENC_RPKT_N_PKT_L
-    rcall UART_TRANSMIT_HEX
-    ldi   a1, ' '
-    rcall UART_TRANSMIT
-    ldd   a1, z + ENC_RPKT_BC_H
-    rcall UART_TRANSMIT_HEX
-    ldd   a1, z + ENC_RPKT_BC_L
+    ldd   a1, z + SRAM_ENC_RPKT_N_PKT_L - SRAM_ENC
     rcall UART_TRANSMIT_HEX
     ldi   a1, ' '
     rcall UART_TRANSMIT
-    ldd   a1, z + ENC_RPKT_STATUS1
+    ldd   a1, z + SRAM_ENC_RPKT_BC_H - SRAM_ENC
+    rcall UART_TRANSMIT_HEX
+    ldd   a1, z + SRAM_ENC_RPKT_BC_L - SRAM_ENC
     rcall UART_TRANSMIT_HEX
     ldi   a1, ' '
     rcall UART_TRANSMIT
-    ldd   a1, z + ENC_RPKT_STATUS2
+    ldd   a1, z + SRAM_ENC_RPKT_STATUS1 - SRAM_ENC
+    rcall UART_TRANSMIT_HEX
+    ldi   a1, ' '
+    rcall UART_TRANSMIT
+    ldd   a1, z + SRAM_ENC_RPKT_STATUS2 - SRAM_ENC
     rcall UART_TRANSMIT_HEX
     PRINT_NEWLINE
     DEBUG_POP

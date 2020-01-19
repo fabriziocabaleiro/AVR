@@ -85,8 +85,8 @@ COMM_SEND_PKT:
     rcall ARP_GET_MAC_ADDR_PTR
     brne  2f /* IP not in ARP table */
 
-    ldi   zl, lo8(SRAM_ENC_DATA)
-    ldi   zh, hi8(SRAM_ENC_DATA)
+    ldi   zl, lo8(SRAM_ENC)
+    ldi   zh, hi8(SRAM_ENC)
     std   z + ENC_MAC_DST_PTR + 0, a4
     std   z + ENC_MAC_DST_PTR + 1, a3
 
