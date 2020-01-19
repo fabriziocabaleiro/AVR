@@ -40,23 +40,23 @@ UDP_HANDLE_PKT:
     ldi   zl, lo8(SRAM_UDP_HEADER)
     ldi   zh, hi8(SRAM_UDP_HEADER)
     ldi   a1, UDP_HEADER_LEN
-    rcall S_MEMCPY
+    rcall MEMCPY_SPI_SRAM
 
-    /* Set common argument for E_MEMCMP */
+    /* Set common argument for MEMCMP_SRAM_EEPROM */
     sbiw  zl, UDP_HEADER_LEN
     ldi   a1, 4
 
     /* DHCP */
     ldi   xl, lo8(EEPROM_DHCP_SRC_DST_PORT)
     ldi   xh, hi8(EEPROM_DHCP_SRC_DST_PORT)
-    rcall E_MEMCMP
+    rcall MEMCMP_SRAM_EEPROM
     brne  0f
     rcall DHCP_HANDLE_PKT
     rjmp  9f
 
     /* COMM */
 0:  adiw  xl, EEPROM_COMM_SRC_DST_PORT - EEPROM_DHCP_SRC_DST_PORT
-    rcall E_MEMCMP
+    rcall MEMCMP_SRAM_EEPROM
     brne  9f
     rcall COMM_REGISTER_IP
 
@@ -79,7 +79,7 @@ UDP_PREPARE_PACKET:
     ldi   xh, hi8(SRAM_UDP_HEADER)
     /* Write Src, Dst and Length. Chksum will be written next */
     ldi   a1, (UDP_HEADER_CHK_SUM - UDP_HEADER_SRC_PORT)
-    rcall MEMCPY
+    rcall MEMCPY_SRAM_SRAM
 
     /* Clear checksum */
     st    z+, zero
@@ -89,7 +89,7 @@ UDP_PREPARE_PACKET:
     pop   xh
     pop   xl
     lds   a1, SRAM_UDP_PKT_LEN + 1
-    rcall MEMCPY
+    rcall MEMCPY_SRAM_SRAM
 
     ret
 

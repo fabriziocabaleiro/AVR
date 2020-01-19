@@ -63,7 +63,7 @@ ARP_HANDLE_PKT:
     ldi   zh, hi8(SRAM_ARP_PAYLOAD)
     ldi   zl, lo8(SRAM_ARP_PAYLOAD)
     ldi   a1, ARP_PAYLOAD_LEN
-    rcall S_MEMCPY
+    rcall MEMCPY_SPI_SRAM
     ETH_READ_BUFFER_END
 
     /* Check that ARP is for me */
@@ -71,7 +71,7 @@ ARP_HANDLE_PKT:
     ldi   xh, hi8(EEPROM_IP_ADDR)
     ldi   xl, lo8(EEPROM_IP_ADDR)
     ldi   a1, IPV4_ADDR_LEN
-    rcall E_MEMCMP
+    rcall MEMCMP_SRAM_EEPROM
     brne  9f /* Not for me, just return */
 
     /* Check if Request or Reply */
@@ -138,12 +138,12 @@ ARP_HANDLE_PKT:
     ldi   xl, lo8(SRAM_ARP_PAYLOAD + ARP_SPA)
     ldi   xh, hi8(SRAM_ARP_PAYLOAD + ARP_SPA)
     ldi   a1, IPV4_ADDR_LEN
-    rcall MEMCPY
+    rcall MEMCPY_SRAM_SRAM
 
     /* Copy SHA */
     sbiw  xl, (ARP_THA - ARP_SHA) /* x was at THA */
     ldi   a1, MAC_ADDR_LEN
-    rcall MEMCPY
+    rcall MEMCPY_SRAM_SRAM
 
 9:  ret
 
@@ -166,19 +166,19 @@ ARP_REQUEST:
     ldi   zl, lo8(SRAM_ARP_PAYLOAD)
     ldi   zh, hi8(SRAM_ARP_PAYLOAD)
     ldi   a1, EEPROM_ARP_REQUEST_END - EEPROM_ARP_REQUEST
-    rcall E_MEMCPY
+    rcall MEMCPY_EEPROM_SRAM
 
     /* TPA, copy IP Address */
     pop   xh
     pop   xl
     ldi   a1, IPV4_ADDR_LEN
-    rcall MEMCPY
+    rcall MEMCPY_SRAM_SRAM
 
     /* SPA, copy Src IP Address */
     sbiw  zl, (ARP_TPA - ARP_SPA + IPV4_ADDR_LEN)
     ldi   xl, lo8(EEPROM_IP_ADDR)
     ldi   xh, hi8(EEPROM_IP_ADDR)
-    rcall E_MEMCPY
+    rcall MEMCPY_EEPROM_SRAM
 
     /* Set Ethernet Dst Address to Broadcast */
     /* TODO: Should main set Y to SRAM_ENC_DATA ? */
@@ -218,7 +218,7 @@ ARP_GET_MAC_ADDR_PTR:
     ldi   t3, ARP_TABLE_SIZE
     ldi   a1, IPV4_ADDR_LEN
     /* Loop through ARP table looking for IP Address */
-0:  rcall MEMCMP
+0:  rcall MEMCMP_SRAM_SRAM
     breq  0f /* IP Address found in ARP table */
     adiw  zl, ARP_TABLE_ENTRY_LEN /* set z to the next entry */
     dec   t3

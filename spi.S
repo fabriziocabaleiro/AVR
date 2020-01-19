@@ -17,8 +17,6 @@
 /* GLOBAL {{{1 ---------------------------------------------------------------*/
 .global SPI_MASTER_INIT
 .global SPI_MASTER_TRANSMIT
-.global SPI_MASTER_TRANSMIT_ZEROS
-.global SPI_EEPROM_TRANSMIT
 
 /* TEXT {{{1 -----------------------------------------------------------------*/
 .section .text
@@ -59,30 +57,6 @@ SPI_MASTER_TRANSMIT:
     rjmp  0b
     /* Get received message */
     in    a4, _SFR_IO_ADDR(SPDR)
-    ret
-
-/* Transmit zeros {{{2 ---------------------------------------------------------
- * Transmit a1 zeros */
-SPI_MASTER_TRANSMIT_ZEROS:
-    /* Start transmission */
-0:  out   _SFR_IO_ADDR(SPDR), zero
-    /* Wait for transmission complete */
-1:  sbis  _SFR_IO_ADDR(SPSR), SPIF
-    rjmp  1b
-    /* Get received message */
-    dec   a1
-    brne  0b
-    ret
-
-/* Write a1 bytes from x (EEPROM) to SPI {{{2 ----------------------------
-   */
-SPI_EEPROM_TRANSMIT:
-    mov   t3, a1
-0:  rcall EEPROM_READ_N_INC
-    mov   a1, a4
-    rcall SPI_MASTER_TRANSMIT
-    dec   t3
-    brne  0b
     ret
 
 .end

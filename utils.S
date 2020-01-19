@@ -14,12 +14,15 @@
  ******************************************************************************/
 
 /* MACORS {{{1 ---------------------------------------------------------------*/
+#define OFAST
+
 #define FROM_SRAM    0
 #define FROM_EEPROM  1
 #define FROM_SPI     2
-#define TO_SRAM      3
-#define TO_EEPROM    4
-#define TO_SPI       5
+#define FROM_ZERO    3
+#define TO_SRAM      4
+#define TO_EEPROM    5
+#define TO_SPI       6
 
 #define CP_Rd_SRAM   0
 #define CP_Rd_SPI    1
@@ -28,17 +31,19 @@
 #define CP_Rr_EEPROM 4
 
 /* GLOBAL {{{1 ---------------------------------------------------------------*/
-.global MEMCMP
-.global R_MEMCMP
-.global E_MEMCMP
-.global SE_MEMCMP
+.global MEMCMP_SRAM_SRAM
+.global MEMCMP_SRAM_EEPROM
+.global MEMCMP_SPI_EEPROM
+.global MEMCMP_REG_SRAM
 
-.global MEMCPY
-.global E_MEMCPY
-.global S_MEMCPY
-.global SE_MEMCPY
-.global SEE_MEMCPY
-.global SRAM_SPI_MEMCPY
+.global MEMCPY_SRAM_SRAM
+.global MEMCPY_SRAM_SPI
+.global MEMCPY_SRAM_EEPROM
+.global MEMCPY_EEPROM_SRAM
+.global MEMCPY_EEPROM_SPI
+.global MEMCPY_SPI_SRAM
+.global MEMCPY_SPI_EEPROM
+.global MEMCPY_ZERO_SPI
 
 .global MEMSWAP
 .global ADD_UINT32_BIG_ENDIAN
@@ -56,11 +61,11 @@
  *
  * Table of comparisons:
  *
- *             a2         a4        <--- Register where byte is stored
- * MEMCMP    : SRAM(z) vs SRAM(x)
- * R_MEMCMP  : REG     vs SRAM(x)
- * E_MEMCMP  : SRAM(z) vs EEPROM(x)
- * SE_MEMCMP : SPI     vs EEPROM(x)
+ *                     a2         a4        <--- Register where byte is stored
+ * MEMCMP_SRAM_SRAM:   SRAM(z) vs SRAM(x)
+ * MEMCMP_SRAM_EEPROM: SRAM(z) vs EEPROM(x)
+ * MEMCMP_SPI_EEPROM:  SPI     vs EEPROM(x)
+ * MEMCMP_REG_SRAM:    REG     vs SRAM(x)
  *
  * a1: Number of bytes to compare
  * x:  Address from SRAM or EEPROM
@@ -70,22 +75,23 @@
  * a1, x and z unchanged.
  *
  * Note: SPI_MASTER_TRANSMIT and EEPROM_READ_N_INC don't modify many register,
- * only a4, xl, and xh. Modifying those two routines may break MEMCMP family.
+ * only a4, xl, and xh. Modifying those two routines may break MEMCMP_SRAM_SRAM
+ * family.
  * ---------------------------------------------------------------------------*/
-/* MEMCMP, R_MEMCMP, E_MEMCMP and SE_MEMCMP {{{3 -----------------------------*/
+/* MEMCMP_* {{{3 -------------------------------------------------------------*/
 #ifndef OFAST
 /* 32 bytes of FLASH less than OFAST implementation */
-MEMCMP:
+MEMCMP_SRAM_SRAM:
     ldi   t1, (1 << CP_Rd_SRAM) | (1 << CP_Rr_SRAM)
     rjmp  0f
-R_MEMCMP:
-    ldi   t1, (1 << CP_Rd_REG)  | (1 << CP_Rr_SRAM)
-    rjmp  0f
-E_MEMCMP:
+MEMCMP_SRAM_EEPROM:
     ldi   t1, (1 << CP_Rd_SRAM) | (1 << CP_Rr_EEPROM)
     rjmp  0f
-SE_MEMCMP:
+MEMCMP_SPI_EEPROM:
     ldi   t1, (1 << CP_Rd_SPI)  | (1 << CP_Rr_EEPROM)
+    rjmp  0f
+MEMCMP_REG_SRAM:
+    ldi   t1, (1 << CP_Rd_REG)  | (1 << CP_Rr_SRAM)
 
 0:  push  a1
     movw  p1, xl
@@ -128,22 +134,22 @@ SE_MEMCMP:
     pop   a1
     ret
 #else
-/* MEMCMP {{{3 ---------------------------------------------------------------*/
-MEMCMP:
+/* MEMCMP_SRAM_SRAM {{{3 -----------------------------------------------------*/
+MEMCMP_SRAM_SRAM:
     push  a1
     movw  p1, xl
     movw  p2, zl
 
 0:  subi  a1, 1
-    brlo  0f
+    brlo  8f
     ld    a2, z+
     ld    a4, x+
     cp    a2, a4
     breq  0b
     /* See NOTE1 */
-0:  rjmp  E_MEMCMP_EXIT
+    rjmp  8f
 /* reusing instructions, reducing 8 bytes of FLASH
-0:  inc   a1
+8:  inc   a1
 
     movw  zl, p2
     movw  xl, p1
@@ -151,62 +157,60 @@ MEMCMP:
     ret
 */
 
-/* R_MEMCMP {{{3 -----------------------------------------------------------*/
-R_MEMCMP:
-    push  a1
-    movw  p1, xl
-
-0:  subi  a1, 1
-    brlo  0f
-    ld    a4, x+
-    cp    a2, a4
-    breq  0b
-    /* See NOTE1 */
-0:  rjmp  SE_MEMCMP_EXIT
-/* reusing instructions, reducing 6 bytes of FLASH
-0:  inc   a1
-
-    movw  xl, p1
-    pop   a1
-    ret
-*/
-
-/* E_MEMCMP {{{3 ------------------------------------------------------------*/
-E_MEMCMP:
+/* MEMCMP_SRAM_EEPROM {{{3 ---------------------------------------------------*/
+MEMCMP_SRAM_EEPROM:
     push  a1
     movw  p1, xl
     movw  p2, zl
 
 0:  subi  a1, 1
-    brlo  0f
+    brlo  8f
     ld    a2, z+
     rcall EEPROM_READ_N_INC
     cp    a2, a4
     breq  0b
     /* See NOTE1 */
-E_MEMCMP_EXIT:
-0:  inc   a1
+8:  inc   a1
 
     movw  zl, p2
     movw  xl, p1
     pop   a1
     ret
 
-/* SE_MEMCMP {{{3 ------------------------------------------------------------*/
-SE_MEMCMP:
+/* MEMCMP_SPI_EEPROM {{{3 ----------------------------------------------------*/
+MEMCMP_SPI_EEPROM:
     push  a1
     movw  p1, xl
 
 0:  subi  a1, 1
-    brlo  0f
+    brlo  8f
     rcall EEPROM_READ_N_INC
     mov   a2, a4
     rcall SPI_MASTER_TRANSMIT
     cp    a2, a4
     breq  0b
     /* See NOTE1 */
-SE_MEMCMP_EXIT:
-0:  inc   a1
+    rjmp  8f
+/* reusing instructions, reducing 6 bytes of FLASH
+8:  inc   a1
+
+    movw  xl, p1
+    pop   a1
+    ret
+*/
+
+/* MEMCMP_REG_SRAM {{{3 ------------------------------------------------------*/
+MEMCMP_REG_SRAM:
+    push  a1
+    movw  p1, xl
+
+0:  subi  a1, 1
+    brlo  8f
+    ld    a4, x+
+    cp    a2, a4
+    breq  0b
+    /* See NOTE1 */
+8:  inc   a1
 
     movw  xl, p1
     pop   a1
@@ -214,40 +218,48 @@ SE_MEMCMP_EXIT:
 #endif
 
 /* MEMCPY variants {{{2 --------------------------------------------------------
- * Copy a1 bytes from (SRAM|EEPROM|SPI) to SRAM.
+ * Copy a1 bytes from (SRAM|EEPROM|SPI) to (SRAM|EEPROM|SPI).
  *
- * MEMCPY:          SRAM(x+)   -> SRAM(z+)
- * SRAM_SPI_MEMCPY: SRAM(x+)   -> SPI
- * E_MEMCPY:        EEPROM(x+) -> SRAM(z+)
- * SE_MEMCPY:       SRAM(x+)   -> EEPROM(z+)
- * S_MEMCPY:        SPI        -> SRAM(z+)
- * SEE_MEMCPY:      SPI        -> EEPROM(z+)
+ * MEMCPY_SRAM_SRAM:   SRAM(x+)   -> SRAM(z+)
+ * MEMCPY_SRAM_SPI:    SRAM(x+)   -> SPI
+ * MEMCPY_SRAM_EEPROM: SRAM(x+)   -> EEPROM(z+)
+ * MEMCPY_EEPROM_SRAM: EEPROM(x+) -> SRAM(z+)
+ * MEMCPY_EEPROM_SPI:  EEPROM(x+) -> SPI
+ * MEMCPY_SPI_SRAM:    SPI        -> SRAM(z+)
+ * MEMCPY_SPI_EEPROM:  SPI        -> EEPROM(z+)
+ * MEMCPY_ZERO_SPI:    0          -> SPI
  *
  * After routine:
  * a1 unchanged.
- * x += a1 When calling MEMCPY and E_MEMCPY.
- * z += a1 When calling MEMCPY, E_MEMCPY and S_MEMCPY.
+ * x += a1 When calling MEMCPY variant from SRAM or EEPROM.
+ * z += a1 When calling MEMCPY variant to SRAM or EEPROM.
  * ---------------------------------------------------------------------------*/
-/* MEMCPY, E_MEMCPY and S_MEMCPY {{{3 ----------------------------------------*/
+/* MEMCPY_* {{{3 -------------------------------------------------------------*/
 #ifndef OFAST
 /* Difference is 4 bytes in FLASH... Maybe not worth it. */
-MEMCPY:
+MEMCPY_SRAM_SRAM:
     ldi   t1, (1 << FROM_SRAM)|(1 << TO_SRAM)
     rjmp  0f
-SRAM_SPI_MEMCPY:
+MEMCPY_SRAM_SPI:
     ldi   t1, (1 << FROM_SRAM)|(1 << TO_SPI)
     rjmp  0f
-E_MEMCPY: /* TODO: CHANGE NAME, align with next one */
-    ldi   t1, (1 << FROM_EEPROM)|(1 << TO_SRAM)
-    rjmp  0f
-SE_MEMCPY:
+MEMCPY_SRAM_EEPROM:
     ldi   t1, (1 << FROM_SRAM)|(1 << TO_EEPROM)
     rjmp  0f
-S_MEMCPY:
+MEMCPY_EEPROM_SRAM:
+    ldi   t1, (1 << FROM_EEPROM)|(1 << TO_SRAM)
+    rjmp  0f
+MEMCPY_EEPROM_SPI:
+    ldi   t1, (1 << FROM_EEPROM)|(1 << TO_SPI)
+    rjmp  0f
+MEMCPY_SPI_SRAM:
     ldi   t1, (1 << FROM_SPI)|(1 << TO_SRAM)
     rjmp  0f
-SEE_MEMCPY:
+MEMCPY_SPI_EEPROM:
     ldi   t1, (1 << FROM_SPI)|(1 << TO_EEPROM)
+    rjmp  0f
+MEMCPY_ZERO_SPI:
+    ldi   t1, (1 << FROM_ZERO)|(1 << TO_SPI)
 
 0:  push  a1
 
@@ -255,6 +267,8 @@ SEE_MEMCPY:
 0:  subi  t3, 1
     brlo  0f
     /* From: */
+    /* sbrc  t1, FROM_ZERO ; not really needed as others will overwrite a4 */
+    ldi   a4, 0               /* a4 <- 0 */
     sbrc  t1, FROM_SRAM       /* a4 <- SRAM */
     ld    a4, x+
     sbrc  t1, FROM_SPI        /* a4 <- SPI */
@@ -268,47 +282,104 @@ SEE_MEMCPY:
     sbrc  t1, TO_SPI
     mov   a1, a4
     sbrc  t1, TO_EEPROM
-    rcall EEPROM_WRITE_N_INC  /* EEPROM(z) <- a4 */
+    rcall EEPROM_WRITE_N_INC  /* EEPROM(z) <- a1 */
     sbrc  t1, TO_SPI
-    rcall SPI_MASTER_TRANSMIT /* SPI <- a4 */
+    rcall SPI_MASTER_TRANSMIT /* SPI <- a1 */
     rjmp  0b
 
 0:  pop   a1
     ret
 #else
-/* MEMCPY {{{3 ---------------------------------------------------------------*/
-MEMCPY:
+/* MEMCPY_SRAM_SRAM {{{3 -----------------------------------------------------*/
+MEMCPY_SRAM_SRAM:
     push  a1
 
 0:  subi  a1, 1
-    brlo  S_MEMCPY_EXIT
+    brlo  8f
     ld    t1, x+
     st    z+, t1
     rjmp  0b
 
-/* E_MEMCPY {{{3 ------------------------------------------------------------*/
-E_MEMCPY:
+/* MEMCPY_SRAM_SPI {{{3 ------------------------------------------------------*/
+MEMCPY_SRAM_SPI:
+    push  a1
+
+    mov   t3, a1
+0:  subi  t3, 1
+    brlo  8f
+    ld    a1, x+
+    rcall SPI_MASTER_TRANSMIT
+    rjmp  0b
+
+/* MEMCPY_SRAM_EEPROM {{{3 ---------------------------------------------------*/
+MEMCPY_SRAM_EEPROM:
+    push  a1
+
+    mov   t3, a1
+0:  subi  t3, 1
+    brlo  8f
+    ld    a1, x+
+    rcall EEPROM_WRITE_N_INC
+    rjmp  0b
+
+/* MEMCPY_EEPROM_SRAM {{{3 ---------------------------------------------------*/
+MEMCPY_EEPROM_SRAM:
     push  a1
 
 0:  subi  a1, 1
-    brlo  S_MEMCPY_EXIT
+    brlo  8f
     rcall EEPROM_READ_N_INC
     st    z+, a4
     rjmp  0b
 
-/* S_MEMCPY {{{3 -------------------------------------------------------------*/
-S_MEMCPY:
+/* MEMCPY_EEPROM_SPI {{{3 ----------------------------------------------------*/
+MEMCPY_EEPROM_SPI:
+    push  a1
+
+    mov   t3, a1
+0:  subi  t3, 1
+    brlo  8f
+    rcall EEPROM_READ_N_INC
+    mov   a1, a4
+    rcall SPI_MASTER_TRANSMIT
+    rjmp  0b
+
+/* MEMCPY_SPI_SRAM {{{3 ------------------------------------------------------*/
+MEMCPY_SPI_SRAM:
     push  a1
 
 0:  subi  a1, 1
-    brlo  0f
+    brlo  8f
     rcall SPI_MASTER_TRANSMIT
     st    z+, a4
     rjmp  0b
 
-    /* Common pop and return for MEMCPY, E_MEMCPY and S_MEMCPY. */
-S_MEMCPY_EXIT:
-0:  pop   a1
+/* MEMCPY_SPI_EEPROM {{{3 ----------------------------------------------------*/
+MEMCPY_SPI_EEPROM:
+    push  a1
+
+    mov   t3, a1
+0:  subi  t3, 1
+    brlo  8f
+    rcall SPI_MASTER_TRANSMIT
+    mov   a1, a4
+    rcall EEPROM_WRITE_N_INC
+    rjmp  0b
+
+/* MEMCPY_ZERO_SPI {{{3 ------------------------------------------------------*/
+MEMCPY_ZERO_SPI:
+    push  a1
+
+    mov   t3, a1
+    clr   a1
+0:  subi  t3, 1
+    brlo  8f
+    rcall SPI_MASTER_TRANSMIT
+    rjmp  0b
+
+    /* Common pop and return for MEMCPY_SRAM_SRAM, MEMCPY_EEPROM_SRAM and
+     * MEMCPY_SPI_SRAM. */
+8:  pop   a1
     ret
 #endif
 

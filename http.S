@@ -26,7 +26,7 @@ HTTP_HANDLE_PKT:
     ldi   xl, lo8(EEPROM_HTTP_RESPONSE)
     ldi   xh, hi8(EEPROM_HTTP_RESPONSE)
     ldi   a1, (EEPROM_HTTP_RESPONSE_END - EEPROM_HTTP_RESPONSE)
-    rcall E_MEMCPY
+    rcall MEMCPY_EEPROM_SRAM
     /* Set back z to beginning of HTTP payload */
     sbiw  zl, (EEPROM_HTTP_RESPONSE_END - EEPROM_HTTP_RH_OFFSET)
 

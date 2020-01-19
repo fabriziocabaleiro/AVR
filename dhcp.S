@@ -197,10 +197,10 @@ DHCP_INIT:
     ldi   zl, lo8(SRAM_DHCP_IP_ADDR)
     ldi   zh, hi8(SRAM_DHCP_IP_ADDR)
     ldi   a1, IPV4_ADDR_LEN
-    rcall E_MEMCMP
+    rcall MEMCMP_SRAM_EEPROM
     ldi   t1, (1 << DHCP_STATE_INIT)
     breq  0f
-    rcall E_MEMCPY
+    rcall MEMCPY_EEPROM_SRAM
     subi  zl, IPV4_ADDR_LEN
     ldi   t1, (1 << DHCP_STATE_INIT_REBOOT)
 0:  std   z + SRAM_DHCP_STATE - SRAM_DHCP_IP_ADDR, t1
@@ -235,7 +235,7 @@ DHCP_SEND:
     ldi   xl, lo8(EEPROM_IP_HEADER)
     ldi   xh, hi8(EEPROM_IP_HEADER)
     ldi   a1, (EEPROM_UDP_DHCP_PORT_END - EEPROM_IP_HEADER)
-    rcall E_MEMCPY
+    rcall MEMCPY_EEPROM_SRAM
     /* Set z back to SRAM_IPV4_HEADER */
     sbiw  zl, (EEPROM_UDP_DHCP_PORT_END - EEPROM_IP_HEADER)
 
@@ -252,11 +252,11 @@ DHCP_SEND:
     ldi   a1, IPV4_ADDR_LEN
     ldi   xl, lo8(SRAM_DHCP_IP_ADDR)
     ldi   xh, hi8(SRAM_DHCP_IP_ADDR)
-    rcall MEMCPY
+    rcall MEMCPY_SRAM_SRAM
     /* Copy DHCP server IP address */
     ldi   xl, lo8(SRAM_DHCP_SERVER_IP_ADDR)
     ldi   xh, hi8(SRAM_DHCP_SERVER_IP_ADDR)
-    rcall MEMCPY
+    rcall MEMCPY_SRAM_SRAM
     /* Set z back to SRAM_IPV4_HEADER */
     sbiw  zl, IPV4_ADDR_LEN * 2 + IPV4_SRC_ADDR
 
@@ -272,7 +272,7 @@ DHCP_SEND:
     rcall ETH_WRITE_Z_TO_TRANSMIT_BUFFER
     rcall ETH_SET_LISTEN_ON_SPI
 
-    /* UDP Header*/
+    /* UDP Header */
     /* SRC/DST already written */
     /* Write UDP Length */
     /* DHCP PKT SIZE was set to IP size, so, subtract DHCP_IP_HEADER_SIZE to
@@ -285,14 +285,14 @@ DHCP_SEND:
 
     /* UDP Checksum, Zero for ignore */
     ldi   a1, 2
-    rcall SPI_MASTER_TRANSMIT_ZEROS
+    rcall MEMCPY_ZERO_SPI
 
     /* DHCP Body -------------------------------------------------------------*/
     /* Write first 8 bytes: OP, HTYPE, HLEN, HOPS AND XID (3 of 4 bytes) */
     ldi   xl, lo8(EEPROM_DHCP_HEADER)
     ldi   xh, hi8(EEPROM_DHCP_HEADER)
     ldi   a1, (EEPROM_DHCP_HEADER_END - EEPROM_DHCP_HEADER)
-    rcall SPI_EEPROM_TRANSMIT
+    rcall MEMCPY_EEPROM_SPI
 
     /* Last byte of XID */
     ldd   a1, y + SRAM_DHCP_XID_LAST_BYTE - SRAM_DHCP
@@ -301,7 +301,7 @@ DHCP_SEND:
 
     /* set SECS and FLAGS to Zero */
     ldi   a1, 4
-    rcall SPI_MASTER_TRANSMIT_ZEROS
+    rcall MEMCPY_ZERO_SPI
 
     /* CIADDR
      * Field      DHCPDISCOVER          DHCPREQUEST           DHCPDECLINE,
@@ -318,23 +318,23 @@ DHCP_SEND:
     ldi   xl, lo8(SRAM_DHCP_IP_ADDR)
     ldi   xh, hi8(SRAM_DHCP_IP_ADDR)
     ldi   a1, IPV4_ADDR_LEN
-    rcall SRAM_SPI_MEMCPY
+    rcall MEMCPY_SRAM_SPI
 
     /* YIADDR, SIADDR and GIADDR to Zero  */
     ldi   a1, 12
-    rcall SPI_MASTER_TRANSMIT_ZEROS
+    rcall MEMCPY_ZERO_SPI
 
     /* CHADDR, write own MAC */
     ldi   xl, lo8(EEPROM_MAC_ADDR)
     ldi   xh, hi8(EEPROM_MAC_ADDR)
     ldi   a1, MAC_ADDR_LEN
-    rcall SPI_EEPROM_TRANSMIT
+    rcall MEMCPY_EEPROM_SPI
 
     /* header has 16 bytes for mac, as using only 6, there are 10 bytes to 
      * write as zero, then we have 192 bytes of zero (option overload/BOOTS
      * legacy) */
     ldi   a1, 202
-    rcall SPI_MASTER_TRANSMIT_ZEROS
+    rcall MEMCPY_ZERO_SPI
 
 #if EEPROM_DHCP_MAGIC_COOKIE_END != EEPROM_DHCP_OPTION_MSG_N_LEN
 #   error "EEPROM_DHCP_MAGIC_COOKIE_END != EEPROM_DHCP_OPTION_MSG_N_LEN"
@@ -343,7 +343,7 @@ DHCP_SEND:
     ldi   xl, lo8(EEPROM_DHCP_MAGIC_COOKIE)
     ldi   xh, hi8(EEPROM_DHCP_MAGIC_COOKIE)
     ldi   a1, (EEPROM_DHCP_OPTION_MSG_N_LEN_END - EEPROM_DHCP_MAGIC_COOKIE)
-    rcall SPI_EEPROM_TRANSMIT
+    rcall MEMCPY_EEPROM_SPI
 
     /* DHCP Options */
     /* DHCP MSG TYPE */
@@ -374,7 +374,7 @@ DHCP_SEND:
     ldi   xl, lo8(EEPROM_DHCP_REQUEST_OPS_1)
     ldi   xh, hi8(EEPROM_DHCP_REQUEST_OPS_1)
     ldi   a1, (EEPROM_DHCP_REQUEST_OPS_2_END - EEPROM_DHCP_REQUEST_OPS_1)
-    rcall SPI_EEPROM_TRANSMIT
+    rcall MEMCPY_EEPROM_SPI
 
     ldi   zl, lo8(SRAM_DHCP_SERVER_IP_ADDR)
     ldi   zh, hi8(SRAM_DHCP_SERVER_IP_ADDR)
@@ -406,7 +406,7 @@ DHCP_HANDLE_PKT:
     ldi   xl, lo8(EEPROM_DHCP_HEADER + 1)
     ldi   xh, hi8(EEPROM_DHCP_HEADER + 1)
     ldi   a1, 6
-    rcall SE_MEMCMP
+    rcall MEMCMP_SPI_EEPROM
     brne  9f /* return */
 
     /* Check last byte of the XID */
@@ -425,14 +425,14 @@ DHCP_HANDLE_PKT:
     rcall ETH_READ_BUFFER_START
 #else
     ldi   a1, 8
-    rcall SPI_MASTER_TRANSMIT_ZEROS
+    rcall MEMCPY_ZERO_SPI
 #endif
 
     /* Read offered IP and write it into EEPROM */
     ldi   zl, lo8(EEPROM_IP_ADDR)
     ldi   zh, hi8(EEPROM_IP_ADDR)
     ldi   a1, IPV4_ADDR_LEN
-    rcall SEE_MEMCPY
+    rcall MEMCPY_SPI_EEPROM
 
     /* Jump from siaddr ip addr to magic cookie */
 #if USE_MOVE_RDPT
@@ -443,14 +443,14 @@ DHCP_HANDLE_PKT:
     rcall ETH_READ_BUFFER_START
 #else
     ldi   a1, 216
-    rcall SPI_MASTER_TRANSMIT_ZEROS
+    rcall MEMCPY_ZERO_SPI
 #endif
 
     /* Check magic cookie */
     ldi   xl, lo8(EEPROM_DHCP_MAGIC_COOKIE)
     ldi   xh, hi8(EEPROM_DHCP_MAGIC_COOKIE)
     ldi   a1, (EEPROM_DHCP_MAGIC_COOKIE_END - EEPROM_DHCP_MAGIC_COOKIE)
-    rcall SE_MEMCMP
+    rcall MEMCMP_SPI_EEPROM
     breq  3f /* Jump to read options loop (skipping exit block) */
     DEBUG(PRINT_STR_SAFE STR_FAILURE)
 
@@ -491,7 +491,7 @@ DHCP_HANDLE_PKT:
     ldi   xh, hi8(EEPROM_IP_ADDR)
     adiw  zl, SRAM_DHCP_IP_ADDR - SRAM_DHCP
     ldi   a1, IPV4_ADDR_LEN
-    rcall E_MEMCPY
+    rcall MEMCPY_EEPROM_SRAM
     sbiw  zl, SRAM_DHCP_IP_ADDR - SRAM_DHCP + IPV4_ADDR_LEN
     ldi   t1, (1 << DHCP_STATE_BOUND)
     ldi   t2, (1 << DHCP_TIMER_LAP) | EEPROM_DHCP_TIMERS
@@ -545,7 +545,7 @@ DHCP_TIMERS:
     /* Common set for set-counter and decrement-counter */
     ldi   zl, lo8(SRAM_DHCP_SECONDS + 4)
     ldi   zh, hi8(SRAM_DHCP_SECONDS + 4)
-    ldi   a1, 4 /* Used for MEMCPY and counter in subtraction loop */
+    ldi   a1, 4 /* Used for MEMCPY_SRAM_SRAM and counter in subtraction loop */
 
     /* Check if underflow */
     ldd   xl, y + SRAM_DHCP_TIMER_SUBTRAHEND_PTR_L - SRAM_DHCP
@@ -560,7 +560,7 @@ DHCP_TIMERS:
     ldi   xl, lo8(SRAM_DHCP_ADDRESS_TIME)
     ldi   xh, hi8(SRAM_DHCP_ADDRESS_TIME)
     sbiw  zl, 4
-    rcall MEMCPY
+    rcall MEMCPY_SRAM_SRAM
     ldd   xl, y + SRAM_DHCP_TIMER_SUBTRAHEND_PTR_L - SRAM_DHCP
 
     /* Subtract the value pointed by x in the EEPROM to the uint32 big endian

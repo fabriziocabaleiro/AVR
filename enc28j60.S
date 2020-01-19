@@ -177,7 +177,7 @@ ETH_ENABLE_RECEIVE_INTERRUPT:
 ETH_CMDS_FROM_EEPROM:
     SPI_SELECT_ETH
     ldi   a1, 2
-    rcall SPI_EEPROM_TRANSMIT
+    rcall MEMCPY_EEPROM_SPI
     SPI_END_ETH
     dec   a2
     brne  ETH_CMDS_FROM_EEPROM
@@ -203,7 +203,7 @@ ETH_READ_RECEIVE_N_ETHERNET_HEADER:
     ldi   zh, hi8(SRAM_ENC_RPKT_HEADER)
     ldi   zl, lo8(SRAM_ENC_RPKT_HEADER)
     ldi   a1, (RPKT_STATUS_VECTOR_LEN + MAC_ADDR_LEN + MAC_ADDR_LEN + 2)
-    rcall S_MEMCPY
+    rcall MEMCPY_SPI_SRAM
     SPI_END_ETH
 
     DEBUG(rcall PRINT_RECEIVE_VECTOR)
@@ -327,7 +327,7 @@ ETH_WRITE_BUFFER_PACKET_HEADER:
     ldi   xl, lo8(EEPROM_MAC_ADDR)
     ldi   xh, hi8(EEPROM_MAC_ADDR)
     ldi   a1, MAC_ADDR_LEN
-    rcall SPI_EEPROM_TRANSMIT
+    rcall MEMCPY_EEPROM_SPI
 
     /* Write Type/Len */
     ldi   xl, lo8(EEPROM_TYPE_LEN)
@@ -336,7 +336,7 @@ ETH_WRITE_BUFFER_PACKET_HEADER:
     add   xl, t1
     adc   xh, zero
     ldi   a1, 2
-    rcall SPI_EEPROM_TRANSMIT
+    rcall MEMCPY_EEPROM_SPI
 
     SPI_END_ETH
 
@@ -355,6 +355,7 @@ ETH_SET_LISTEN_ON_SPI:
 /* Write z to transmit buffer {{{2 ---------------------------------------------
  * z is a pointer to memory to where start writing from
  * a1 is number of byte to write */
+ /* TODO: Use MEMCPY_SRAM_SPI */
 ETH_WRITE_Z_TO_TRANSMIT_BUFFER:
     /* Send write command */
     mov   t1, a1
@@ -513,6 +514,7 @@ UPDATE_ERDPT:
     ret
 #endif
 
+/* DEBUG {{{1 ----------------------------------------------------------------*/
 #ifndef NDEBUG
 PRINT_RECEIVE_VECTOR:
     DEBUG_PUSH

@@ -92,13 +92,13 @@ LOOP:
     ldi   zl, lo8(SRAM_COMM_PAYLOAD)
     ldi   zh, hi8(SRAM_COMM_PAYLOAD)
     ldi   a1, DHT11_PAYLOAD_LEN
-    rcall MEMCPY
+    rcall MEMCPY_SRAM_SRAM
 
     ldi   xh, hi8(SRAM_ADC0)
     ldi   xl, lo8(SRAM_ADC0)
     ldi   a1, MQ135_PAYLOAD_LEN
     cli   /* Avoid race condition with SRAM_ADC0 */
-    rcall MEMCPY
+    rcall MEMCPY_SRAM_SRAM
     sei
 
     /* Send data */
@@ -172,7 +172,7 @@ HANDLE_PACKET:
     ldi   zh, hi8(SRAM_ENC_ETH_SRC_ADDR)
     ldi   zl, lo8(SRAM_ENC_ETH_SRC_ADDR)
     ldi   a1, MAC_ADDR_LEN
-    rcall E_MEMCMP
+    rcall MEMCMP_SRAM_EEPROM
     breq  9f
 
     /* Check with memcmp which type/len was sent and call handler accordingly */
@@ -182,7 +182,7 @@ HANDLE_PACKET:
 
     ldi   xl, lo8(EEPROM_TYPE_LEN_IPV4)
     ldi   xh, hi8(EEPROM_TYPE_LEN_IPV4)
-    rcall E_MEMCMP
+    rcall MEMCMP_SRAM_EEPROM
     brne  0f
 
     /* IPv4 Handler */
@@ -190,7 +190,7 @@ HANDLE_PACKET:
     rjmp  9f
 
 0:  adiw  xl, (EEPROM_TYPE_LEN_ARP - EEPROM_TYPE_LEN_IPV4)
-    rcall E_MEMCMP
+    rcall MEMCMP_SRAM_EEPROM
     brne  9f
 
     /* ARP Handler */

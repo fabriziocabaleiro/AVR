@@ -77,7 +77,7 @@ COMM_SEND_PKT:
     /* For all entries of the COMM table */
 0:  ldi   a1, IPV4_ADDR_LEN
     clr   a2
-    rcall R_MEMCMP
+    rcall MEMCMP_REG_SRAM
     breq  1f /* Try next entry */
     push  xl
     push  xh
@@ -101,13 +101,13 @@ COMM_SEND_PKT:
     ldi   zl, lo8(SRAM_IPV4_DST_IP_ADDR)
     ldi   zh, hi8(SRAM_IPV4_DST_IP_ADDR)
     ldi   a1, IPV4_ADDR_LEN
-    rcall MEMCPY
+    rcall MEMCPY_SRAM_SRAM
 
     /* Set Src and Dst UDP port */
     ldi   zl, lo8(SRAM_UDP_HEADER + UDP_HEADER_SRC_PORT)
     ldi   zh, hi8(SRAM_UDP_HEADER + UDP_HEADER_SRC_PORT)
     ldi   a1, (IPV4_PORT_LEN * 2)
-    rcall MEMCPY
+    rcall MEMCPY_SRAM_SRAM
 
     /* Set UDP packet length */
     st    z+, zero
@@ -175,7 +175,7 @@ COMM_REGISTER_IP:
 
     /* From start of entry till COMM_DST_IPV4_TIME */
     ldi   a1, COMM_DST_IPV4_TIME
-    rcall S_MEMCPY
+    rcall MEMCPY_SPI_SRAM
 
     ret
 
