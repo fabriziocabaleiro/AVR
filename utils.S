@@ -267,8 +267,7 @@ MEMCPY_ZERO_SPI:
 0:  subi  t3, 1
     brlo  0f
     /* From: */
-    /* sbrc  t1, FROM_ZERO ; not really needed as others will overwrite a4 */
-    ldi   a4, 0               /* a4 <- 0 */
+    ldi   a4, 0               /* a4 <- 0 (FROM_ZERO) */
     sbrc  t1, FROM_SRAM       /* a4 <- SRAM */
     ld    a4, x+
     sbrc  t1, FROM_SPI        /* a4 <- SPI */
