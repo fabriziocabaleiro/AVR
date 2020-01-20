@@ -1,7 +1,6 @@
-/* vim: set foldmethod=marker: */
 #ifndef _DHT11_H_
 #define _DHT11_H_
-#define DHT11_PAYLOAD_LEN                    5 /* 40 Bits */
+#define DHT11_PAYLOAD_LEN  5 /* 40 Bits */
 
 /* Payload offsets */
 #define DHT11_DATA_RH_INT  0 /* Relative humidity integer part */

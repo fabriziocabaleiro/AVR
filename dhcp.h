@@ -1,4 +1,3 @@
-/* vim: set foldmethod=marker: */
 #ifndef _DHCP_H_
 #define _DHCP_H_
 

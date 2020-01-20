@@ -1,4 +1,3 @@
-/* vim: set foldmethod=marker: */
 #ifndef _DEFS_H_
 #define _DEFS_H_
 
@@ -89,15 +88,10 @@
 /* Miscellaneous {{{1 ---------------------------------------------------------*/
 /* ADC reading MQ135 */
 #define MQ135_PAYLOAD_LEN 2
-/* Own messages type/len */
-#define MESSAGE_TYPE_LEN 0x1987
-/* End SPI communication with ENC28J60 */
-#define ETH_END_LISTEN_ON_SPI SPI_END_ETH
 
-/************************
- * BIT FIELDS VARIABLES *
- ************************/
-#define BIT_FIELD_1_INT1_DHT11 7
+/* End SPI communication with ENC28J60 */
+/* TODO: remove */
+#define ETH_END_LISTEN_ON_SPI SPI_END_ETH
 
 /**********************
  * EtherType Protocol *

@@ -1,5 +1,4 @@
-/* vim: set filetype=S foldmethod=marker: */
-/* INCLUDES {{{1 */
+/* INCLUDES {{{1 -------------------------------------------------------------*/
 .NOLIST
 #include <avr/io.h>
 #include "defs.h"

@@ -1,5 +1,4 @@
-/* vim: set filetype=S foldmethod=marker: */
-/* INCLUDES {{{1 */
+/* INCLUDES {{{1 -------------------------------------------------------------*/
 .NOLIST
 #ifndef __AVR_ATmega8__
 #   define __AVR_ATmega8__

@@ -1,5 +1,4 @@
-/* vim: set filetype=S foldmethod=marker: */
-/* INCLUDES {{{1 */
+/* INCLUDES {{{1 -------------------------------------------------------------*/
 .NOLIST
 #include <avr/io.h>
 #include "defs.h"
@@ -67,7 +66,7 @@ TIMER_INIT:
     ldi   zl, lo8(SRAM_TIMER1_SECONDS)
     ldi   zh, hi8(SRAM_TIMER1_SECONDS)
     ldi   a1, (TIMER1_SECONDS_LEN + EVENT_LEN)
-    rcall BZERO
+    rcall MEMCPY_ZERO_SRAM
 
     ret
 

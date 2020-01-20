@@ -1,5 +1,4 @@
-/* vim: set filetype=S foldmethod=marker: */
-/* INCLUDES {{{1 */
+/* INCLUDES {{{1 -------------------------------------------------------------*/
 .NOLIST
 #include <avr/io.h>
 #include "enc28j60.h"
@@ -42,8 +41,6 @@ SRAM_IPV4_DST_IP_ADDR:             .skip  IPV4_ADDR_LEN
 /* TODO: Review this flags */
 SRAM_IPV4_G_FLAGS:                 .skip  1
 SRAM_IPV4_HEADER:                  .skip  IPV4_MAX_HEADER_LEN
-/* TODO: change SRAM_IPV4_PAYLOAD to be a generic memory area, ARP could also
- * use this memory space */
 SRAM_IPV4_PAYLOAD:                 .skip  IPV4_PAYLOAD_LEN
 
 /* TEXT {{{1 -----------------------------------------------------------------*/

@@ -1,4 +1,3 @@
-/* vim: set foldmethod=marker: */
 #ifndef _ENC28J60_H_
 #define _ENC28J60_H_
 
@@ -35,24 +34,21 @@
 #define USE_RXERIF 0
 
 /* To many conditions can trigger this interrupt, we are going to ignore it for
- * the moment.
- * TODO: take action upon this event */
+ * the moment. */
 #define USE_TXERIF 0
 
 /* This interrupt should be trigger upon transmission completion or when the
  * host cancels or abort a packet transmission.
  * We don't wait for the transmission to be complete.
  * Cancellation or abort of transmission by host is not implemented at the
- * moment, so ignore this event.
- */
+ * moment, so ignore this event. */
 #define USE_TXIF   0
 
 /* To receive it, the host controller must set the PHIE.PLNKIE and PGEIE bits,
  * which we don't do at the moment, so ignore it */
 #define USE_LINKIF 0
 
-/* We don't have DMA support at the moment.
- * TODO: add DMA support? */
+/* We don't have DMA support at the moment. */
 #define USE_DMAIF  0
 
 /* The Receive Packet Pending Interrupt Flag (PKTIF) is used to indicate the

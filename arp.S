@@ -1,5 +1,4 @@
-/* vim: set filetype=S foldmethod=marker: */
-/* INCLUDES {{{1 */
+/* INCLUDES {{{1 -------------------------------------------------------------*/
 .NOLIST
 #include <avr/io.h>
 #include "macros.S"
@@ -45,7 +44,7 @@ ARP_INIT:
     ldi   zl, lo8(SRAM_ARP_TABLE)
     ldi   zh, hi8(SRAM_ARP_TABLE)
     ldi   a1, (ARP_TABLE_LEN + ARP_TABLE_CURRENT_ENTRY_LEN)
-    rcall BZERO
+    rcall MEMCPY_ZERO_SRAM
     ret
 
 /* ARP_HANDLE_PKT {{{2 ---------------------------------------------------------

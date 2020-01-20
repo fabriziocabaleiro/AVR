@@ -1,5 +1,4 @@
-/* vim: set filetype=S foldmethod=marker: */
-/* INCLUDES {{{1 */
+/* INCLUDES {{{1 -------------------------------------------------------------*/
 .NOLIST
 #ifndef __AVR_ATmega8__
 #   define __AVR_ATmega8__
@@ -17,11 +16,9 @@
 /* GLOBAL {{{1 ---------------------------------------------------------------*/
 .global main
 .global INT0_vect
-.global BIT_FIELD_1
 
 /* DATA  {{{1 ----------------------------------------------------------------*/
 .section .data
-BIT_FIELD_1: .skip 1
 
 /* TEXT {{{1 -----------------------------------------------------------------*/
 .section .text

@@ -1,5 +1,4 @@
-/* vim: set filetype=S foldmethod=marker: */
-/* INCLUDES {{{1 */
+/* INCLUDES {{{1 -------------------------------------------------------------*/
 .NOLIST
 #include <avr/io.h>
 #include <avr/interrupt.h>
@@ -87,7 +86,7 @@ DHCP:
     ldi   zl, lo8(SRAM_DHCP_IP_ADDR)
     ldi   zh, hi8(SRAM_DHCP_IP_ADDR)
     ldi   a1, IPV4_ADDR_LEN
-    rcall BZERO
+    rcall MEMCPY_ZERO_SRAM
     /* Try to send a REQUEST every 16 seconds (DHCP_TIMER_ANDI)
      * DHCP_WAITING_IN_STATE re-uses SRAM_DHCP_TIMER_SUBTRAHEND_PTR_L */
     rcall DHCP_WAITING_IN_STATE
@@ -188,7 +187,7 @@ DHCP_INIT:
     ldi   zl, lo8(SRAM_DHCP_IP_ADDR)
     ldi   zh, hi8(SRAM_DHCP_IP_ADDR)
     ldi   a1, SRAM_DHCP_END - SRAM_DHCP_IP_ADDR
-    rcall BZERO
+    rcall MEMCPY_ZERO_SRAM
 
     /* Check if our IP Address in the EEPROM is != 0.0.0.0
      * We just zero out SRAM_DHCP_IP_ADDR, so using it to compare */

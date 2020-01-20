@@ -1,4 +1,3 @@
-/* vim: set filetype=S foldmethod=marker: */
 /* INCLUDES {{{1 -------------------------------------------------------------*/
 .NOLIST
 #include <avr/io.h>
@@ -55,7 +54,7 @@ COMM_INIT:
     ldi   zl, lo8(SRAM_COMM_DATA)
     ldi   zh, hi8(SRAM_COMM_DATA)
     ldi   a1, (COMM_DST_TBL_LEN + 1 + DHT11_PAYLOAD_LEN + MQ135_PAYLOAD_LEN)
-    rcall BZERO
+    rcall MEMCPY_ZERO_SRAM
     ret
 
 /* COMM_SEND_PKT {{{2 ----------------------------------------------------------

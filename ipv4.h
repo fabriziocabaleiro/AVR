@@ -1,4 +1,3 @@
-/* vim: set foldmethod=marker: */
 #ifndef _IPV4_H_
 #define _IPV4_H_
 
@@ -55,6 +54,7 @@
 */
 
 /* Data offset to use ldd/std with Y */
+/* TODO: Improved auto generation of this offsets */
 #define IPV4_DO_IHL_IN_BYTES              0
 #define IPV4_DO_PAYLOAD_LENGTH_IN_BYTES   1
 #define IPV4_DO_DST_IP_ADDR               3

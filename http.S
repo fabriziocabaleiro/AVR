@@ -1,5 +1,4 @@
-/* vim: set filetype=S foldmethod=marker: */
-/* INCLUDES {{{1 */
+/* INCLUDES {{{1 -------------------------------------------------------------*/
 .NOLIST
 #include <avr/io.h>
 #include "defs.h"
@@ -21,7 +20,7 @@
 /* HTTP_HANDLE_PKT {{{2 --------------------------------------------------------
  * Handle HTTP packet.
  *
- * z: Pointer to TCP payload.
+ * z: Pointer to TCP payload (SRAM_TCP_PAYLOAD).
  *
  * After routine:
  * a4: output HTTP length in bytes

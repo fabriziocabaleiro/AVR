@@ -1,5 +1,4 @@
-/* vim: set filetype=S foldmethod=marker: */
-/* INCLUDES {{{1 */
+/* INCLUDES {{{1 -------------------------------------------------------------*/
 .NOLIST
 #include <avr/io.h>
 #include "defs.h"
@@ -14,8 +13,6 @@
  ******************************************************************************/
 
 /* MACORS {{{1 ---------------------------------------------------------------*/
-#define OFAST
-
 #define FROM_SRAM    0
 #define FROM_EEPROM  1
 #define FROM_SPI     2
@@ -43,12 +40,12 @@
 .global MEMCPY_EEPROM_SPI
 .global MEMCPY_SPI_SRAM
 .global MEMCPY_SPI_EEPROM
+.global MEMCPY_ZERO_SRAM
 .global MEMCPY_ZERO_SPI
 
 .global MEMSWAP
 .global ADD_UINT32_BIG_ENDIAN
 .global SDIV
-.global BZERO
 
 /* TEXT {{{1 -----------------------------------------------------------------*/
 .section .text
@@ -228,6 +225,7 @@ MEMCMP_REG_SRAM:
  * MEMCPY_EEPROM_SPI:  EEPROM(x+) -> SPI
  * MEMCPY_SPI_SRAM:    SPI        -> SRAM(z+)
  * MEMCPY_SPI_EEPROM:  SPI        -> EEPROM(z+)
+ * MEMCPY_ZERO_SRAM:   0          -> SRAM(z+)
  * MEMCPY_ZERO_SPI:    0          -> SPI
  *
  * After routine:
@@ -258,6 +256,9 @@ MEMCPY_SPI_SRAM:
     rjmp  0f
 MEMCPY_SPI_EEPROM:
     ldi   t1, (1 << FROM_SPI)|(1 << TO_EEPROM)
+    rjmp  0f
+MEMCPY_ZERO_SRAM:
+    ldi   t1, (1 << FROM_ZERO)|(1 << TO_SRAM)
     rjmp  0f
 MEMCPY_ZERO_SPI:
     ldi   t1, (1 << FROM_ZERO)|(1 << TO_SPI)
@@ -366,6 +367,15 @@ MEMCPY_SPI_EEPROM:
     rcall EEPROM_WRITE_N_INC
     rjmp  0b
 
+/* MEMCPY_ZERO_SRAM {{{3 -----------------------------------------------------*/
+MEMCPY_ZERO_SRAM:
+    push  a1
+
+0:  subi  a1, 1
+    brlo  8f
+    st    z+, zero
+    rjmp  0b
+
 /* MEMCPY_ZERO_SPI {{{3 ------------------------------------------------------*/
 MEMCPY_ZERO_SPI:
     push  a1
@@ -449,23 +459,6 @@ SDIV:
     rjmp  0b /* Jump to the beginning of the loop */
 1:  mov   a3, a1
     add   a3, a2
-    ret
-
-/* BZERO {{{2 ------------------------------------------------------------------
- * Set a1 bytes to zero pointed by z on the SRAM
- *
- * a1: Number of bytes to set to zero.
- * z: Pointer to memory in SRAM to be set to zero.
- *
- * After routine:
- * z += a1
- * a1 = 0
- * ---------------------------------------------------------------------------*/
-/* TODO: use MEMCPY_ZERO_SRAM */
-BZERO:
-    st    z+, zero
-    dec   a1
-    brne  BZERO
     ret
 
 .end
