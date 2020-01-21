@@ -24,7 +24,7 @@
  * Handle ICMP packet
  * Not supporting ping with total length greater than 255
  *
- * y: Pointer to SRAM_IPV4_DATA.
+ * y: Pointer to SRAM_IPV4.
  *
  * After routine:
  * y: unchanged.

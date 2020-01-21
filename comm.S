@@ -11,25 +11,21 @@
 .LIST
 
 /* MACORS {{{1 ---------------------------------------------------------------*/
-#define TIMER_LEN               1
-#define COMM_DST_TBL_ENTRY      (IPV4_ADDR_LEN +                               \
-                                 IPV4_PORT_LEN +                               \
-                                 IPV4_PORT_LEN +                               \
-                                 TIMER_LEN +                                   \
-                                 TIMER_LEN)
-#define COMM_DST_TBL_SIZE       4
-#define COMM_DST_TBL_LEN        (COMM_DST_TBL_ENTRY * COMM_DST_TBL_SIZE)
+#define TIMER_LEN             1
+#define COMM_DST_TBL_ENTRY    (IPV4_ADDR_LEN +                                 \
+                               IPV4_PORT_LEN +                                 \
+                               IPV4_PORT_LEN +                                 \
+                               TIMER_LEN +                                     \
+                               TIMER_LEN)
+#define COMM_DST_TBL_SIZE     4
+#define COMM_DST_TBL_LEN      (COMM_DST_TBL_ENTRY * COMM_DST_TBL_SIZE)
 
-#define COMM_DST_IPV4_ADDR      0
-#define COMM_DST_IPV4_SRC_PORT  (COMM_DST_IPV4_ADDR + IPV4_ADDR_LEN)
-#define COMM_DST_IPV4_DST_PORT  (COMM_DST_IPV4_SRC_PORT + IPV4_PORT_LEN)
-#define COMM_DST_IPV4_TIMER     (COMM_DST_IPV4_DST_PORT + IPV4_PORT_LEN)
-#define COMM_DST_IPV4_TIME      (COMM_DST_IPV4_TIMER + TIMER_LEN)
+#define COMM_TABLE_ADDR       0
+#define COMM_TABLE_SRC_PORT   (COMM_TABLE_ADDR + IPV4_ADDR_LEN)
+#define COMM_TABLE_DST_PORT   (COMM_TABLE_SRC_PORT + IPV4_PORT_LEN)
+#define COMM_TABLE_TIMER      (COMM_TABLE_DST_PORT + IPV4_PORT_LEN)
+#define COMM_TABLE_TIME       (COMM_TABLE_TIMER + TIMER_LEN)
 
-/* Data offsets */
-#define COMM_TABLE         0
-#define COMM_RR_ITERATOR   (COMM_DST_TBL_LEN)
-#define COMM_PAYLOAD       (COMM_RR_ITERATOR + 1)
 /* GLOBAL {{{1 ---------------------------------------------------------------*/
 .global COMM_SEND_PKT
 .global COMM_REGISTER_IP
@@ -39,7 +35,7 @@
 
 /* DATA  {{{1 ----------------------------------------------------------------*/
 .section .data
-SRAM_COMM_DATA:
+SRAM_COMM:
 SRAM_COMM_TABLE:       .skip (COMM_DST_TBL_LEN)
 SRAM_COMM_RR_ITERATOR: .skip 1
 SRAM_COMM_PAYLOAD:     .skip (DHT11_PAYLOAD_LEN + MQ135_PAYLOAD_LEN)
@@ -51,8 +47,8 @@ SRAM_COMM_PAYLOAD:     .skip (DHT11_PAYLOAD_LEN + MQ135_PAYLOAD_LEN)
  * Initialize all COMM data to zero.
  * ---------------------------------------------------------------------------*/
 COMM_INIT:
-    ldi   zl, lo8(SRAM_COMM_DATA)
-    ldi   zh, hi8(SRAM_COMM_DATA)
+    ldi   zl, lo8(SRAM_COMM)
+    ldi   zh, hi8(SRAM_COMM)
     ldi   a1, (COMM_DST_TBL_LEN + 1 + DHT11_PAYLOAD_LEN + MQ135_PAYLOAD_LEN)
     rcall MEMCPY_ZERO_SRAM
     ret
@@ -78,8 +74,22 @@ COMM_SEND_PKT:
     clr   a2
     rcall MEMCMP_REG_SRAM
     breq  1f /* Try next entry */
+
     push  xl
     push  xh
+
+    /* Check timer */
+    adiw  xl, COMM_TABLE_TIMER
+    ld    t1, x+ /* Timer */
+    ld    t2, x  /* Counter */
+    inc   t2
+    cp    t1, t2
+    brsh  3f /* Branch if Timer >= Counter */
+    clr   t2
+3:  st    x, t2
+    brsh  2f /* pop x and try next entry */
+    sbiw  xl, COMM_TABLE_TIMER + 1
+
     /* Set MAC Dst pointer */
     rcall ARP_GET_MAC_ADDR_PTR
     brne  2f /* IP not in ARP table */
@@ -154,24 +164,30 @@ COMM_SEND_PKT:
 /* COMM_REGISTER_IP {{{2 -------------------------------------------------------
  * Register an IP Address to send packages to.
  * Use Round Robin to write destination entries into the table.
+ *
+ * Incoming format:
+ * Dst IP Addr (4 bytes), Dst port (2 bytes), Src port (2 bytes), Timer (1 byte)
+ *
+ * If Timer is set to 0, then a packet will be sent every time COMM_SEND_PKT is
+ * called, if timer is set to 1, then every other time COMM_SEND_PKT and so on.
  * 
- * This routine will copy from SPI to SRAM_COMM_TABLE until COMM_DST_IPV4_TIME
+ * This routine will copy from SPI to SRAM_COMM_TABLE until COMM_TABLE_TIME
  * ---------------------------------------------------------------------------*/
 COMM_REGISTER_IP:
     /* Select the entry on the table to register using Round Robin */
     ldi   zl, lo8(SRAM_COMM_TABLE)
     ldi   zh, hi8(SRAM_COMM_TABLE)
-    ldd   t1, z + COMM_RR_ITERATOR - COMM_TABLE
+    ldd   t1, z + SRAM_COMM_RR_ITERATOR - SRAM_COMM_TABLE
     subi  t1, -(COMM_DST_TBL_ENTRY)
     cpi   t1, COMM_DST_TBL_LEN
     brne  0f
     clr   t1
-0:  std   z + COMM_RR_ITERATOR - COMM_TABLE, t1
+0:  std   z + SRAM_COMM_RR_ITERATOR - SRAM_COMM_TABLE, t1
     add   zl, t1
     adc   zh, zero
 
-    /* From start of entry till COMM_DST_IPV4_TIME */
-    ldi   a1, COMM_DST_IPV4_TIME
+    /* From start of entry till COMM_TABLE_TIME */
+    ldi   a1, COMM_TABLE_TIME
     rcall MEMCPY_SPI_SRAM
 
     ret

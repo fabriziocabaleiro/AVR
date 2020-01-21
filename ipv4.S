@@ -287,7 +287,7 @@ IPV4_PREPARE_DEFAULT_HEADER_20_40_BYTES:
  * Use incoming IPv4 header for outgoing IPv4 header.
  *
  * a1: IPv4 Total Length in bytes.
- * y: Pointer to SRAM_IPV4_DATA.
+ * y: Pointer to SRAM_IPV4.
  *
  * After routine:
  * a1: undefined.
