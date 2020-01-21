@@ -127,8 +127,6 @@ COMM_SEND_PKT:
     rcall IPV4_PREPARE_DEFAULT_HEADER_20_40_BYTES
 
     /* Write IPv4 header into Ethernet module */
-    ldi   zl, lo8(SRAM_IPV4_HEADER)
-    ldi   zh, hi8(SRAM_IPV4_HEADER)
     ldi   a1, IPV4_DEFAULT_HEADER_LEN
     rcall ETH_WRITE_TO_TRANSMIT_BUFFER
 

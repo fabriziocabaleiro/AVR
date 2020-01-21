@@ -1,4 +1,7 @@
 /* INCLUDES {{{1 -------------------------------------------------------------*/
+#ifndef NDEBUG
+#define NDEBUG
+#endif
 .NOLIST
 #include <avr/io.h>
 #include "defs.h"

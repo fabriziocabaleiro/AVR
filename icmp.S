@@ -22,8 +22,12 @@
 
 /* ICMP_HANDLE_PKT {{{2 --------------------------------------------------------
  * Handle ICMP packet
- * Y has been set to SRAM_IPV4_DATA in the previous routine.
  * Not supporting ping with total length greater than 255
+ *
+ * y: Pointer to SRAM_IPV4_DATA.
+ *
+ * After routine:
+ * y: unchanged.
  * ---------------------------------------------------------------------------*/
 ICMP_HANDLE_PKT:
     /* Read message type, if not ICMP_MSG_TYPE_ECHO, then ignore packet */
@@ -34,7 +38,7 @@ ICMP_HANDLE_PKT:
 
     /* Swap Src and Dst IP addresses */
     /* Swapping IP addresses directly is faster, but generates bigger code */
-    ldd   a1, y + IPV4_DO_TOTAL_LENGTH + 1
+    ldd   a1, y + IPV4_TOTAL_LENGTH + 1
     rcall IPV4_PREPARE_INCOMING_HEADER_FOR_RESPONSE
 
     /* Set ICMP msg type to echo reply, get the rest of IPv4 payload */
@@ -42,7 +46,7 @@ ICMP_HANDLE_PKT:
     ldi   zl, lo8(SRAM_IPV4_PAYLOAD)
     ldi   zh, hi8(SRAM_IPV4_PAYLOAD)
     st    z+, a1
-    ldd   a1, y + (IPV4_DO_PAYLOAD_LENGTH_IN_BYTES + 1)
+    ldd   a1, y + (IPV4_PAYLOAD_LENGTH_IN_BYTES + 1)
     rcall MEMCPY_SPI_SRAM
 
     ETH_READ_BUFFER_END
@@ -53,12 +57,12 @@ ICMP_HANDLE_PKT:
     /* Write IPv4 Header into transmit buffer */
     ldi   zl, lo8(SRAM_IPV4_HEADER)
     ldi   zh, hi8(SRAM_IPV4_HEADER)
-    ldd   a1, y + IPV4_DO_IHL_IN_BYTES
+    ldd   a1, y + IPV4_IHL_IN_BYTES
     rcall ETH_WRITE_TO_TRANSMIT_BUFFER
 
     /* Should we check that received checksum is correct ? */
     /* Set checksum for reply */
-    ldd   a1, y + (IPV4_DO_PAYLOAD_LENGTH_IN_BYTES + 1)
+    ldd   a1, y + (IPV4_PAYLOAD_LENGTH_IN_BYTES + 1)
     ldi   zl, lo8(SRAM_IPV4_PAYLOAD)
     ldi   zh, hi8(SRAM_IPV4_PAYLOAD)
     /* Clear received checksum */

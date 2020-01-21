@@ -73,7 +73,7 @@ TCP_HANDLE_PKT:
     /* Handle sequence number and acknowledge number */
     /* Swap sequence number with acknowledge number */
     /* x was left pointing to Seq. Num. */
-    /* y was left pointing to Dst port */
+    /* z was left pointing to Dst port */
     adiw  zl, TCP_HEADER_ACK_N - TCP_HEADER_DST_PORT
     ldi   a1, 4
     rcall MEMSWAP
@@ -88,7 +88,7 @@ TCP_HANDLE_PKT:
     breq  0f
     inc   t2
     /* TODO: add support for 16b payload size */
-0:  ldd   a1, y + IPV4_DO_PAYLOAD_LENGTH_IN_BYTES + 1
+0:  ldd   a1, y + IPV4_PAYLOAD_LENGTH_IN_BYTES + 1
     sub   a1, s1 /* TCP header length */
     add   a1, t2
     /* x is pointing to SRAM_TCP_ACK_N from previous MEMSWAP */
@@ -166,7 +166,7 @@ TCP_HANDLE_PKT:
 0:  add   zl, s1 /* TCP header length */
     adc   zh, zero
     /* Call Handle if TCP packet has payload */
-    ldd   t1, y + IPV4_DO_PAYLOAD_LENGTH_IN_BYTES + 1
+    ldd   t1, y + IPV4_PAYLOAD_LENGTH_IN_BYTES + 1
     sub   t1, s1 /* TCP header length */
     breq  9f /* exit */
 
@@ -190,12 +190,12 @@ TCP_HANDLE_PKT:
 
     /* IPv4 header */
     /* IPv4 payload length */
-    ldd   a1, y + IPV4_DO_IHL_IN_BYTES
+    ldd   a1, y + IPV4_IHL_IN_BYTES
     add   a1, s1 /* + TCP header and payload */
     rcall IPV4_PREPARE_INCOMING_HEADER_FOR_RESPONSE
 
     /* Write IPv4 header into ENC buffer */
-    ldd   a1, y + IPV4_DO_IHL_IN_BYTES
+    ldd   a1, y + IPV4_IHL_IN_BYTES
     rcall ETH_WRITE_TO_TRANSMIT_BUFFER
 
     /* Write TCP header + payload into ENC buffer */

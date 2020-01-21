@@ -240,14 +240,14 @@ DHCP_SEND:
 
     /* Set non default IPv4 header fields */
     /* IP Total Length */
-    std   z + (IPV4_TOTAL_LENGTH + 0), s2
-    std   z + (IPV4_TOTAL_LENGTH + 1), s1
+    std   z + (IPV4_HEADER_TOTAL_LENGTH + 0), s2
+    std   z + (IPV4_HEADER_TOTAL_LENGTH + 1), s1
 
     /* Src and Dst IP addresses for RENEWING */
     sbrs  s3, DHCP_STATE_RENEWING
     rjmp  0f /* Deafult Src/Dst IP Addresses */
     /* Copy Src IP address */
-    adiw  zl, IPV4_SRC_ADDR
+    adiw  zl, IPV4_HEADER_SRC_ADDR
     ldi   a1, IPV4_ADDR_LEN
     ldi   xl, lo8(SRAM_DHCP_IP_ADDR)
     ldi   xh, hi8(SRAM_DHCP_IP_ADDR)
@@ -257,14 +257,14 @@ DHCP_SEND:
     ldi   xh, hi8(SRAM_DHCP_SERVER_IP_ADDR)
     rcall MEMCPY_SRAM_SRAM
     /* Set z back to SRAM_IPV4_HEADER */
-    sbiw  zl, IPV4_ADDR_LEN * 2 + IPV4_SRC_ADDR
+    sbiw  zl, IPV4_ADDR_LEN * 2 + IPV4_HEADER_SRC_ADDR
 
     /* Internet Checksum */
 0:  ldi   a1, (EEPROM_IP_HEADER_END - EEPROM_IP_HEADER)
     ldi   a2, 0
     rcall INTERNET_CHECKSUM_RFC1071
-    std   z + (IPV4_H_CHECKSUM + 0), a3
-    std   z + (IPV4_H_CHECKSUM + 1), a4
+    std   z + (IPV4_HEADER_H_CHECKSUM + 0), a3
+    std   z + (IPV4_HEADER_H_CHECKSUM + 1), a4
 
     /* Transmit IPv4 Header plus part of UDP */
     ldi   a1, (EEPROM_UDP_DHCP_PORT_END - EEPROM_IP_HEADER)
