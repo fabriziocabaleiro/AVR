@@ -7,8 +7,6 @@
  * REBOOTING_WAIT_SECONDS_FOR_ACK seconds for an ACK, or go to the initial state
  */
 
-#define DHCP_TIMER_LAP  7
-
 /* DHCP states {{{1 ----------------------------------------------------------*/
 #define DHCP_STATE_INIT         0
 #define DHCP_STATE_SELECTING    1

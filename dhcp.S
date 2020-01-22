@@ -12,8 +12,16 @@
 .LIST
 
 /* MACORS {{{1 ---------------------------------------------------------------*/
+/* Bit to mark when the timer completes a lap */
+#define DHCP_TIMER_LAP          7
+
+/* Counter will be andi with DHCP_TIMER_ANDI, SREG(Z) = 1 when lap completes */
 #define DHCP_TIMER_ANDI         0x03 /* TODO: set back to 7 ? */
+
+/* Maximum length for this DHCP option */
 #define DHCP_DOMAIN_SERVER_LEN  8
+
+/* Maximum time that we wait in requesting state */
 #define REQUESTING_MAX_TIME     15
 
 /* Bit 7 used for counter underflow flag.
@@ -45,7 +53,7 @@ SRAM_DHCP_ADDRESS_TIME:           .skip DHCP_OPTION_ADDRESS_TIME_LEN
 SRAM_DHCP_SECONDS:                .skip DHCP_OPTION_ADDRESS_TIME_LEN
 SRAM_DHCP_SUBNET_MASK:            .skip DHCP_OPTION_SUBNET_MASK_LEN
 SRAM_DHCP_DOMAIN_SERVER:          .skip DHCP_DOMAIN_SERVER_LEN
-/* Pointer to T1/T2 subtrahend. Bit 7 used as flag.
+/* Pointer to T1/T2 subtrahend. Bit DHCP_TIMER_LAP used as flag.
  * Only one byte is needed as EEPROM_DHCP_TIMERS is guarantee to have upper byte
  * equal to zero */
 SRAM_DHCP_TIMER_SUBTRAHEND_PTR_L: .skip 1

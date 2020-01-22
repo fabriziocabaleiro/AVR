@@ -3,6 +3,7 @@
 .NOLIST
 #include <avr/io.h>
 #include "defs.h"
+#include "macros.S"
 .LIST
 
 /* MACORS {{{1 ---------------------------------------------------------------*/
@@ -27,6 +28,7 @@
 
 /* GLOBAL {{{1 ---------------------------------------------------------------*/
 .global UART_INIT
+.global USART_RXC_vect
 .global UART_TRANSMIT
 .global UART_TRANSMIT_HEX
 .global UART_TRANSMIT_STR
@@ -40,6 +42,8 @@
 /* UART_INIT {{{2 --------------------------------------------------------------
  * Initialize UART.
  * Asynchronous normal mode.
+ * Enable transmission and reception.
+ * Enable interrupt handle for reception.
  * UBRR => Baud rate 4800, error 0.2%
  * ---------------------------------------------------------------------------*/
 UART_INIT:
@@ -48,9 +52,45 @@ UART_INIT:
     out   _SFR_IO_ADDR(UBRRL), t1
 
     /* Enable transmit */
-    ldi   t1, (1 << TXEN)
+    ldi   t1, (1 << TXEN)|(1 << RXEN)|(1 << RXCIE)
     out   _SFR_IO_ADDR(UCSRB), t1
     ret
+
+/* USART_RXC_vect {{{2 ---------------------------------------------------------
+ * UART reception completed interrupt.
+ *
+ * This routine is only for testing.
+ *
+ * Read the received data and send back "$ <data>".
+ * ---------------------------------------------------------------------------*/
+USART_RXC_vect:
+    push  t1
+    in    t1, _SFR_IO_ADDR(SREG)
+    push  t1
+    push  zl
+    push  zh
+    push  a1
+
+    ldi   zl, lo8(STR_RXC_MESG)
+    ldi   zh, hi8(STR_RXC_MESG)
+    rcall UART_TRANSMIT_STR
+
+0:  in    a1, _SFR_IO_ADDR(UDR)
+    rcall UART_TRANSMIT
+    sbic  _SFR_IO_ADDR(UCSRA), RXC
+    rjmp  0b
+    ldi   a1, '\r'
+    rcall UART_TRANSMIT
+    ldi   a1, '\n'
+    rcall UART_TRANSMIT
+
+    pop   a1
+    pop   zh
+    pop   zl
+    pop   t1
+    out   _SFR_IO_ADDR(SREG), t1
+    pop   t1
+    reti
 
 /* UART_TRANSMIT {{{2 ----------------------------------------------------------
  * Transmit a1 through UART.

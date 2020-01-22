@@ -40,6 +40,7 @@
 .global STR_DHT11_DATA
 .global STR_ENC_RECEIVE_VECTOR
 .global STR_TCP_OPTION_ERR
+.global STR_RXC_MESG
 
 /* DATA  {{{1 ----------------------------------------------------------------*/
 .section .data
@@ -102,6 +103,8 @@ STR_DHT11_DATA:
 .string "DHT11 data: "
 STR_TCP_OPTION_ERR:
 .string "TCP Unknown option\r\n"
+STR_RXC_MESG:
+.string "$ "
 
 .align 1
 #endif
