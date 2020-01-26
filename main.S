@@ -1,3 +1,19 @@
+/* LICENSE {{{ -----------------------------------------------------------------
+ * IPv4 stack for AVR (ATmega8) microcontroller.
+ * Copyright (C) 2020 Fabrizio Cabaleiro
+ * 
+ * This program is free software: you can redistribute it and/or modify it under
+ * the terms of the GNU General Public License as published by the Free Software
+ * Foundation, version 2.
+ * 
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ * FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
+ * details.
+ * 
+ * You should have received a copy of the GNU General Public License along with
+ * this program. If not, see <https://www.gnu.org/licenses/>.
+ * ------------------------------------------------------------------------}}}*/
 /* INCLUDES {{{1 -------------------------------------------------------------*/
 .NOLIST
 #ifndef __AVR_ATmega8__
@@ -131,6 +147,8 @@ ENC_INTERRUPT_HANDLE:
     rcall ETH_SEND_CMD
     mov   s1, a4
 
+    DEBUG(PRINT_STR STR_ETHERNET_INTERRUPT_HANDLER)
+
     /* First check for errors */
 #if USE_DMAIF
     sbrc  s1, ENC_COMMON_EIE_DMAIE
@@ -165,6 +183,7 @@ ENC_INTERRUPT_HANDLE:
  * ---------------------------------------------------------------------------*/
 HANDLE_PACKET:
     /* Packet and Ethernet headers */
+    DEBUG(PRINT_STR STR_HANDLE_PKT)
     rcall ETH_READ_RECEIVE_N_ETHERNET_HEADER
     sbrs  a4, RPKT_STATUS1_RECEIVED_OK
     rjmp  8f /* Error seen commonly after programming */

@@ -1,3 +1,19 @@
+/* LICENSE {{{ -----------------------------------------------------------------
+ * IPv4 stack for AVR (ATmega8) microcontroller.
+ * Copyright (C) 2020 Fabrizio Cabaleiro
+ * 
+ * This program is free software: you can redistribute it and/or modify it under
+ * the terms of the GNU General Public License as published by the Free Software
+ * Foundation, version 2.
+ * 
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ * FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
+ * details.
+ * 
+ * You should have received a copy of the GNU General Public License along with
+ * this program. If not, see <https://www.gnu.org/licenses/>.
+ * ------------------------------------------------------------------------}}}*/
 /* INCLUDES {{{1 -------------------------------------------------------------*/
 .NOLIST
 #include <avr/io.h>
@@ -238,7 +254,6 @@ ETH_PKT_PROCESSED:
     ldi   a1, ENC_BANK0_ERDPTL | ETH_SPI_CMD_WCR
     rcall ETH_SEND_CMD
 
-
     ldi   a1, ENC_BANK0_ERXRDPTH | ETH_SPI_CMD_WCR
     lds   a2, SRAM_ENC_RPKT_N_PKT_H
     rcall ETH_SEND_CMD
@@ -250,6 +265,8 @@ ETH_PKT_PROCESSED:
     ldi   a1, ENC_COMMON_ECON2 | ETH_SPI_CMD_BFS
     ldi   a2, ENC_COMMON_ECON2_PKTDEC
     rcall ETH_SEND_CMD
+
+    DEBUG(rcall PRINT_ERXRDPT)
 
     ret
 
@@ -557,6 +574,21 @@ PRINT_RECEIVE_VECTOR:
     rcall UART_TRANSMIT_HEX
     PRINT_NEWLINE
     DEBUG_POP
+    ret
+
+PRINT_ERXRDPT:
+    PRINT_STR STR_ERXRDPT
+
+    ldi   a1, ENC_BANK0_ERXRDPTH | ETH_SPI_CMD_RCR
+    rcall ETH_SEND_CMD
+    PRINT_REG a4
+
+    ldi   a1, ENC_BANK0_ERXRDPTL | ETH_SPI_CMD_RCR
+    rcall ETH_SEND_CMD
+    PRINT_REG a4
+
+    PRINT_NEWLINE
+
     ret
 #endif
 

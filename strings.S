@@ -1,3 +1,19 @@
+/* LICENSE {{{ -----------------------------------------------------------------
+ * IPv4 stack for AVR (ATmega8) microcontroller.
+ * Copyright (C) 2020 Fabrizio Cabaleiro
+ * 
+ * This program is free software: you can redistribute it and/or modify it under
+ * the terms of the GNU General Public License as published by the Free Software
+ * Foundation, version 2.
+ * 
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ * FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
+ * details.
+ * 
+ * You should have received a copy of the GNU General Public License along with
+ * this program. If not, see <https://www.gnu.org/licenses/>.
+ * ------------------------------------------------------------------------}}}*/
 /* INCLUDES {{{1 -------------------------------------------------------------*/
 .NOLIST
 #include <avr/io.h>
@@ -40,7 +56,10 @@
 .global STR_DHT11_DATA
 .global STR_ENC_RECEIVE_VECTOR
 .global STR_TCP_OPTION_ERR
-.global STR_RXC_MESG
+.global STR_RXC_MSG
+.global STR_ERXRDPT
+.global STR_ETHERNET_INTERRUPT_HANDLER
+.global STR_HANDLE_PKT
 
 /* DATA  {{{1 ----------------------------------------------------------------*/
 .section .data
@@ -103,8 +122,14 @@ STR_DHT11_DATA:
 .string "DHT11 data: "
 STR_TCP_OPTION_ERR:
 .string "TCP Unknown option\r\n"
-STR_RXC_MESG:
+STR_RXC_MSG:
 .string "$ "
+STR_ERXRDPT:
+.string "ERXRDPT: "
+STR_ETHERNET_INTERRUPT_HANDLER:
+.string "Eth Int Handler\r\n"
+STR_HANDLE_PKT:
+.string "Packet Handler\r\n"
 
 .align 1
 #endif

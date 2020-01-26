@@ -1,3 +1,19 @@
+/* LICENSE {{{ -----------------------------------------------------------------
+ * IPv4 stack for AVR (ATmega8) microcontroller.
+ * Copyright (C) 2020 Fabrizio Cabaleiro
+ * 
+ * This program is free software: you can redistribute it and/or modify it under
+ * the terms of the GNU General Public License as published by the Free Software
+ * Foundation, version 2.
+ * 
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ * FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
+ * details.
+ * 
+ * You should have received a copy of the GNU General Public License along with
+ * this program. If not, see <https://www.gnu.org/licenses/>.
+ * ------------------------------------------------------------------------}}}*/
 /* INCLUDES {{{1 -------------------------------------------------------------*/
 #ifndef NDEBUG
 .NOLIST
@@ -71,8 +87,8 @@ USART_RXC_vect:
     push  zh
     push  a1
 
-    ldi   zl, lo8(STR_RXC_MESG)
-    ldi   zh, hi8(STR_RXC_MESG)
+    ldi   zl, lo8(STR_RXC_MSG)
+    ldi   zh, hi8(STR_RXC_MSG)
     rcall UART_TRANSMIT_STR
 
 0:  in    a1, _SFR_IO_ADDR(UDR)
