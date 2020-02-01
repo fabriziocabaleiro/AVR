@@ -67,16 +67,12 @@
  * Normally using X as Src pointer and Z as Dst pointer.
  * Using Y as saved pointer. */
 
-/* When multiplying two registers, the results is store in R1:R0, therefore
- * avoid using them */
+/* Poison registers that are used under a macro */
 #pragma GCC poison R0
 #pragma GCC poison R1
 #pragma GCC poison R2
-#pragma GCC poison R3
 #pragma GCC poison R4
-#pragma GCC poison R5
 #pragma GCC poison R10
-#pragma GCC poison R15
 #pragma GCC poison R16
 #pragma GCC poison R17
 #pragma GCC poison R18
@@ -105,10 +101,6 @@
 /* ADC reading MQ135 */
 #define MQ135_PAYLOAD_LEN 2
 
-/* End SPI communication with ENC28J60 */
-/* TODO: remove */
-#define ETH_END_LISTEN_ON_SPI SPI_END_ETH
-
 /**********************
  * EtherType Protocol *
  **********************/
@@ -117,14 +109,6 @@
 #define ETHER_TYPE_ARP         0x0806
 #define ETHER_TYPE_WAKE_ON_LAN 0x0842
 #define ETHER_TYPE_IPV6        0x86DD
-
-/****************
- * Error macros *
- ****************/
-#define ERR_BIT                                PB0
-#define ERR_SET_DDR   sbi _SFR_IO_ADDR(DDRB),  ERR_BIT
-#define ERR_SET       sbi _SFR_IO_ADDR(PORTB), ERR_BIT
-#define ERR_CLR       cbi _SFR_IO_ADDR(PORTB), ERR_BIT
 
 /********************
  * IP address sizes *

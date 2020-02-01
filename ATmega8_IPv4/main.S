@@ -48,9 +48,6 @@ main:
     DEBUG(rcall UART_INIT)
     DEBUG(PRINT_STR STR_START)
 
-    /* Set LED errors */
-    ERR_SET_DDR
-
     /* Set global interrupt enable, sleep mode and sleep enable
      * Interrupt on INT0: falling edge */
     in    t1, _SFR_IO_ADDR(MCUCR)
