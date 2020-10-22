@@ -1,5 +1,5 @@
 ################################################################################
-#                          ATmega8 + ENC28J60 + DHT11                          #
+#                             ATmega16 Jtag1 test                              #
 ################################################################################
 OBJS = main.o
 
@@ -23,7 +23,13 @@ ${OBJDIR}/%.o: %.S | ${DEPDIR} ${OBJDIR}
 	avr-gcc ${DEPOPTS} ${GCCOPT} -c -o $@ $<
 
 install:
-	/usr/bin/avrdude -c usbasp -p m16 -U flash:w:main.hex
+	avrdude -c jtag1 -p m16 -U flash:w:main.hex
+
+gdb:
+	avarice -B 125000 -j /dev/ttyUSB0 -P atmega16 :6666
+
+gdb-attach:
+	avr-gdb -ex "target remote :6666" -ex "file main.elf"
 
 clean:
 	test -d ${DEPDIR} && rm -r ${DEPDIR} || true
