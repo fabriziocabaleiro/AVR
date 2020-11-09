@@ -29,7 +29,7 @@ gdb:
 	avarice -B 125000 -j /dev/ttyUSB0 -P atmega16 :6666
 
 gdb-attach:
-	avr-gdb -ex "target remote :6666" -ex "file main.elf"
+	avr-gdb -ex "file main.elf" -ex "target remote :6666"
 
 clean:
 	test -d ${DEPDIR} && rm -r ${DEPDIR} || true
