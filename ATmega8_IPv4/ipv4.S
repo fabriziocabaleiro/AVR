@@ -23,7 +23,7 @@
 #include "eeprom_data.h"
 .LIST
 
-/* MACORS {{{1 ---------------------------------------------------------------*/
+/* MACROS {{{1 ---------------------------------------------------------------*/
 /* Using (EEPROM_IP_HEADER_END - EEPROM_IP_HEADER) within ipv4.h is hacking, as
  * including eeprom_data.h in ipv4.h doesn't work, so don't use those macros in
  * ipv4.h, but check that we are defining the correct value.

@@ -25,7 +25,7 @@
 #include "ipv4.h"
 .LIST
 
-/* MACORS {{{1 ---------------------------------------------------------------*/
+/* MACROS {{{1 ---------------------------------------------------------------*/
 #define ARP_PAYLOAD_LEN      28
 /* How many entries can the ARP table hold */
 #define ARP_TABLE_SIZE       4

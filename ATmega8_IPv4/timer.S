@@ -25,7 +25,7 @@
 #include "macros.S"
 .LIST
 
-/* MACORS {{{1 ---------------------------------------------------------------*/
+/* MACROS {{{1 ---------------------------------------------------------------*/
 #ifndef F_CPU
 #   error "CPU frequency not specified, cannot calculate timer parameters"
 #endif

@@ -22,7 +22,7 @@
 #include "ipv4.h"
 #include "defs.h"
 
-/* MACORS {{{1 ---------------------------------------------------------------*/
+/* MACROS {{{1 ---------------------------------------------------------------*/
 #define MAC_ADDR_0 0xFA
 #define MAC_ADDR_1 0xB2
 #define MAC_ADDR_2 0x13

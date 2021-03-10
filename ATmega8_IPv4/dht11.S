@@ -25,7 +25,7 @@
 #include "macros.S"
 .LIST
 
-/* MACORS {{{1 ---------------------------------------------------------------*/
+/* MACROS {{{1 ---------------------------------------------------------------*/
 /* Tested At 1MHz */
 
 /* Start at 5 because we are going to trigger 3 times the interrupt before data

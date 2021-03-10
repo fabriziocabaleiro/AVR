@@ -26,7 +26,7 @@
 #include "macros.S"
 .LIST
 
-/* MACORS {{{1 ---------------------------------------------------------------*/
+/* MACROS {{{1 ---------------------------------------------------------------*/
 #define SEQ_N_LEN            4
 #define TCP_PAYLOAD_LEN      (EEPROM_HTTP_RESPONSE_END - EEPROM_HTTP_RESPONSE)
 

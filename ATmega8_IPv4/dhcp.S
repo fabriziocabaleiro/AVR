@@ -30,7 +30,7 @@
 #include "macros.S"
 .LIST
 
-/* MACORS {{{1 ---------------------------------------------------------------*/
+/* MACROS {{{1 ---------------------------------------------------------------*/
 /* Bit to mark when the timer completes a lap */
 #define DHCP_TIMER_LAP          7
 

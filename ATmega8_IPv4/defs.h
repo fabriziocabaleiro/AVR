@@ -19,7 +19,7 @@
 
 /* Global configuration {{{1 --------------------------------------------------*/
 /* Default value of internal RC oscillator */
-#define F_CPU 8000000 /* Auto-updated by makefile set-clock */
+#define F_CPU 1000000 /* Auto-updated by makefile set-clock */
 #define USE_DHT11
 
 /* Registers {{{1 -------------------------------------------------------------*/

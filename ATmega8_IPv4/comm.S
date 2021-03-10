@@ -26,7 +26,7 @@
 #include "eeprom_data.h"
 .LIST
 
-/* MACORS {{{1 ---------------------------------------------------------------*/
+/* MACROS {{{1 ---------------------------------------------------------------*/
 #define TIMER_LEN             1
 #define COMM_DST_TBL_ENTRY    (IPV4_ADDR_LEN +                                 \
                                IPV4_PORT_LEN +                                 \
