@@ -21,8 +21,8 @@
 # $Id: configure.ac 308 2012-11-05 16:41:14Z joerg_wunsch $
 #
 
-AC_PREREQ(2.57)
-AC_INIT(avarice, 2.13)
+AC_PREREQ([2.72])
+AC_INIT([avarice],[2.13])
 AC_CONFIG_SRCDIR([src/main.cc])
 AC_CONFIG_HEADERS([src/autoconf.h:src/autoconf.hin])
 
@@ -67,7 +67,15 @@ AC_CHECK_LIB([bfd], [bfd_init], , [ac_found_bfd=no])
 AC_CHECK_LIB([usb], [usb_get_string_simple])
 
 # Checks for header files.
-AC_HEADER_STDC
+m4_warn([obsolete],
+[The preprocessor macro 'STDC_HEADERS' is obsolete.
+  Except in unusual embedded environments, you can safely include all
+  C89 headers unconditionally.])dnl
+# Autoupdate added the next two lines to ensure that your configure
+# script's behavior did not change.  They are probably safe to remove.
+AC_CHECK_INCLUDES_DEFAULT
+AC_PROG_EGREP
+
 AC_CHECK_HEADERS([arpa/inet.h fcntl.h netdb.h netinet/in.h stdlib.h string.h sys/socket.h sys/time.h termios.h unistd.h])
 
 AC_CHECK_HEADERS([bfd.h], , [ac_found_bfd_h=no])
@@ -76,7 +84,20 @@ AC_CHECK_HEADERS([bfd.h], , [ac_found_bfd_h=no])
 AC_HEADER_STDBOOL
 AC_C_CONST
 AC_TYPE_SIZE_T
-AC_HEADER_TIME
+m4_warn([obsolete],
+[Update your code to rely only on HAVE_SYS_TIME_H,
+then remove this warning and the obsolete code below it.
+All current systems provide time.h; it need not be checked for.
+Not all systems provide sys/time.h, but those that do, all allow
+you to include it and time.h simultaneously.])dnl
+AC_CHECK_HEADERS_ONCE([sys/time.h])
+# Obsolete code to be removed.
+if test $ac_cv_header_sys_time_h = yes; then
+  AC_DEFINE([TIME_WITH_SYS_TIME],[1],[Define to 1 if you can safely include both <sys/time.h>
+	     and <time.h>.  This macro is obsolete.])
+fi
+# End of obsolete code.
+
 AC_STRUCT_TM
 
 dnl Available from the GNU Autoconf Macro Archive at:
@@ -135,9 +156,7 @@ AC_CHECK_FUNCS([atexit gethostbyname inet_ntoa memmove memset select socket strc
 # --enable-warnings / --disable-warnings
 AC_ARG_ENABLE(
 	[warnings],
-	AC_HELP_STRING(
-		[--disable-warnings],
-		[Disable -Wall -Wextra options]),
+	AS_HELP_STRING([--disable-warnings],[Disable -Wall -Wextra options]),
 	[case "${enableval}" in
 	      yes) ENABLE_WARNINGS="-Wall -Wextra" ;;
 	      no)  ENABLE_WARNINGS="" ;;
@@ -150,9 +169,7 @@ AC_SUBST([AM_CPPFLAGS], [$ENABLE_WARNINGS])
 # --enable-target-programming / --disable-target-programming
 AC_ARG_ENABLE(
 	[target-programming],
-	AC_HELP_STRING(
-		[--enable-target-programming],
-		[Enable programming (downloading) the target from ELF file]),
+	AS_HELP_STRING([--enable-target-programming],[Enable programming (downloading) the target from ELF file]),
 	[case "${enableval}" in
 	      yes) ENABLE_TARGET_PROGRAMMING="-DENABLE_TARGET_PROGRAMMING=1" ;;
 	      no)  ENABLE_TARGET_PROGRAMMING="-DENABLE_TARGET_PROGRAMMING=0" ;;
